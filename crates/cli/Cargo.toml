@@ -1,0 +1,12 @@
+[package]
+name = "brainmap"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "brainmap"
+path = "src/main.rs"
+
+[dependencies]
+brainmap-core = { path = "../core" }
+clap = { version = "4", features = ["derive"] }

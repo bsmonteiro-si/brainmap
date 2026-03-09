@@ -1,0 +1,7 @@
+[package]
+name = "brainmap-tauri-plugin"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+brainmap-core = { path = "../core" }

@@ -1,0 +1,18 @@
+[package]
+name = "brainmap-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2"
+rusqlite = { version = "0.32", features = ["bundled", "modern_sqlite"] }
+walkdir = "2"
+regex = "1"
+
+[dev-dependencies]
+tempfile = "3"

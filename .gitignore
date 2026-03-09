@@ -1,0 +1,26 @@
+# Rust
+/target
+Cargo.lock
+
+# Node / Frontend
+node_modules/
+dist/
+
+# BrainMap workspace data
+.brainmap/
+*.db
+*.sqlite
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
