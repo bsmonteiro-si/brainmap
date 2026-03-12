@@ -27,13 +27,15 @@ export function RelatedNotesFooter() {
 
   const related = useMemo(() => {
     if (!activeNote) return [];
-    const outgoing = (activeNote.links ?? []).map((l) => ({
-      dir: "out" as const,
-      rel: l.rel,
-      path: l.target,
-      title: nodes.get(l.target)?.title ?? l.target,
-      noteType: nodes.get(l.target)?.note_type ?? "reference",
-    }));
+    const outgoing = edges
+      .filter((e) => e.source === activeNote.path)
+      .map((e) => ({
+        dir: "out" as const,
+        rel: e.rel,
+        path: e.target,
+        title: nodes.get(e.target)?.title ?? e.target,
+        noteType: nodes.get(e.target)?.note_type ?? "reference",
+      }));
     const incoming = edges
       .filter((e) => e.target === activeNote.path)
       .map((e) => ({

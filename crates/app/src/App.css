@@ -1430,13 +1430,13 @@ body {
   position: absolute;
   z-index: 100;
   pointer-events: none;
-  max-width: 280px;
-  padding: 8px 10px;
+  max-width: 320px;
+  padding: 10px 12px;
   border-radius: 8px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  font-size: 11px;
+  gap: 4px;
+  font-size: 13px;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   box-shadow: 0 4px 16px rgba(0,0,0,0.25);
@@ -1450,14 +1450,23 @@ body {
   border: 1px solid rgba(0, 0, 0, 0.08);
 }
 .tooltip-rel-pill {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--text-muted);
   white-space: nowrap;
 }
 .tooltip-status {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--text-muted);
   text-transform: capitalize;
+}
+.related-note-tooltip .tooltip-type-pill {
+  font-size: 11px;
+}
+.related-note-tooltip .tooltip-summary {
+  font-size: 12px;
+}
+.related-note-tooltip .tooltip-tag {
+  font-size: 11px;
 }
 
 /* ── Graph Legend ─────────────────────────────────────────── */
