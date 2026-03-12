@@ -181,7 +181,7 @@ pub fn handle_delete_folder(
                 return Err(format!(
                     "PARTIAL_DELETE:{}:{}",
                     partial_json,
-                    e.to_string()
+                    e
                 ));
             }
         }

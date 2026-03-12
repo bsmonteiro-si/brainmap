@@ -414,7 +414,7 @@ export function FileTreePanel() {
       if (msg.startsWith("PARTIAL_DELETE:")) {
         const rest = msg.slice("PARTIAL_DELETE:".length);
         const colonIdx = rest.indexOf(":");
-        if (colonIdx > 0) {
+        if (colonIdx >= 0) {
           try {
             const deletedPaths = JSON.parse(rest.slice(0, colonIdx)) as string[];
             for (const path of deletedPaths) {

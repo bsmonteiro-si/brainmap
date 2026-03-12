@@ -272,7 +272,7 @@ export class MockBridge implements BrainMapAPI {
     // No-op in mock: no real filesystem
   }
 
-  async deleteFolder(path: string): Promise<{ deleted_paths: string[] }> {
+  async deleteFolder(path: string, force?: boolean): Promise<{ deleted_paths: string[] }> {
     await mockDelay("deleteNote");
     const prefix = path.endsWith("/") ? path : path + "/";
     const deleted_paths: string[] = [];
