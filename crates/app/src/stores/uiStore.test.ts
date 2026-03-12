@@ -106,6 +106,49 @@ describe("zoom actions", () => {
   });
 });
 
+describe("emptyFolders actions", () => {
+  beforeEach(() => {
+    useUIStore.setState({
+      emptyFolders: new Set<string>(),
+      treeExpandedFolders: new Set<string>(),
+    });
+  });
+
+  it("addEmptyFolder adds path to the set", () => {
+    useUIStore.getState().addEmptyFolder("NewFolder");
+    expect(useUIStore.getState().emptyFolders.has("NewFolder")).toBe(true);
+  });
+
+  it("addEmptyFolder auto-expands ancestor folders", () => {
+    useUIStore.getState().addEmptyFolder("a/b/c");
+    const expanded = useUIStore.getState().treeExpandedFolders;
+    expect(expanded.has("a")).toBe(true);
+    expect(expanded.has("a/b")).toBe(true);
+    // The folder itself is not expanded (it has no children yet)
+    expect(expanded.has("a/b/c")).toBe(false);
+  });
+
+  it("addEmptyFolder for root-level folder does not expand anything", () => {
+    useUIStore.getState().addEmptyFolder("TopLevel");
+    const expanded = useUIStore.getState().treeExpandedFolders;
+    expect(expanded.size).toBe(0);
+  });
+
+  it("removeEmptyFolder removes path from the set", () => {
+    useUIStore.setState({ emptyFolders: new Set(["a", "b"]) });
+    useUIStore.getState().removeEmptyFolder("a");
+    const folders = useUIStore.getState().emptyFolders;
+    expect(folders.has("a")).toBe(false);
+    expect(folders.has("b")).toBe(true);
+  });
+
+  it("resetWorkspaceState clears emptyFolders", () => {
+    useUIStore.setState({ emptyFolders: new Set(["x", "y"]) });
+    useUIStore.getState().resetWorkspaceState();
+    expect(useUIStore.getState().emptyFolders.size).toBe(0);
+  });
+});
+
 describe("graph visual toggles", () => {
   beforeEach(() => {
     useUIStore.setState({

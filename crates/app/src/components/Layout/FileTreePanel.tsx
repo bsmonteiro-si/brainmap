@@ -17,7 +17,7 @@ interface TreeNode {
   note_type?: string;
 }
 
-function buildTree(nodes: Map<string, NodeDto>): TreeNode[] {
+export function buildTree(nodes: Map<string, NodeDto>, emptyFolders?: Set<string>): TreeNode[] {
   const folderMap = new Map<string, TreeNode>();
   const roots: TreeNode[] = [];
 
@@ -70,6 +70,16 @@ function buildTree(nodes: Map<string, NodeDto>): TreeNode[] {
           children: [],
           note_type: nodeData.note_type,
         });
+      }
+    }
+  }
+
+  // Merge empty folders so they appear in the tree even without notes
+  if (emptyFolders) {
+    for (const folderPath of emptyFolders) {
+      const parts = folderPath.split("/");
+      for (let i = 0; i < parts.length; i++) {
+        getOrCreateFolder(parts, i);
       }
     }
   }
@@ -312,14 +322,12 @@ export function FileTreePanel() {
   const [deleteTarget, setDeleteTarget] = useState<TreeNode | null>(null);
 
   // folderInputValue: null = inactive; string = active (may have a folder prefix pre-filled)
-  // Note: if the user creates a folder but cancels the subsequent note creation dialog,
-  // the directory will exist on disk but remain invisible in the tree until a note is
-  // created inside it. This is intentional — the Files view is note-centric.
   const [folderInputValue, setFolderInputValue] = useState<string | null>(null);
   const [folderInputError, setFolderInputError] = useState<string | null>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
-  const tree = useMemo(() => buildTree(nodes), [nodes]);
+  const emptyFolders = useUIStore((s) => s.emptyFolders);
+  const tree = useMemo(() => buildTree(nodes, emptyFolders), [nodes, emptyFolders]);
 
   const filtered = filter.trim() ? filterTree(tree, filter.toLowerCase()) : tree;
 
@@ -361,8 +369,8 @@ export function FileTreePanel() {
       await api.createFolder(val);
       setFolderInputValue(null);
       setFolderInputError(null);
-      // Immediately open note creation dialog with this folder pre-filled
-      useUIStore.getState().openCreateNoteDialog(val + "/");
+      // Track the empty folder so it appears in the tree
+      useUIStore.getState().addEmptyFolder(val);
     } catch (e) {
       setFolderInputError(e instanceof Error ? e.message : String(e));
     }
@@ -402,6 +410,13 @@ export function FileTreePanel() {
         // 4. Update graph for each deleted path
         for (const path of result.deleted_paths) {
           useGraphStore.getState().applyEvent({ type: "node-deleted", path });
+        }
+        // 5. Remove tracked empty folders within deleted scope
+        const { emptyFolders } = useUIStore.getState();
+        for (const f of emptyFolders) {
+          if (f === deleteTarget.fullPath || f.startsWith(deleteTarget.fullPath + "/")) {
+            useUIStore.getState().removeEmptyFolder(f);
+          }
         }
       } else {
         // 3. Delete note

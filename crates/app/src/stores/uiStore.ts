@@ -97,6 +97,7 @@ interface UIState {
   editorFontFamily: string;
   editorFontSize: number;
   uiZoom: number;
+  emptyFolders: Set<string>;
 
   setTheme: (theme: Theme) => void;
   toggleGraphMode: () => void;
@@ -130,6 +131,8 @@ interface UIState {
   zoomIn: () => void;
   zoomOut: () => void;
   resetZoom: () => void;
+  addEmptyFolder: (path: string) => void;
+  removeEmptyFolder: (path: string) => void;
 }
 
 function getSystemTheme(): "light" | "dark" {
@@ -194,6 +197,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   editorFontFamily: storedPrefs.editorFontFamily ?? DEFAULT_EDITOR_FONT,
   editorFontSize: storedPrefs.editorFontSize ?? DEFAULT_EDITOR_SIZE,
   uiZoom: storedPrefs.uiZoom ?? DEFAULT_ZOOM,
+  emptyFolders: new Set<string>(),
 
   setTheme: (theme: Theme) => {
     set({ theme, effectiveTheme: resolveTheme(theme) });
@@ -294,6 +298,7 @@ export const useUIStore = create<UIState>((set, get) => ({
     hiddenEdgeTypes: new Set<string>(),
     graphFocusPath: null,
     graphFocusKind: null,
+    emptyFolders: new Set<string>(),
   }),
 
   resetFontPrefs: () => {
@@ -321,4 +326,24 @@ export const useUIStore = create<UIState>((set, get) => ({
     const s = get();
     savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: DEFAULT_ZOOM });
   },
+
+  addEmptyFolder: (path: string) => {
+    const s = get();
+    const nextFolders = new Set(s.emptyFolders);
+    nextFolders.add(path);
+    // Auto-expand all ancestor folders so the new folder is visible
+    const nextExpanded = new Set(s.treeExpandedFolders);
+    const parts = path.split("/");
+    for (let i = 0; i < parts.length - 1; i++) {
+      nextExpanded.add(parts.slice(0, i + 1).join("/"));
+    }
+    set({ emptyFolders: nextFolders, treeExpandedFolders: nextExpanded });
+  },
+
+  removeEmptyFolder: (path: string) =>
+    set((s) => {
+      const next = new Set(s.emptyFolders);
+      next.delete(path);
+      return { emptyFolders: next };
+    }),
 }));
