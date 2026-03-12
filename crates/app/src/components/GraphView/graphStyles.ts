@@ -1,5 +1,5 @@
 // Canonical color palette for the 10 note types.
-// Must stay in sync with .dot-* classes in App.css.
+// Used by graph nodes, file tree icons (fileTreeIcons.tsx), and hull overlays.
 export const NOTE_TYPE_COLORS: Record<string, string> = {
   concept: "#4a9eff",
   "book-note": "#f39c12",

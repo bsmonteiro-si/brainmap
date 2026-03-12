@@ -1,11 +1,15 @@
 import { useState, useMemo, useCallback, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { MoreHorizontal } from "lucide-react";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { useUIStore } from "../../stores/uiStore";
+import { useUndoStore } from "../../stores/undoStore";
 import { getAPI } from "../../api/bridge";
 import type { NodeDto } from "../../api/types";
 import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
+import { ChevronIcon, FolderTreeIcon, NoteTypeIcon } from "./fileTreeIcons";
+import { fuzzyMatch, highlightFuzzyMatch } from "../../utils/fuzzyMatch";
 import { log } from "../../utils/logger";
 
 interface TreeNode {
@@ -15,6 +19,22 @@ interface TreeNode {
   isFolder: boolean;
   children: TreeNode[];
   note_type?: string;
+  noteCount?: number;
+  matchIndices?: number[];
+}
+
+// ── Tree Building ─────────────────────────────────────────────────────────────
+
+function computeNoteCounts(nodes: TreeNode[]): void {
+  for (const node of nodes) {
+    if (node.isFolder) {
+      computeNoteCounts(node.children);
+      node.noteCount = node.children.reduce(
+        (sum, c) => sum + (c.isFolder ? (c.noteCount ?? 0) : 1),
+        0,
+      );
+    }
+  }
 }
 
 export function buildTree(nodes: Map<string, NodeDto>, emptyFolders?: Set<string>): TreeNode[] {
@@ -93,15 +113,21 @@ export function buildTree(nodes: Map<string, NodeDto>, emptyFolders?: Set<string
       .map((n) => ({ ...n, children: sortChildren(n.children) }));
   }
 
-  return sortChildren(roots);
+  const sorted = sortChildren(roots);
+  computeNoteCounts(sorted);
+  return sorted;
 }
 
-function filterTree(nodes: TreeNode[], q: string): TreeNode[] {
+// ── Fuzzy Filter ──────────────────────────────────────────────────────────────
+
+export function fuzzyFilterTree(nodes: TreeNode[], query: string): TreeNode[] {
+  const q = query.toLowerCase();
   return nodes.flatMap((n) => {
     if (!n.isFolder) {
-      return n.title.toLowerCase().includes(q) ? [n] : [];
+      const indices = fuzzyMatch(q, n.title);
+      return indices !== null ? [{ ...n, matchIndices: indices }] : [];
     }
-    const filteredChildren = filterTree(n.children, q);
+    const filteredChildren = fuzzyFilterTree(n.children, query);
     return filteredChildren.length > 0 ? [{ ...n, children: filteredChildren }] : [];
   });
 }
@@ -248,50 +274,112 @@ function ContextMenu({
 
 // ── Tree Node ────────────────────────────────────────────────────────────────
 
+function IndentGuides({ depth }: { depth: number }) {
+  if (depth === 0) return null;
+  return (
+    <>
+      {Array.from({ length: depth }, (_, i) => (
+        <span key={i} className="indent-guide" aria-hidden="true" />
+      ))}
+    </>
+  );
+}
+
 function FileTreeNode({
   node,
   depth,
   onContextMenu,
+  onActionsClick,
+  hasBeenExpanded,
+  onExpand,
 }: {
   node: TreeNode;
   depth: number;
   onContextMenu: (e: React.MouseEvent, node: TreeNode) => void;
+  onActionsClick: (rect: DOMRect, node: TreeNode) => void;
+  hasBeenExpanded: Set<string>;
+  onExpand: (path: string) => void;
 }) {
   const selectedNodePath = useGraphStore((s) => s.selectedNodePath);
   const treeExpandedFolders = useUIStore((s) => s.treeExpandedFolders);
   const toggleFolder = useUIStore((s) => s.toggleFolder);
+  const actionsRef = useRef<HTMLButtonElement>(null);
+
+  const handleActionsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (actionsRef.current) {
+      onActionsClick(actionsRef.current.getBoundingClientRect(), node);
+    }
+  };
 
   if (node.isFolder) {
     const isExpanded = treeExpandedFolders.has(node.fullPath);
+    const shouldRenderChildren = hasBeenExpanded.has(node.fullPath) || isExpanded;
+
+    const handleToggle = () => {
+      if (!hasBeenExpanded.has(node.fullPath)) {
+        onExpand(node.fullPath);
+      }
+      toggleFolder(node.fullPath);
+    };
+
     return (
       <div>
         <div
           role="button"
           tabIndex={0}
           className="tree-item tree-folder"
-          style={{ paddingLeft: `${8 + depth * 12}px` }}
-          onClick={() => toggleFolder(node.fullPath)}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleFolder(node.fullPath); } }}
+          style={{ paddingLeft: 8 }}
+          onClick={handleToggle}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleToggle(); } }}
           onContextMenu={(e) => onContextMenu(e, node)}
         >
-          <span className={`tree-chevron${isExpanded ? " tree-chevron--open" : ""}`} aria-hidden="true" />
+          <IndentGuides depth={depth} />
+          <ChevronIcon isOpen={isExpanded} />
+          <FolderTreeIcon isOpen={isExpanded} />
           <span className="tree-item-label">{node.name}</span>
+          {node.noteCount ? <span className="tree-folder-count">{node.noteCount}</span> : null}
+          <button
+            ref={actionsRef}
+            className="tree-item-actions"
+            onClick={handleActionsClick}
+            tabIndex={-1}
+            aria-label="Actions"
+          >
+            <MoreHorizontal size={14} />
+          </button>
         </div>
-        {isExpanded &&
-          node.children.map((c) => (
-            <FileTreeNode key={c.fullPath} node={c} depth={depth + 1} onContextMenu={onContextMenu} />
-          ))}
+        <div className={`tree-children-anim${isExpanded ? " tree-children-anim--open" : ""}`}>
+          <div className="tree-children-anim-inner">
+            {shouldRenderChildren &&
+              node.children.map((c) => (
+                <FileTreeNode
+                  key={c.fullPath}
+                  node={c}
+                  depth={depth + 1}
+                  onContextMenu={onContextMenu}
+                  onActionsClick={onActionsClick}
+                  hasBeenExpanded={hasBeenExpanded}
+                  onExpand={onExpand}
+                />
+              ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   const isActive = selectedNodePath === node.fullPath;
+  const label = node.matchIndices && node.matchIndices.length > 0
+    ? highlightFuzzyMatch(node.title, node.matchIndices)
+    : node.title;
+
   return (
     <div
       role="button"
       tabIndex={0}
       className={`tree-item tree-file${isActive ? " active" : ""}`}
-      style={{ paddingLeft: `${8 + depth * 12}px` }}
+      style={{ paddingLeft: 8 }}
       onClick={() => {
         useGraphStore.getState().selectNode(node.fullPath);
         useEditorStore.getState().openNote(node.fullPath);
@@ -305,8 +393,18 @@ function FileTreeNode({
       }}
       onContextMenu={(e) => onContextMenu(e, node)}
     >
-      <span className={`tree-type-dot${node.note_type ? ` dot-${node.note_type}` : ""}`} aria-hidden="true" />
-      <span className="tree-item-label">{node.title}</span>
+      <IndentGuides depth={depth} />
+      <NoteTypeIcon noteType={node.note_type} />
+      <span className="tree-item-label">{label}</span>
+      <button
+        ref={actionsRef}
+        className="tree-item-actions"
+        onClick={handleActionsClick}
+        tabIndex={-1}
+        aria-label="Actions"
+      >
+        <MoreHorizontal size={14} />
+      </button>
     </div>
   );
 }
@@ -318,15 +416,32 @@ export function FileTreePanel() {
   const [filter, setFilter] = useState("");
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TreeNode | null>(null);
+  const [hasBeenExpanded, setHasBeenExpanded] = useState<Set<string>>(() => new Set());
 
   const emptyFolders = useUIStore((s) => s.emptyFolders);
   const tree = useMemo(() => buildTree(nodes, emptyFolders), [nodes, emptyFolders]);
 
-  const filtered = filter.trim() ? filterTree(tree, filter.toLowerCase()) : tree;
+  const filtered = useMemo(
+    () => (filter.trim() ? fuzzyFilterTree(tree, filter.trim()) : tree),
+    [tree, filter],
+  );
+
+  const handleExpand = useCallback((path: string) => {
+    setHasBeenExpanded((prev) => {
+      if (prev.has(path)) return prev;
+      const next = new Set(prev);
+      next.add(path);
+      return next;
+    });
+  }, []);
 
   const handleContextMenu = (e: React.MouseEvent, node: TreeNode) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, node });
+  };
+
+  const handleActionsClick = (rect: DOMRect, node: TreeNode) => {
+    setContextMenu({ x: rect.right, y: rect.top, node });
   };
 
   const handleContentContextMenu = (e: React.MouseEvent) => {
@@ -466,7 +581,15 @@ export function FileTreePanel() {
       </div>
       <div className="file-tree-content" onContextMenu={handleContentContextMenu}>
         {filtered.map((n) => (
-          <FileTreeNode key={n.fullPath} node={n} depth={0} onContextMenu={handleContextMenu} />
+          <FileTreeNode
+            key={n.fullPath}
+            node={n}
+            depth={0}
+            onContextMenu={handleContextMenu}
+            onActionsClick={handleActionsClick}
+            hasBeenExpanded={hasBeenExpanded}
+            onExpand={handleExpand}
+          />
         ))}
       </div>
       {contextMenu && (

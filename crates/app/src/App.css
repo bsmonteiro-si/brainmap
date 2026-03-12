@@ -1067,7 +1067,7 @@ body {
   display: flex;
   align-items: center;
   gap: 5px;
-  height: 22px;
+  height: 28px;
   padding-right: 8px;
   font-size: var(--ui-font-sm);
   cursor: pointer;
@@ -1097,48 +1097,86 @@ body {
   color: var(--text-secondary);
   font-weight: 500;
 }
-.tree-chevron {
+/* Chevron icon (Lucide) */
+.tree-chevron-icon {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+  color: var(--text-muted);
+}
+.tree-chevron-icon--open {
+  transform: rotate(90deg);
+}
+
+/* Indent guides */
+.indent-guide {
   display: inline-block;
   width: 12px;
-  height: 12px;
+  height: 100%;
   flex-shrink: 0;
   position: relative;
 }
-.tree-chevron::before {
+.indent-guide::before {
   content: "";
-  display: block;
-  width: 0;
-  height: 0;
-  border-top: 4px solid transparent;
-  border-bottom: 4px solid transparent;
-  border-left: 6px solid var(--text-muted);
   position: absolute;
-  top: 50%;
-  left: 2px;
-  transform: translateY(-50%);
-  transition: transform 0.15s ease;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-color);
 }
-.tree-chevron--open::before {
-  transform: translateY(-50%) rotate(90deg);
-}
-.tree-type-dot {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+
+/* Folder note count badge */
+.tree-folder-count {
+  color: var(--text-muted);
+  font-size: 0.85em;
+  font-weight: 400;
+  margin-left: 4px;
   flex-shrink: 0;
-  background: var(--text-muted);
 }
-.dot-concept        { background: #4a9eff; }
-.dot-book-note      { background: #f39c12; }
-.dot-question       { background: #9b59b6; }
-.dot-reference      { background: #7f8c8d; }
-.dot-index          { background: #1abc9c; }
-.dot-argument       { background: #e74c3c; }
-.dot-evidence       { background: #27ae60; }
-.dot-experiment     { background: #e67e22; }
-.dot-person         { background: #e91e63; }
-.dot-project        { background: #00bcd4; }
+
+/* Hover actions button */
+.tree-item-actions {
+  opacity: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 2px;
+  margin-left: auto;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  border-radius: 3px;
+  transition: opacity 0.1s;
+}
+.tree-item:hover .tree-item-actions {
+  opacity: 1;
+}
+.tree-item-actions:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Expand/collapse animation */
+.tree-children-anim {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 150ms ease;
+}
+.tree-children-anim--open {
+  grid-template-rows: 1fr;
+}
+.tree-children-anim-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Fuzzy match highlight */
+.tree-match-highlight {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 2px;
+  color: inherit;
+}
 
 /* ── Context Menu ─────────────────────────────────────────────── */
 .context-menu {
