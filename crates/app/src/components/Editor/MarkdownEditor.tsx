@@ -2,12 +2,13 @@ import { useRef, useEffect } from "react";
 import { EditorView, keymap } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { markdown } from "@codemirror/lang-markdown";
-import { defaultKeymap } from "@codemirror/commands";
+import { defaultKeymap, history, historyKeymap, redo } from "@codemirror/commands";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { useUIStore } from "../../stores/uiStore";
 import { linkNavigation } from "./cmLinkNavigation";
+import { formattingKeymap } from "./cmFormatting";
 
 const ACCENT = "#4a9eff";
 const ACCENT_DARK = "#5aaeFF";
@@ -51,9 +52,10 @@ interface Props {
   notePath: string;
   content: string;
   onChange: (content: string) => void;
+  onViewReady?: (view: EditorView | null) => void;
 }
 
-export function MarkdownEditor({ notePath, content, onChange }: Props) {
+export function MarkdownEditor({ notePath, content, onChange, onViewReady }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
@@ -76,7 +78,8 @@ export function MarkdownEditor({ notePath, content, onChange }: Props) {
     const isDark = effectiveTheme === "dark";
     const extensions = [
       markdown(),
-      keymap.of(defaultKeymap),
+      history(),
+      keymap.of([...formattingKeymap, { key: "Mod-y", run: redo, preventDefault: true }, ...historyKeymap, ...defaultKeymap]),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           onChangeRef.current(update.state.doc.toString());
@@ -102,6 +105,7 @@ export function MarkdownEditor({ notePath, content, onChange }: Props) {
     });
 
     viewRef.current = view;
+    onViewReady?.(view);
 
     // Patch scale detection so CM accounts for CSS zoom on documentElement
     if (uiZoom !== 1) {
@@ -111,6 +115,7 @@ export function MarkdownEditor({ notePath, content, onChange }: Props) {
     return () => {
       view.destroy();
       viewRef.current = null;
+      onViewReady?.(null);
     };
   }, [notePath, effectiveTheme, uiZoom, editorFontFamily, editorFontSize]);
 

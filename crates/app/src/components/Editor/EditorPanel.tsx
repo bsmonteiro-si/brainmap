@@ -5,7 +5,9 @@ import { MarkdownEditor } from "./MarkdownEditor";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { FrontmatterForm } from "./FrontmatterForm";
 import { RelatedNotesFooter } from "./RelatedNotesFooter";
+import { EditorToolbar } from "./EditorToolbar";
 import { getNodeColor } from "../GraphView/graphStyles";
+import type { EditorView } from "@codemirror/view";
 
 export function EditorPanel() {
   const activeNote = useEditorStore((s) => s.activeNote);
@@ -17,6 +19,7 @@ export function EditorPanel() {
   const isDirty = useEditorStore((s) => s.isDirty);
   const editedFm = useEditorStore((s) => s.editedFrontmatter);
   const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
+  const [editorView, setEditorView] = useState<EditorView | null>(null);
   const editedBody = useEditorStore((s) => s.editedBody);
   const onEditorChange = useCallback((body: string) => {
     useEditorStore.getState().updateContent(body);
@@ -24,6 +27,7 @@ export function EditorPanel() {
 
   useEffect(() => {
     setViewMode("edit");
+    setEditorView(null);
   }, [activeNote?.path]);
 
   if (isLoading) {
@@ -105,12 +109,14 @@ export function EditorPanel() {
         </div>
       )}
       <FrontmatterForm note={activeNote} />
+      {viewMode === "edit" && <EditorToolbar editorView={editorView} />}
       <div className="editor-body">
         <div className={`editor-view-layer${viewMode === "edit" ? " editor-view-layer--active" : ""}`}>
           <MarkdownEditor
             notePath={activeNote.path}
             content={editedBody ?? activeNote.body}
             onChange={onEditorChange}
+            onViewReady={setEditorView}
           />
         </div>
         <div className={`editor-view-layer${viewMode === "preview" ? " editor-view-layer--active" : ""}`}>

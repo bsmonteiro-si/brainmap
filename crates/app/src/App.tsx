@@ -74,8 +74,12 @@ function App() {
         useEditorStore.getState().saveNote();
       }
       if (isMod && e.key === "b") {
-        e.preventDefault();
-        useUIStore.getState().toggleTree();
+        // When the CodeMirror editor has focus, let CM handle Cmd+B for bold
+        const target = e.target as HTMLElement | null;
+        if (!target?.closest(".cm-editor")) {
+          e.preventDefault();
+          useUIStore.getState().toggleTree();
+        }
       }
       if (isMod && e.key === ",") {
         e.preventDefault();

@@ -117,6 +117,7 @@ export function GraphView() {
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
+    nodePath: string;
     label: string;
     noteType: string;
     color: string;
@@ -200,52 +201,77 @@ export function GraphView() {
       );
     });
 
+    const clearHoverState = () => {
+      cy.nodes().stop(true).removeStyle("shadow-blur shadow-opacity");
+      cy.elements().removeClass("hover-dim hover-bright");
+      setTooltip(null);
+    };
+
+    // Clear highlights when hovering the canvas background (not a node/edge)
+    cy.on("mouseover", (evt) => {
+      if (evt.target === cy) clearHoverState();
+    });
+
     cy.on("mouseover", "node", (evt) => {
-      const node = evt.target;
-      const nodePath = node.id();
-      // Neighborhood highlight: dim everything, brighten neighbors
-      const neighborhood = node.closedNeighborhood();
-      cy.elements().addClass("hover-dim");
-      neighborhood.removeClass("hover-dim").addClass("hover-bright");
-      // Pulse animation on hovered node
-      node.animate(
-        { style: { "shadow-blur": 22, "shadow-opacity": 1.0 } },
-        { duration: 400, easing: "ease-in-out-sine" },
-      );
-      const pos = node.renderedPosition();
-      const baseTooltip = {
-        x: pos.x + 12,
-        y: pos.y - 8,
-        label: node.data("label") as string,
-        noteType: node.data("noteType") as string,
-        color: node.data("color") as string,
-        connections: node.degree(false),
-      };
-      // Show basic tooltip immediately
-      const cached = tooltipCacheRef.current.get(nodePath);
-      if (cached) {
-        setTooltip({ ...baseTooltip, tags: cached.tags, summary: cached.summary });
-      } else {
-        setTooltip(baseTooltip);
-        // Lazy-load enriched data
-        getAPI().then((api) =>
-          api.getNodeSummary(nodePath).then((summary) => {
-            tooltipCacheRef.current.set(nodePath, summary);
-            // Only update if still hovering this node
-            setTooltip((prev) =>
-              prev && prev.label === baseTooltip.label
-                ? { ...prev, tags: summary.tags, summary: summary.summary }
-                : prev,
-            );
-          }).catch(() => { /* ignore tooltip fetch errors */ }),
+      try {
+        const node = evt.target;
+        const nodePath = node.id();
+        console.log("[GraphView] mouseover node:", nodePath);
+        // Clear any previous highlight state first (defensive)
+        clearHoverState();
+        // Neighborhood highlight: dim everything, brighten neighbors
+        const neighborhood = node.closedNeighborhood();
+        cy.elements().addClass("hover-dim");
+        neighborhood.removeClass("hover-dim").addClass("hover-bright");
+        // Pulse animation on hovered node
+        node.animate(
+          { style: { "shadow-blur": 22, "shadow-opacity": 1.0 } },
+          { duration: 400, easing: "ease-in-out-sine" },
         );
+        const pos = node.renderedPosition();
+        const container = containerRef.current;
+        const cw = container ? container.clientWidth : Infinity;
+        const ch = container ? container.clientHeight : Infinity;
+        // Clamp tooltip position within the container (280px max tooltip width, ~180px estimated max height)
+        const tx = Math.min(pos.x + 12, cw - 290);
+        const ty = Math.min(Math.max(pos.y - 8, 0), ch - 180);
+        const baseTooltip = {
+          x: tx,
+          y: ty,
+          nodePath,
+          label: node.data("label") as string,
+          noteType: node.data("noteType") as string,
+          color: node.data("color") as string,
+          connections: node.degree(false),
+        };
+        console.log("[GraphView] tooltip data:", baseTooltip);
+        // Show basic tooltip immediately
+        const cached = tooltipCacheRef.current.get(nodePath);
+        if (cached) {
+          setTooltip({ ...baseTooltip, tags: cached.tags, summary: cached.summary });
+        } else {
+          setTooltip(baseTooltip);
+          // Lazy-load enriched data
+          getAPI().then((api) =>
+            api.getNodeSummary(nodePath).then((summary) => {
+              tooltipCacheRef.current.set(nodePath, summary);
+              // Only update if still hovering this node
+              setTooltip((prev) =>
+                prev && prev.nodePath === nodePath
+                  ? { ...prev, tags: summary.tags, summary: summary.summary }
+                  : prev,
+              );
+            }).catch((err) => console.warn("[GraphView] tooltip fetch error:", err)),
+          );
+        }
+      } catch (err) {
+        console.error("[GraphView] mouseover handler error:", err);
       }
     });
 
     cy.on("mouseout", "node", () => {
-      cy.nodes().stop(true).removeStyle("shadow-blur shadow-opacity");
-      cy.elements().removeClass("hover-dim hover-bright");
-      setTooltip(null);
+      console.log("[GraphView] mouseout node");
+      clearHoverState();
     });
 
     return () => {
@@ -600,7 +626,14 @@ export function GraphView() {
         {tooltip && (
           <div
             className="graph-node-tooltip"
-            style={{ left: tooltip.x, top: tooltip.y }}
+            style={{
+              left: tooltip.x,
+              top: tooltip.y,
+              zIndex: 9999,
+              background: "rgba(30, 30, 30, 0.92)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              color: "#eee",
+            }}
           >
             <div className="tooltip-header">
               <span className="tooltip-type-pill" style={{ background: tooltip.color }}>{tooltip.noteType}</span>
