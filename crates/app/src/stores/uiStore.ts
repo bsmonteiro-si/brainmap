@@ -53,6 +53,20 @@ interface PersistedPrefs {
   uiZoom?: number;
 }
 
+type CreateNoteMode = "default" | "create-and-link";
+
+interface CreateAndLinkSource {
+  notePath: string;
+  rel: string;
+}
+
+interface CreateNoteDialogOpts {
+  initialPath?: string;
+  initialTitle?: string;
+  mode?: CreateNoteMode;
+  linkSource?: CreateAndLinkSource;
+}
+
 interface UIState {
   theme: Theme;
   effectiveTheme: "light" | "dark";
@@ -60,6 +74,9 @@ interface UIState {
   commandPaletteOpen: boolean;
   createNoteDialogOpen: boolean;
   createNoteInitialPath: string | null;
+  createNoteInitialTitle: string | null;
+  createNoteMode: CreateNoteMode;
+  createAndLinkSource: CreateAndLinkSource | null;
   settingsOpen: boolean;
   showEdgeLabels: boolean;
   showLegend: boolean;
@@ -85,7 +102,7 @@ interface UIState {
   toggleGraphMode: () => void;
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
-  openCreateNoteDialog: (initialPath?: string) => void;
+  openCreateNoteDialog: (pathOrOpts?: string | CreateNoteDialogOpts) => void;
   closeCreateNoteDialog: () => void;
   openSettings: () => void;
   closeSettings: () => void;
@@ -154,6 +171,9 @@ export const useUIStore = create<UIState>((set, get) => ({
   commandPaletteOpen: false,
   createNoteDialogOpen: false,
   createNoteInitialPath: null,
+  createNoteInitialTitle: null,
+  createNoteMode: "default",
+  createAndLinkSource: null,
   settingsOpen: false,
   showEdgeLabels: false,
   showLegend: false,
@@ -189,8 +209,20 @@ export const useUIStore = create<UIState>((set, get) => ({
 
   openCommandPalette: () => set({ commandPaletteOpen: true }),
   closeCommandPalette: () => set({ commandPaletteOpen: false }),
-  openCreateNoteDialog: (initialPath?: string) => set({ createNoteDialogOpen: true, createNoteInitialPath: initialPath ?? null }),
-  closeCreateNoteDialog: () => set({ createNoteDialogOpen: false, createNoteInitialPath: null }),
+  openCreateNoteDialog: (pathOrOpts?: string | CreateNoteDialogOpts) => {
+    if (typeof pathOrOpts === "string" || pathOrOpts === undefined) {
+      set({ createNoteDialogOpen: true, createNoteInitialPath: pathOrOpts ?? null, createNoteInitialTitle: null, createNoteMode: "default", createAndLinkSource: null });
+    } else {
+      set({
+        createNoteDialogOpen: true,
+        createNoteInitialPath: pathOrOpts.initialPath ?? null,
+        createNoteInitialTitle: pathOrOpts.initialTitle ?? null,
+        createNoteMode: pathOrOpts.mode ?? "default",
+        createAndLinkSource: pathOrOpts.linkSource ?? null,
+      });
+    }
+  },
+  closeCreateNoteDialog: () => set({ createNoteDialogOpen: false, createNoteInitialPath: null, createNoteInitialTitle: null, createNoteMode: "default", createAndLinkSource: null }),
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false }),
 

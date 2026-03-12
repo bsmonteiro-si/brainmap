@@ -3,7 +3,13 @@ import { useUIStore } from "./uiStore";
 
 beforeEach(() => {
   // Reset the relevant slice of store state between tests
-  useUIStore.setState({ createNoteDialogOpen: false, createNoteInitialPath: null });
+  useUIStore.setState({
+    createNoteDialogOpen: false,
+    createNoteInitialPath: null,
+    createNoteInitialTitle: null,
+    createNoteMode: "default",
+    createAndLinkSource: null,
+  });
 });
 
 
@@ -28,6 +34,34 @@ describe("openCreateNoteDialog / closeCreateNoteDialog", () => {
     const { createNoteDialogOpen, createNoteInitialPath } = useUIStore.getState();
     expect(createNoteDialogOpen).toBe(false);
     expect(createNoteInitialPath).toBeNull();
+  });
+
+  it("accepts options object with initialTitle, mode, and linkSource", () => {
+    useUIStore.getState().openCreateNoteDialog({
+      initialTitle: "New Concept",
+      mode: "create-and-link",
+      linkSource: { notePath: "Notes/Test.md", rel: "causes" },
+    });
+    const s = useUIStore.getState();
+    expect(s.createNoteDialogOpen).toBe(true);
+    expect(s.createNoteInitialPath).toBeNull();
+    expect(s.createNoteInitialTitle).toBe("New Concept");
+    expect(s.createNoteMode).toBe("create-and-link");
+    expect(s.createAndLinkSource).toEqual({ notePath: "Notes/Test.md", rel: "causes" });
+  });
+
+  it("closeCreateNoteDialog clears all create-and-link fields", () => {
+    useUIStore.getState().openCreateNoteDialog({
+      initialTitle: "Test",
+      mode: "create-and-link",
+      linkSource: { notePath: "Notes/X.md", rel: "supports" },
+    });
+    useUIStore.getState().closeCreateNoteDialog();
+    const s = useUIStore.getState();
+    expect(s.createNoteDialogOpen).toBe(false);
+    expect(s.createNoteInitialTitle).toBeNull();
+    expect(s.createNoteMode).toBe("default");
+    expect(s.createAndLinkSource).toBeNull();
   });
 });
 

@@ -15,14 +15,23 @@ function titleFromPath(path: string): string {
 export function CreateNoteDialog() {
   const close = useUIStore((s) => s.closeCreateNoteDialog);
   const initialPath = useUIStore((s) => s.createNoteInitialPath);
+  const initialTitle = useUIStore((s) => s.createNoteInitialTitle);
+  const createNoteMode = useUIStore((s) => s.createNoteMode);
+  const linkSource = useUIStore((s) => s.createAndLinkSource);
   const noteTypes = useWorkspaceStore((s) => s.noteTypes);
 
+  const isCreateAndLink = createNoteMode === "create-and-link" && linkSource !== null;
+
   const [path, setPath] = useState(initialPath ?? "");
-  // Auto-populate title only when initial path is a full filename (not a folder prefix ending with "/")
+  // Auto-populate title from initialTitle (create-and-link) or from path
   const [title, setTitle] = useState(
-    initialPath && !initialPath.endsWith("/") ? titleFromPath(initialPath) : ""
+    initialTitle
+      ? initialTitle
+      : initialPath && !initialPath.endsWith("/")
+        ? titleFromPath(initialPath)
+        : ""
   );
-  const [titleManuallyEdited, setTitleManuallyEdited] = useState(false);
+  const [titleManuallyEdited, setTitleManuallyEdited] = useState(!!initialTitle);
   // Only show path/title errors after the user has touched the field
   const [pathDirty, setPathDirty] = useState(false);
   const [noteType, setNoteType] = useState(noteTypes[0] ?? "concept");
@@ -82,18 +91,41 @@ export function CreateNoteDialog() {
         body: body || undefined,
       });
 
-      // Optimistic update: add to graph store and select
+      // Optimistic update: add to graph store
       useGraphStore.getState().createNote(createdPath, title.trim(), noteType);
 
-      // Open in editor
-      await useEditorStore.getState().openNote(createdPath);
+      if (isCreateAndLink && linkSource) {
+        // Create the link from source note to the newly created note
+        try {
+          await api.createLink(linkSource.notePath, createdPath, linkSource.rel);
+          useGraphStore.getState().applyEvent({
+            type: "edge-created",
+            edge: {
+              source: linkSource.notePath,
+              target: createdPath,
+              rel: linkSource.rel,
+              kind: "Explicit",
+            },
+          });
+          await useEditorStore.getState().refreshActiveNote();
+        } catch (linkErr) {
+          // Note was created but link failed — close dialog, the new note now
+          // exists in the graph so the user can link to it manually from LinksEditor
+          console.warn("Note created but linking failed:", linkErr);
+          close();
+          return;
+        }
+      } else {
+        // Default mode: open the new note in editor
+        await useEditorStore.getState().openNote(createdPath);
+      }
 
       close();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setIsSubmitting(false);
     }
-  }, [isValid, isSubmitting, path, title, noteType, tags, body, close]);
+  }, [isValid, isSubmitting, path, title, noteType, tags, body, close, isCreateAndLink, linkSource]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -230,7 +262,7 @@ export function CreateNoteDialog() {
   return (
     <div style={overlayStyle} onClick={handleOverlayClick}>
       <div style={boxStyle} onKeyDown={handleKeyDown}>
-        <h2 style={headingStyle}>Create Note</h2>
+        <h2 style={headingStyle}>{isCreateAndLink ? "Create & Link" : "Create Note"}</h2>
 
         <div style={fieldGroupStyle}>
           <label style={labelStyle} htmlFor="cn-path">Path *</label>
@@ -316,7 +348,7 @@ export function CreateNoteDialog() {
             onClick={handleSubmit}
             disabled={!isValid || isSubmitting}
           >
-            {isSubmitting ? "Creating..." : "Create"}
+            {isSubmitting ? "Creating..." : isCreateAndLink ? "Create & Link" : "Create"}
           </button>
         </div>
       </div>

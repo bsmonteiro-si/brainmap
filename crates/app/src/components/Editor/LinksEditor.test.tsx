@@ -41,6 +41,14 @@ vi.mock("../../stores/editorStore", () => ({
   },
 }));
 
+const mockOpenCreateNoteDialog = vi.fn();
+
+vi.mock("../../stores/uiStore", () => ({
+  useUIStore: {
+    getState: () => ({ openCreateNoteDialog: mockOpenCreateNoteDialog }),
+  },
+}));
+
 const LINKS: TypedLinkDto[] = [
   { target: "Concepts/SCM.md", rel: "supports" },
   { target: "People/Pearl.md", rel: "authored-by" },
@@ -52,6 +60,7 @@ describe("LinksEditor", () => {
     mockCreateLink.mockResolvedValue(undefined);
     mockDeleteLink.mockResolvedValue(undefined);
     mockRefreshActiveNote.mockResolvedValue(undefined);
+    mockOpenCreateNoteDialog.mockReset();
   });
 
   it("renders existing links with titles and rel labels", () => {
@@ -108,14 +117,14 @@ describe("LinksEditor", () => {
     expect((addBtn as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("add button is disabled when target doesn't match a node", () => {
+  it("shows Create & Link button when target doesn't match a node", () => {
     render(<LinksEditor notePath="Notes/Test.md" links={[]} />);
 
     const input = screen.getByPlaceholderText("Target note…");
     fireEvent.change(input, { target: { value: "Nonexistent Note" } });
 
-    const addBtn = screen.getByText("+");
-    expect((addBtn as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText("Create & Link")).toBeDefined();
+    expect(screen.queryByText("+")).toBeNull();
   });
 
   it("add button calls createLink with correct params", async () => {
@@ -223,6 +232,67 @@ describe("LinksEditor", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Failed to add link")).toBeDefined();
+    });
+  });
+
+  it("shows + button (not Create & Link) when target matches an existing node", () => {
+    render(<LinksEditor notePath="Notes/Test.md" links={[]} />);
+
+    const input = screen.getByPlaceholderText("Target note…");
+    fireEvent.change(input, { target: { value: "Confounding" } });
+
+    expect(screen.getByText("+")).toBeDefined();
+    expect(screen.queryByText("Create & Link")).toBeNull();
+  });
+
+  it("shows + button when input is empty (no Create & Link)", () => {
+    render(<LinksEditor notePath="Notes/Test.md" links={[]} />);
+
+    expect(screen.getByText("+")).toBeDefined();
+    expect(screen.queryByText("Create & Link")).toBeNull();
+  });
+
+  it("Create & Link button calls openCreateNoteDialog with correct params", () => {
+    render(<LinksEditor notePath="Notes/Test.md" links={[]} />);
+
+    const input = screen.getByPlaceholderText("Target note…");
+    fireEvent.change(input, { target: { value: "Brand New Note" } });
+
+    const createBtn = screen.getByText("Create & Link");
+    fireEvent.click(createBtn);
+
+    expect(mockOpenCreateNoteDialog).toHaveBeenCalledWith({
+      initialTitle: "Brand New Note",
+      mode: "create-and-link",
+      linkSource: { notePath: "Notes/Test.md", rel: "causes" },
+    });
+  });
+
+  it("Create & Link clears the target input after clicking", () => {
+    render(<LinksEditor notePath="Notes/Test.md" links={[]} />);
+
+    const input = screen.getByPlaceholderText("Target note…") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "Brand New Note" } });
+    fireEvent.click(screen.getByText("Create & Link"));
+
+    expect(input.value).toBe("");
+  });
+
+  it("Create & Link uses the selected relationship type", () => {
+    render(<LinksEditor notePath="Notes/Test.md" links={[]} />);
+
+    const input = screen.getByPlaceholderText("Target note…");
+    fireEvent.change(input, { target: { value: "New Note" } });
+
+    const select = screen.getByDisplayValue("causes");
+    fireEvent.change(select, { target: { value: "supports" } });
+
+    fireEvent.click(screen.getByText("Create & Link"));
+
+    expect(mockOpenCreateNoteDialog).toHaveBeenCalledWith({
+      initialTitle: "New Note",
+      mode: "create-and-link",
+      linkSource: { notePath: "Notes/Test.md", rel: "supports" },
     });
   });
 });

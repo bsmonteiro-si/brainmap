@@ -3,6 +3,7 @@ import type { TypedLinkDto } from "../../api/types";
 import { getAPI } from "../../api/bridge";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
+import { useUIStore } from "../../stores/uiStore";
 
 // User-selectable edge types (excludes auto-generated: contains, part-of, mentioned-in)
 const LINK_TYPES = [
@@ -61,6 +62,18 @@ export function LinksEditor({ notePath, links }: Props) {
   }, [resolvedTarget, newRel, links]);
 
   const canAdd = resolvedTarget !== null && !isDuplicate && !busy;
+  const showCreateAndLink = newTarget.trim().length > 0 && resolvedTarget === null && !busy;
+
+  const handleCreateAndLink = () => {
+    const trimmed = newTarget.trim();
+    if (!trimmed) return;
+    useUIStore.getState().openCreateNoteDialog({
+      initialTitle: trimmed,
+      mode: "create-and-link",
+      linkSource: { notePath, rel: newRel },
+    });
+    setNewTarget("");
+  };
 
   const handleRemove = async (link: TypedLinkDto) => {
     setBusy(true);
@@ -170,14 +183,24 @@ export function LinksEditor({ notePath, links }: Props) {
             </option>
           ))}
         </select>
-        <button
-          type="button"
-          className="link-add-btn"
-          onClick={handleAdd}
-          disabled={!canAdd}
-        >
-          +
-        </button>
+        {showCreateAndLink ? (
+          <button
+            type="button"
+            className="link-create-btn"
+            onClick={handleCreateAndLink}
+          >
+            Create &amp; Link
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="link-add-btn"
+            onClick={handleAdd}
+            disabled={!canAdd}
+          >
+            +
+          </button>
+        )}
       </div>
       {error && <div className="link-error">{error}</div>}
     </div>
