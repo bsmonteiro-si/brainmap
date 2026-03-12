@@ -4,6 +4,7 @@ import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { getAPI } from "../../api/bridge";
+import { useUndoStore } from "../../stores/undoStore";
 import { log } from "../../utils/logger";
 
 /** Derive a human-readable title from a file path like "Concepts/My-Note.md" */
@@ -94,6 +95,7 @@ export function CreateNoteDialog() {
 
       // Optimistic update: add to graph store
       useGraphStore.getState().createNote(createdPath, title.trim(), noteType);
+      useUndoStore.getState().pushAction({ kind: "create-note", path: createdPath });
 
       // Clean up empty folder tracking — the folder is no longer empty
       const parentDir = createdPath.includes("/")

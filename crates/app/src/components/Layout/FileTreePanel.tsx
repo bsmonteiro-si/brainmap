@@ -119,12 +119,10 @@ interface ContextMenuState {
 function ContextMenu({
   state,
   onClose,
-  onNewFolderHere,
   onDelete,
 }: {
   state: ContextMenuState;
   onClose: () => void;
-  onNewFolderHere: (prefix: string) => void;
   onDelete: (node: TreeNode) => void;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -185,7 +183,7 @@ function ContextMenu({
   const handleNewFolderHere = () => {
     onClose();
     const prefix = state.node ? folderPrefixFor(state.node) : "";
-    onNewFolderHere(prefix);
+    useUIStore.getState().openCreateFolderDialog(prefix);
   };
 
   const handleDelete = () => {
@@ -371,6 +369,7 @@ export function FileTreePanel() {
       setFolderInputError(null);
       // Track the empty folder so it appears in the tree
       useUIStore.getState().addEmptyFolder(val);
+      useUndoStore.getState().pushAction({ kind: "create-folder", folderPath: val });
     } catch (e) {
       setFolderInputError(e instanceof Error ? e.message : String(e));
     }
@@ -405,13 +404,26 @@ export function FileTreePanel() {
 
     try {
       if (deleteTarget.isFolder) {
-        // 3. Delete folder
+        // 3. Snapshot all notes in folder for undo
+        const folderNotePaths = [...nodes.entries()]
+          .filter(([p]) => p.startsWith(deleteTarget.fullPath + "/"))
+          .map(([p]) => p);
+        const settled = await Promise.allSettled(folderNotePaths.map((p) => api.readNote(p)));
+        const failedCount = settled.filter((r) => r.status === "rejected").length;
+        if (failedCount > 0) {
+          log.warn("components::FileTreePanel", `${failedCount} note(s) could not be snapshotted for undo`, { folder: deleteTarget.fullPath });
+        }
+        const undoSnapshots = settled
+          .filter((r): r is PromiseFulfilledResult<import("../../api/types").NoteDetail> => r.status === "fulfilled")
+          .map((r) => r.value);
+
+        // 4. Delete folder
         const result = await api.deleteFolder(deleteTarget.fullPath, force);
-        // 4. Update graph for each deleted path
+        // 5. Update graph for each deleted path
         for (const path of result.deleted_paths) {
           useGraphStore.getState().applyEvent({ type: "node-deleted", path });
         }
-        // 5. Remove tracked empty folders within deleted scope (single state update)
+        // 6. Remove tracked empty folders within deleted scope (single state update)
         const { emptyFolders } = useUIStore.getState();
         const prefix = deleteTarget.fullPath + "/";
         const nextFolders = new Set<string>();
@@ -423,11 +435,17 @@ export function FileTreePanel() {
         if (nextFolders.size !== emptyFolders.size) {
           useUIStore.setState({ emptyFolders: nextFolders });
         }
+        // 7. Push undo action
+        useUndoStore.getState().pushAction({ kind: "delete-folder", folderPath: deleteTarget.fullPath, snapshots: undoSnapshots });
       } else {
-        // 3. Delete note
+        // 3. Snapshot note for undo
+        const undoSnapshot = await api.readNote(deleteTarget.fullPath);
+        // 4. Delete note
         await api.deleteNote(deleteTarget.fullPath, force);
-        // 4. Update graph
+        // 5. Update graph
         useGraphStore.getState().applyEvent({ type: "node-deleted", path: deleteTarget.fullPath });
+        // 6. Push undo action
+        useUndoStore.getState().pushAction({ kind: "delete-note", path: deleteTarget.fullPath, snapshot: undoSnapshot });
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -452,7 +470,7 @@ export function FileTreePanel() {
     }
 
     setDeleteTarget(null);
-  }, [deleteTarget]);
+  }, [deleteTarget, nodes]);
 
   const handleFolderKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {

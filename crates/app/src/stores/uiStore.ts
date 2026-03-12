@@ -77,6 +77,8 @@ interface UIState {
   createNoteInitialTitle: string | null;
   createNoteMode: CreateNoteMode;
   createAndLinkSource: CreateAndLinkSource | null;
+  createFolderDialogOpen: boolean;
+  createFolderInitialPath: string | null;
   settingsOpen: boolean;
   showEdgeLabels: boolean;
   showLegend: boolean;
@@ -105,6 +107,8 @@ interface UIState {
   closeCommandPalette: () => void;
   openCreateNoteDialog: (pathOrOpts?: string | CreateNoteDialogOpts) => void;
   closeCreateNoteDialog: () => void;
+  openCreateFolderDialog: (initialPath?: string) => void;
+  closeCreateFolderDialog: () => void;
   openSettings: () => void;
   closeSettings: () => void;
   toggleEdgeLabels: () => void;
@@ -177,6 +181,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   createNoteInitialTitle: null,
   createNoteMode: "default",
   createAndLinkSource: null,
+  createFolderDialogOpen: false,
+  createFolderInitialPath: null,
   settingsOpen: false,
   showEdgeLabels: false,
   showLegend: false,
@@ -227,6 +233,8 @@ export const useUIStore = create<UIState>((set, get) => ({
     }
   },
   closeCreateNoteDialog: () => set({ createNoteDialogOpen: false, createNoteInitialPath: null, createNoteInitialTitle: null, createNoteMode: "default", createAndLinkSource: null }),
+  openCreateFolderDialog: (initialPath?: string) => set({ createFolderDialogOpen: true, createFolderInitialPath: initialPath ?? null }),
+  closeCreateFolderDialog: () => set({ createFolderDialogOpen: false, createFolderInitialPath: null }),
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false }),
 

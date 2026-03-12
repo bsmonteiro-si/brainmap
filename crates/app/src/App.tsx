@@ -3,12 +3,14 @@ import { useWorkspaceStore } from "./stores/workspaceStore";
 import { useGraphStore } from "./stores/graphStore";
 import { useEditorStore } from "./stores/editorStore";
 import { useUIStore } from "./stores/uiStore";
+import { useUndoStore } from "./stores/undoStore";
 import { getAPI } from "./api/bridge";
 import { SegmentPicker } from "./components/Layout/SegmentPicker";
 import { AppLayout } from "./components/Layout/AppLayout";
 import { CommandPalette } from "./components/CommandPalette/CommandPalette";
 import { CreateNoteDialog } from "./components/Editor/CreateNoteDialog";
 import { SettingsModal } from "./components/Settings/SettingsModal";
+import { UndoToast } from "./components/Layout/UndoToast";
 
 import "./App.css";
 
@@ -97,6 +99,22 @@ function App() {
         e.preventDefault();
         useUIStore.getState().resetZoom();
       }
+      // Cmd+Z: Undo file operations (skip when CodeMirror has focus)
+      if (isMod && e.key === "z" && !e.shiftKey) {
+        const target = e.target as HTMLElement | null;
+        if (!target?.closest(".cm-editor")) {
+          e.preventDefault();
+          useUndoStore.getState().undo();
+        }
+      }
+      // Cmd+Y or Cmd+Shift+Z: Redo file operations (skip when CodeMirror has focus)
+      if (isMod && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        const target = e.target as HTMLElement | null;
+        if (!target?.closest(".cm-editor")) {
+          e.preventDefault();
+          useUndoStore.getState().redo();
+        }
+      }
       if (e.key === "Escape") {
         const ui = useUIStore.getState();
         if (ui.settingsOpen) {
@@ -154,6 +172,7 @@ function App() {
       {commandPaletteOpen && <CommandPalette />}
       {createNoteDialogOpen && <CreateNoteDialog />}
       {settingsOpen && <SettingsModal />}
+      <UndoToast />
     </div>
   );
 }
