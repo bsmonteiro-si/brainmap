@@ -411,12 +411,17 @@ export function FileTreePanel() {
         for (const path of result.deleted_paths) {
           useGraphStore.getState().applyEvent({ type: "node-deleted", path });
         }
-        // 5. Remove tracked empty folders within deleted scope
+        // 5. Remove tracked empty folders within deleted scope (single state update)
         const { emptyFolders } = useUIStore.getState();
+        const prefix = deleteTarget.fullPath + "/";
+        const nextFolders = new Set<string>();
         for (const f of emptyFolders) {
-          if (f === deleteTarget.fullPath || f.startsWith(deleteTarget.fullPath + "/")) {
-            useUIStore.getState().removeEmptyFolder(f);
+          if (f !== deleteTarget.fullPath && !f.startsWith(prefix)) {
+            nextFolders.add(f);
           }
+        }
+        if (nextFolders.size !== emptyFolders.size) {
+          useUIStore.setState({ emptyFolders: nextFolders });
         }
       } else {
         // 3. Delete note

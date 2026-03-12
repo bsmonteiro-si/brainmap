@@ -54,13 +54,22 @@ let uiStoreState = {
 };
 const mockClose = vi.fn();
 
-vi.mock("../../stores/uiStore", () => ({
-  useUIStore: (selector: (s: Record<string, unknown>) => unknown) =>
+vi.mock("../../stores/uiStore", () => {
+  const storeFunc = (selector: (s: Record<string, unknown>) => unknown) =>
     selector({
       closeCreateNoteDialog: mockClose,
+      emptyFolders: new Set<string>(),
+      removeEmptyFolder: vi.fn(),
       ...uiStoreState,
-    }),
-}));
+    });
+  storeFunc.getState = () => ({
+    closeCreateNoteDialog: mockClose,
+    emptyFolders: new Set<string>(),
+    removeEmptyFolder: vi.fn(),
+    ...uiStoreState,
+  });
+  return { useUIStore: storeFunc };
+});
 
 describe("CreateNoteDialog", () => {
   beforeEach(() => {

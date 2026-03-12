@@ -95,6 +95,17 @@ export function CreateNoteDialog() {
       // Optimistic update: add to graph store
       useGraphStore.getState().createNote(createdPath, title.trim(), noteType);
 
+      // Clean up empty folder tracking — the folder is no longer empty
+      const parentDir = createdPath.includes("/")
+        ? createdPath.slice(0, createdPath.lastIndexOf("/"))
+        : null;
+      if (parentDir) {
+        const { emptyFolders, removeEmptyFolder } = useUIStore.getState();
+        if (emptyFolders.has(parentDir)) {
+          removeEmptyFolder(parentDir);
+        }
+      }
+
       if (isCreateAndLink && linkSource) {
         // Create the link from source note to the newly created note
         try {
