@@ -4,6 +4,7 @@ import type {
   GraphTopology,
   NodeSummary,
   NoteDetail,
+  PlainFileDetail,
   SearchFilters,
   SearchResult,
   StatsDto,
@@ -270,6 +271,18 @@ export class MockBridge implements BrainMapAPI {
 
   async createFolder(_path: string): Promise<void> {
     // No-op in mock: no real filesystem
+  }
+
+  async listWorkspaceFiles(): Promise<string[]> {
+    return Array.from(mockState.notes.keys());
+  }
+
+  async readPlainFile(path: string): Promise<PlainFileDetail> {
+    return { path, body: `(mock plain file: ${path})` };
+  }
+
+  async writePlainFile(_path: string, _body: string): Promise<void> {
+    // No-op in mock
   }
 
   async deleteFolder(path: string, force?: boolean): Promise<{ deleted_paths: string[] }> {

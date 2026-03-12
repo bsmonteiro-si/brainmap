@@ -39,8 +39,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const api = await getAPI();
+      log.info("stores::workspace", "opening workspace", { path });
       const info = await api.openWorkspace(path);
+      log.info("stores::workspace", "workspace opened", { name: info.name, root: info.root, node_count: info.node_count, edge_count: info.edge_count });
       const stats = await api.getStats();
+      log.info("stores::workspace", "stats loaded", { node_count: stats.node_count, edge_count: stats.edge_count });
       useUIStore.getState().clearHiddenEdgeTypes();
       set({ info, stats, isLoading: false });
     } catch (e) {

@@ -5,9 +5,9 @@ import { useUIStore } from "../stores/uiStore";
 const AUTO_SAVE_DELAY = 1500;
 
 function trySave() {
-  const { isDirty, savingInProgress, activeNote, editedFrontmatter } =
+  const { isDirty, savingInProgress, activeNote, activePlainFile, editedFrontmatter } =
     useEditorStore.getState();
-  if (!isDirty || savingInProgress || !activeNote) return;
+  if (!isDirty || savingInProgress || (!activeNote && !activePlainFile)) return;
   if (
     editedFrontmatter?.title !== undefined &&
     editedFrontmatter.title.trim() === ""
@@ -28,11 +28,11 @@ export function useAutoSave() {
 
   useEffect(() => {
     let prevDirty = useEditorStore.getState().isDirty;
-    let prevPath = useEditorStore.getState().activeNote?.path ?? null;
+    let prevPath = useEditorStore.getState().activeNote?.path ?? useEditorStore.getState().activePlainFile?.path ?? null;
 
     const unsubEditor = useEditorStore.subscribe((state) => {
       const autoSave = useUIStore.getState().autoSave;
-      const currentPath = state.activeNote?.path ?? null;
+      const currentPath = state.activeNote?.path ?? state.activePlainFile?.path ?? null;
 
       // Note switch: clear any pending debounce for the old note
       if (currentPath !== prevPath) {

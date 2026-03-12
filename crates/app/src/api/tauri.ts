@@ -6,6 +6,7 @@ import type {
   GraphTopology,
   NodeSummary,
   NoteDetail,
+  PlainFileDetail,
   SearchFilters,
   SearchResult,
   StatsDto,
@@ -101,6 +102,18 @@ export class TauriBridge implements BrainMapAPI {
 
   async deleteFolder(path: string, force?: boolean): Promise<{ deleted_paths: string[] }> {
     return invoke<{ deleted_paths: string[] }>("delete_folder", { path, force: force ?? false });
+  }
+
+  async listWorkspaceFiles(): Promise<string[]> {
+    return invoke<string[]>("list_workspace_files");
+  }
+
+  async readPlainFile(path: string): Promise<PlainFileDetail> {
+    return invoke<PlainFileDetail>("read_plain_file", { path });
+  }
+
+  async writePlainFile(path: string, body: string): Promise<void> {
+    return invoke<void>("write_plain_file", { path, body });
   }
 
   onEvent(callback: (event: WorkspaceEvent) => void): () => void {

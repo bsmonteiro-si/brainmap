@@ -198,7 +198,7 @@ export function SegmentPicker() {
       <div className="sp-root sp-root--create">
         <button className="sp-back" onClick={handleBackToHome}>← Back</button>
         <div className="sp-form-panel">
-          <h2 className="sp-form-title">Open a Segment</h2>
+          <h2 className="sp-form-title">Create Folder as Segment</h2>
           <div className="sp-field">
             <label className="sp-field-label" htmlFor="seg-name">Name</label>
             <input
@@ -221,7 +221,7 @@ export function SegmentPicker() {
                 value={formPath}
                 onChange={(e) => handlePathChange(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreateSubmit()}
-                placeholder="/Users/me/notes"
+                placeholder="/Users/me/my-knowledge-base"
               />
               <button
                 className="sp-browse-btn"
@@ -238,7 +238,7 @@ export function SegmentPicker() {
             onClick={handleCreateSubmit}
             disabled={!formPath.trim() || !formName.trim() || openingId !== null}
           >
-            {openingId !== null ? "Opening..." : "Open Segment"}
+            {openingId !== null ? "Creating..." : "Create Segment"}
           </button>
           {createError && <div className="sp-error" role="alert">{createError}</div>}
         </div>
@@ -260,13 +260,13 @@ export function SegmentPicker() {
         <div className="sp-empty-actions">
           <button className="sp-empty-cta" onClick={handleOpenFolder}>
             <span className="sp-empty-cta-icon">📂</span>
-            <span>Open Folder…</span>
+            <span>Open Folder as Segment</span>
           </button>
           <button
             className="sp-empty-link"
             onClick={() => setView("create")}
           >
-            or enter a path manually
+            or create a new folder as segment
           </button>
         </div>
       ) : (
@@ -289,15 +289,15 @@ export function SegmentPicker() {
               disabled={openingId !== null}
             >
               <span className="sp-new-card-icon">📂</span>
-              <span>Open Folder…</span>
+              <span>Open Folder as Segment</span>
             </button>
             <button
               className="sp-new-card"
               onClick={() => { setDuplicateNotice(null); setView("create"); }}
               disabled={openingId !== null}
             >
-              <span className="sp-new-card-icon">+</span>
-              <span>New segment</span>
+              <span className="sp-new-card-icon">📁</span>
+              <span>Create Folder as Segment</span>
             </button>
           </div>
         </div>

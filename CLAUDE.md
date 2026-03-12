@@ -56,11 +56,24 @@ Structured logging via `tracing` (Rust) and custom NDJSON logger (TypeScript). F
 
 - **Env var**: `BRAINMAP_LOG` — uses `tracing` `EnvFilter` syntax (e.g., `debug`, `brainmap_core::workspace=trace`)
 - **Defaults**: CLI=`warn`, MCP=`info`, Tauri=`info`
-- **File logs**: `<workspace>/.brainmap/logs/brainmap.log` (daily rotation, MCP serve mode only)
+- **File logs (MCP)**: `<workspace>/.brainmap/logs/brainmap.log` (daily rotation)
+- **File logs (Tauri)**: `~/.brainmap/logs/brainmap.log.<date>` (daily rotation, always enabled)
 - **Stderr**: JSON for MCP, compact human-readable for CLI/Tauri
-- **Frontend**: `import { log } from "../utils/logger"` — `log.error()`, `log.warn()`, `log.info()`, `log.debug()`
+- **Frontend logger**: `import { log } from "../utils/logger"` — `log.error()`, `log.warn()`, `log.info()`, `log.debug()`. When running inside Tauri, frontend logs are forwarded to the Rust backend via the `write_log` Tauri command and written to the same log file.
 - **Init**: CLI/MCP call `brainmap_core::logging::init_logging(LogConfig)` in main; Tauri inits in `lib.rs`
 - **Feature flag**: `logging` on `brainmap-core` enables `tracing-subscriber` + `tracing-appender`
+
+### Accessing logs (AI-first)
+
+The Tauri desktop app writes all logs (backend + forwarded frontend) to `~/.brainmap/logs/`. To read the current day's log:
+
+```bash
+# Find today's log file
+ls ~/.brainmap/logs/
+# Read it (use the Read tool on the most recent file)
+```
+
+When debugging the desktop app, **always check these log files first** using the Read tool. They contain structured tracing output from both Rust backend operations (workspace open, graph topology, file watcher events) and frontend operations (bridge selection, store actions, errors). This is the primary debugging mechanism — do not rely on terminal output or browser devtools.
 
 ## Conventions
 

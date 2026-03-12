@@ -6,6 +6,7 @@ import { log } from "../utils/logger";
 interface GraphState {
   nodes: Map<string, NodeDto>;
   edges: EdgeDto[];
+  workspaceFiles: string[];
   selectedNodePath: string | null;
   expandedNodes: Set<string>;
   isLoading: boolean;
@@ -21,6 +22,7 @@ interface GraphState {
 export const useGraphStore = create<GraphState>((set, get) => ({
   nodes: new Map(),
   edges: [],
+  workspaceFiles: [],
   selectedNodePath: null,
   expandedNodes: new Set(),
   isLoading: false,
@@ -29,12 +31,17 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     set({ isLoading: true });
     try {
       const api = await getAPI();
-      const topology = await api.getGraphTopology();
+      log.info("stores::graph", "loading topology");
+      const [topology, workspaceFiles] = await Promise.all([
+        api.getGraphTopology(),
+        api.listWorkspaceFiles(),
+      ]);
+      log.info("stores::graph", "topology loaded", { nodes: topology.nodes.length, edges: topology.edges.length, files: workspaceFiles.length });
       const nodes = new Map<string, NodeDto>();
       for (const n of topology.nodes) {
         nodes.set(n.path, n);
       }
-      set({ nodes, edges: topology.edges, isLoading: false });
+      set({ nodes, edges: topology.edges, workspaceFiles, isLoading: false });
     } catch (e) {
       log.error("stores::graph", "failed to load topology", { error: String(e) });
       set({ isLoading: false });
@@ -91,19 +98,23 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   reset: () => set({
     nodes: new Map(),
     edges: [],
+    workspaceFiles: [],
     selectedNodePath: null,
     expandedNodes: new Set(),
     isLoading: false,
   }),
 
   applyEvent: (event: WorkspaceEvent) => {
-    const { nodes, edges } = get();
+    const { nodes, edges, workspaceFiles } = get();
 
     switch (event.type) {
       case "node-created": {
         const newNodes = new Map(nodes);
         newNodes.set(event.path, event.node);
-        set({ nodes: newNodes });
+        const newFiles = workspaceFiles.includes(event.path)
+          ? workspaceFiles
+          : [...workspaceFiles, event.path];
+        set({ nodes: newNodes, workspaceFiles: newFiles });
         break;
       }
       case "node-updated": {
@@ -118,7 +129,8 @@ export const useGraphStore = create<GraphState>((set, get) => ({
         const newEdges = edges.filter(
           (e) => e.source !== event.path && e.target !== event.path
         );
-        set({ nodes: newNodes, edges: newEdges });
+        const newFiles = workspaceFiles.filter((f) => f !== event.path);
+        set({ nodes: newNodes, edges: newEdges, workspaceFiles: newFiles });
         break;
       }
       case "edge-created": {

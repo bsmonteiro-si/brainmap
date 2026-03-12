@@ -11,6 +11,7 @@ import type { EditorView } from "@codemirror/view";
 
 export function EditorPanel() {
   const activeNote = useEditorStore((s) => s.activeNote);
+  const activePlainFile = useEditorStore((s) => s.activePlainFile);
   const isLoading = useEditorStore((s) => s.isLoading);
   const conflictState = useEditorStore((s) => s.conflictState);
   const resolveConflict = useEditorStore((s) => s.resolveConflict);
@@ -25,13 +26,77 @@ export function EditorPanel() {
     useEditorStore.getState().updateContent(body);
   }, []);
 
+  const activePath = activeNote?.path ?? activePlainFile?.path;
+
   useEffect(() => {
     setViewMode("edit");
     setEditorView(null);
-  }, [activeNote?.path]);
+  }, [activePath]);
 
   if (isLoading) {
     return <div className="editor-placeholder">Loading note...</div>;
+  }
+
+  // Plain file view
+  if (activePlainFile && !activeNote) {
+    const fileName = activePlainFile.path.split("/").pop() ?? activePlainFile.path;
+    const body = editedBody ?? activePlainFile.body;
+
+    return (
+      <div className="editor-panel">
+        <div className="editor-hero">
+          <div className="editor-hero-top">
+            <div className="editor-view-toggle">
+              <button
+                className={`editor-view-btn${viewMode === "edit" ? " editor-view-btn--active" : ""}`}
+                onClick={() => setViewMode("edit")}
+                type="button"
+              >Edit</button>
+              <button
+                className={`editor-view-btn${viewMode === "preview" ? " editor-view-btn--active" : ""}`}
+                onClick={() => setViewMode("preview")}
+                type="button"
+              >Preview</button>
+            </div>
+            <button
+              className="editor-focus-btn"
+              onClick={toggleFocusMode}
+              title={focusMode ? "Exit focus mode" : "Focus mode"}
+            >
+              {focusMode ? "\u2921" : "\u2922"}
+            </button>
+          </div>
+          <h1 className="editor-hero-title">
+            {fileName}
+            {isDirty && <span className="editor-dirty-dot" title="Unsaved changes" />}
+          </h1>
+          <div className="meta-row">
+            <span className="meta-source">{activePlainFile.path}</span>
+          </div>
+        </div>
+        {conflictState === "external-change" && (
+          <div className="conflict-banner">
+            <span>File changed externally.</span>
+            <button onClick={() => resolveConflict("keep-mine")}>Keep Mine</button>
+            <button onClick={() => resolveConflict("accept-theirs")}>Accept Theirs</button>
+          </div>
+        )}
+        {viewMode === "edit" && <EditorToolbar editorView={editorView} />}
+        <div className="editor-body">
+          <div className={`editor-view-layer${viewMode === "edit" ? " editor-view-layer--active" : ""}`}>
+            <MarkdownEditor
+              notePath={activePlainFile.path}
+              content={body}
+              onChange={onEditorChange}
+              onViewReady={setEditorView}
+            />
+          </div>
+          <div className={`editor-view-layer${viewMode === "preview" ? " editor-view-layer--active" : ""}`}>
+            <MarkdownPreview content={body} notePath={activePlainFile.path} />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!activeNote) {

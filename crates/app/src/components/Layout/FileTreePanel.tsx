@@ -37,7 +37,7 @@ function computeNoteCounts(nodes: TreeNode[]): void {
   }
 }
 
-export function buildTree(nodes: Map<string, NodeDto>, emptyFolders?: Set<string>): TreeNode[] {
+export function buildTree(nodes: Map<string, NodeDto>, emptyFolders?: Set<string>, workspaceFiles?: string[]): TreeNode[] {
   const folderMap = new Map<string, TreeNode>();
   const roots: TreeNode[] = [];
 
@@ -100,6 +100,43 @@ export function buildTree(nodes: Map<string, NodeDto>, emptyFolders?: Set<string
       const parts = folderPath.split("/");
       for (let i = 0; i < parts.length; i++) {
         getOrCreateFolder(parts, i);
+      }
+    }
+  }
+
+  // Merge workspace files that aren't already in the graph (non-BrainMap files)
+  if (workspaceFiles) {
+    for (const filePath of workspaceFiles) {
+      if (nodes.has(filePath)) continue;
+      const parts = filePath.split("/");
+      const fileName = parts[parts.length - 1];
+
+      if (parts.length === 1) {
+        // Check we haven't already added a root node with this path
+        if (!roots.some((r) => r.fullPath === filePath)) {
+          roots.push({
+            name: fileName,
+            fullPath: filePath,
+            title: fileName,
+            isFolder: false,
+            children: [],
+          });
+        }
+      } else {
+        for (let i = 0; i < parts.length - 1; i++) {
+          getOrCreateFolder(parts, i);
+        }
+        const parentPath = parts.slice(0, parts.length - 1).join("/");
+        const parent = folderMap.get(parentPath);
+        if (parent && !parent.children.some((c) => c.fullPath === filePath)) {
+          parent.children.push({
+            name: fileName,
+            fullPath: filePath,
+            title: fileName,
+            isFolder: false,
+            children: [],
+          });
+        }
       }
     }
   }
@@ -223,6 +260,7 @@ function ContextMenu({
     state.node !== null &&
     !state.node.isFolder &&
     state.node.fullPath.split("/").length === 1;
+  const isBrainMapNote = state.node !== null && !state.node.isFolder && !!state.node.note_type;
 
   return createPortal(
     <div ref={menuRef} className="context-menu" style={{ left: x, top: y, minWidth: MENU_WIDTH }}>
@@ -252,7 +290,7 @@ function ContextMenu({
             Delete Folder
           </div>
         </>
-      ) : (
+      ) : isBrainMapNote ? (
         <>
           <div className="context-menu-item" onClick={handleNewNoteHere}>
             {isRootLevelFile ? "New Note at Root" : "New Note in Folder"}
@@ -264,6 +302,12 @@ function ContextMenu({
           <div className="context-menu-separator" />
           <div className="context-menu-item context-menu-item--danger" onClick={handleDelete}>
             Delete
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="context-menu-item" onClick={handleNewNoteHere}>
+            {isRootLevelFile ? "New Note at Root" : "New Note in Folder"}
           </div>
         </>
       )}
@@ -369,26 +413,34 @@ function FileTreeNode({
     );
   }
 
-  const isActive = selectedNodePath === node.fullPath;
+  const activePlainFilePath = useEditorStore((s) => s.activePlainFile?.path ?? null);
+  const isActive = selectedNodePath === node.fullPath || activePlainFilePath === node.fullPath;
+  const isBrainMapNote = !!node.note_type;
   const label = node.matchIndices && node.matchIndices.length > 0
     ? highlightFuzzyMatch(node.title, node.matchIndices)
     : node.title;
+
+  const handleClick = () => {
+    if (isBrainMapNote) {
+      useGraphStore.getState().selectNode(node.fullPath);
+      useEditorStore.getState().openNote(node.fullPath);
+    } else {
+      useGraphStore.getState().selectNode(null);
+      useEditorStore.getState().openPlainFile(node.fullPath);
+    }
+  };
 
   return (
     <div
       role="button"
       tabIndex={0}
-      className={`tree-item tree-file${isActive ? " active" : ""}`}
+      className={`tree-item tree-file${isActive ? " active" : ""}${!isBrainMapNote ? " tree-file--plain" : ""}`}
       style={{ paddingLeft: 8 }}
-      onClick={() => {
-        useGraphStore.getState().selectNode(node.fullPath);
-        useEditorStore.getState().openNote(node.fullPath);
-      }}
+      onClick={handleClick}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          useGraphStore.getState().selectNode(node.fullPath);
-          useEditorStore.getState().openNote(node.fullPath);
+          handleClick();
         }
       }}
       onContextMenu={(e) => onContextMenu(e, node)}
@@ -419,7 +471,8 @@ export function FileTreePanel() {
   const [hasBeenExpanded, setHasBeenExpanded] = useState<Set<string>>(() => new Set());
 
   const emptyFolders = useUIStore((s) => s.emptyFolders);
-  const tree = useMemo(() => buildTree(nodes, emptyFolders), [nodes, emptyFolders]);
+  const workspaceFiles = useGraphStore((s) => s.workspaceFiles);
+  const tree = useMemo(() => buildTree(nodes, emptyFolders, workspaceFiles), [nodes, emptyFolders, workspaceFiles]);
 
   const filtered = useMemo(
     () => (filter.trim() ? fuzzyFilterTree(tree, filter.trim()) : tree),

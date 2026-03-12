@@ -1,4 +1,5 @@
 use tauri::State;
+use tracing::{info, warn, error};
 
 use crate::dto::*;
 use crate::handlers;
@@ -6,12 +7,14 @@ use crate::state::AppState;
 use crate::watcher;
 
 #[tauri::command]
-pub fn open_workspace(
+pub async fn open_workspace(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
     path: String,
 ) -> Result<WorkspaceInfoDto, String> {
+    info!(path = %path, "open_workspace called");
     let (workspace, info) = handlers::handle_open_workspace(&path)?;
+    info!(name = %info.name, root = %info.root, nodes = info.node_count, edges = info.edge_count, "workspace opened");
     let root = workspace.root.clone();
 
     // Stop the old watcher before replacing the workspace so its Tokio task
@@ -36,7 +39,11 @@ pub fn open_workspace(
 
 #[tauri::command]
 pub fn get_graph_topology(state: State<'_, AppState>) -> Result<GraphTopologyDto, String> {
-    state.with_workspace(|ws| Ok(handlers::handle_get_topology(ws)))
+    state.with_workspace(|ws| {
+        let topo = handlers::handle_get_topology(ws);
+        info!(nodes = topo.nodes.len(), edges = topo.edges.len(), "get_graph_topology");
+        Ok(topo)
+    })
 }
 
 #[tauri::command]
@@ -210,4 +217,34 @@ pub fn create_folder(state: State<'_, AppState>, path: String) -> Result<(), Str
         Ok(normalized)
     })?;
     std::fs::create_dir_all(&abs_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn read_plain_file(state: State<'_, AppState>, path: String) -> Result<PlainFileDto, String> {
+    state.with_workspace(|ws| handlers::handle_read_plain_file(ws, &path))
+}
+
+#[tauri::command]
+pub fn write_plain_file(state: State<'_, AppState>, path: String, body: String) -> Result<(), String> {
+    let abs_path = state.with_workspace(|ws| {
+        handlers::validate_relative_path(&ws.root, &path)
+    })?;
+    state.register_expected_write(abs_path);
+    state.with_workspace(|ws| handlers::handle_write_plain_file(ws, &path, &body))
+}
+
+#[tauri::command]
+pub fn list_workspace_files(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    state.with_workspace(|ws| Ok(handlers::handle_list_workspace_files(ws)))
+}
+
+#[tauri::command]
+pub fn write_log(level: String, target: String, msg: String, fields: Option<String>) {
+    let fields_str = fields.as_deref().unwrap_or("");
+    match level.as_str() {
+        "ERROR" => error!(target = %target, fields = %fields_str, "[frontend] {}", msg),
+        "WARN" => warn!(target = %target, fields = %fields_str, "[frontend] {}", msg),
+        "DEBUG" => info!(target = %target, fields = %fields_str, "[frontend] {}", msg),
+        _ => info!(target = %target, fields = %fields_str, "[frontend] {}", msg),
+    }
 }

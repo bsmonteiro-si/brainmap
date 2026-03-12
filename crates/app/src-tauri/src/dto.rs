@@ -267,6 +267,14 @@ pub struct ExternalBacklinkDto {
     pub rel: String,
 }
 
+// ── Plain File DTOs ───────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct PlainFileDto {
+    pub path: String,
+    pub body: String,
+}
+
 // ── Helpers ────────────────────────────────────────────────────────
 
 /// Convert serde_yaml::Value map to serde_json::Value map for IPC boundary.

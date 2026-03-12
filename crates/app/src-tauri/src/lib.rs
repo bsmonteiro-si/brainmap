@@ -8,8 +8,11 @@ use brainmap_core::logging::{init_logging, LogConfig};
 use state::AppState;
 
 pub fn run() {
+    let log_dir = std::env::var("HOME")
+        .map(|h| std::path::PathBuf::from(h).join(".brainmap/logs"))
+        .ok();
     let _log_guard = init_logging(&LogConfig {
-        log_dir: None,
+        log_dir,
         stderr_enabled: true,
         stderr_json: false,
         default_level: "info",
@@ -36,6 +39,10 @@ pub fn run() {
             commands::get_stats,
             commands::create_folder,
             commands::delete_folder,
+            commands::list_workspace_files,
+            commands::read_plain_file,
+            commands::write_plain_file,
+            commands::write_log,
         ])
         .run(tauri::generate_context!())
         .expect("error while running BrainMap");

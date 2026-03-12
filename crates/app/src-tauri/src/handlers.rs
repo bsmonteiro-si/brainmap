@@ -317,3 +317,88 @@ pub fn handle_get_node_summary(ws: &Workspace, path: &str) -> Result<NodeSummary
 pub fn handle_get_stats(ws: &Workspace) -> StatsDto {
     StatsDto::from(ws.stats())
 }
+
+/// Read a plain (non-BrainMap) file's raw content.
+pub fn handle_read_plain_file(ws: &Workspace, path: &str) -> Result<PlainFileDto, String> {
+    let abs = validate_relative_path(&ws.root, path)?;
+    let body = std::fs::read_to_string(&abs)
+        .map_err(|e| format!("Failed to read file: {}", e))?;
+    Ok(PlainFileDto {
+        path: path.to_string(),
+        body,
+    })
+}
+
+/// Write a plain (non-BrainMap) file's raw content.
+/// Rejects writes to files tracked in the BrainMap graph (use `update_note` instead).
+pub fn handle_write_plain_file(ws: &Workspace, path: &str, body: &str) -> Result<(), String> {
+    let rp = brainmap_core::model::RelativePath::new(path);
+    if ws.notes.contains_key(&rp) {
+        return Err("Cannot write to a BrainMap-managed note via plain file API".to_string());
+    }
+    let abs = validate_relative_path(&ws.root, path)?;
+    std::fs::write(&abs, body)
+        .map_err(|e| format!("Failed to write file: {}", e))
+}
+
+/// Validate that a relative path stays within the workspace root.
+pub(crate) fn validate_relative_path(root: &std::path::Path, path: &str) -> Result<std::path::PathBuf, String> {
+    let p = std::path::Path::new(path);
+    if p.is_absolute() {
+        return Err("Path must be relative".to_string());
+    }
+    let normalized = root.join(p).components().fold(
+        std::path::PathBuf::new(),
+        |mut acc, c| {
+            match c {
+                std::path::Component::ParentDir => { acc.pop(); acc }
+                _ => { acc.push(c); acc }
+            }
+        },
+    );
+    if !normalized.starts_with(root) {
+        return Err("Path escapes workspace root".to_string());
+    }
+    Ok(normalized)
+}
+
+/// List all files in the workspace directory (recursive, excludes `.brainmap/`).
+/// Returns relative paths from the workspace root.
+pub fn handle_list_workspace_files(ws: &Workspace) -> Vec<String> {
+    let mut files = Vec::new();
+    collect_files_recursive(&ws.root, &ws.root, &mut files);
+    files.sort();
+    files
+}
+
+fn collect_files_recursive(
+    base: &std::path::Path,
+    dir: &std::path::Path,
+    out: &mut Vec<String>,
+) {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let name = entry.file_name();
+        let name_str = name.to_string_lossy();
+
+        // Skip hidden files/dirs (includes .brainmap)
+        if name_str.starts_with('.') {
+            continue;
+        }
+
+        // Skip symlinks to avoid cycles and escaping workspace root
+        if path.is_symlink() {
+            continue;
+        }
+
+        if path.is_dir() {
+            collect_files_recursive(base, &path, out);
+        } else if let Ok(rel) = path.strip_prefix(base) {
+            out.push(rel.to_string_lossy().into_owned());
+        }
+    }
+}
