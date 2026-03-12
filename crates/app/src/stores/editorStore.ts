@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { NoteDetail } from "../api/types";
 import { getAPI } from "../api/bridge";
 import { useGraphStore } from "./graphStore";
+import { useUIStore } from "./uiStore";
 import { log } from "../utils/logger";
 
 export type EditableFrontmatter = Pick<NoteDetail, 'title' | 'note_type' | 'tags' | 'status' | 'source' | 'summary' | 'extra'>;
@@ -39,8 +40,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (activeNote?.path === path) return;
 
     if (isDirty) {
-      // Discard unsaved changes when switching notes in v1
-      log.warn("stores::editor", "discarding unsaved changes", { path: activeNote?.path });
+      const autoSave = useUIStore.getState().autoSave;
+      if (autoSave) {
+        const { savingInProgress, editedFrontmatter } = get();
+        const titleInvalid = editedFrontmatter?.title !== undefined &&
+          editedFrontmatter.title.trim() === "";
+        if (!savingInProgress && !titleInvalid) {
+          await get().saveNote();
+        }
+      } else {
+        log.warn("stores::editor", "discarding unsaved changes", { path: activeNote?.path });
+      }
     }
 
     set({ isLoading: true, isDirty: false, conflictState: "none", editedBody: null, editedFrontmatter: null });

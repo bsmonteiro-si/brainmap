@@ -1837,6 +1837,18 @@ body {
 .settings-reset:hover {
   color: var(--text-primary);
 }
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.settings-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
 
 /* ── Segment Picker ───────────────────────────────────────────── */
 .sp-root {

@@ -4,6 +4,7 @@ import { useGraphStore } from "./stores/graphStore";
 import { useEditorStore } from "./stores/editorStore";
 import { useUIStore } from "./stores/uiStore";
 import { useUndoStore } from "./stores/undoStore";
+import { useAutoSave } from "./hooks/useAutoSave";
 import { getAPI } from "./api/bridge";
 import { SegmentPicker } from "./components/Layout/SegmentPicker";
 import { AppLayout } from "./components/Layout/AppLayout";
@@ -163,6 +164,9 @@ function App() {
       root.style.setProperty("--ui-zoom", "1");
     };
   }, [uiZoom]);
+
+  // Auto-save: debounced save on edit, save on blur, save on note switch
+  useAutoSave();
 
   if (!info) {
     return <SegmentPicker />;

@@ -20,6 +20,14 @@ vi.mock("./graphStore", () => ({
   },
 }));
 
+// Mock uiStore for auto-save preference
+let mockAutoSave = true;
+vi.mock("./uiStore", () => ({
+  useUIStore: {
+    getState: () => ({ autoSave: mockAutoSave }),
+  },
+}));
+
 const sampleNote = {
   path: "Concepts/Test.md",
   title: "Test Note",
@@ -37,6 +45,7 @@ const sampleNote = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockAutoSave = true;
   useEditorStore.setState({
     activeNote: null,
     isLoading: false,
@@ -206,6 +215,7 @@ describe("saveNote", () => {
 
 describe("openNote", () => {
   it("resets editedFrontmatter when switching notes", async () => {
+    mockAutoSave = false;
     mockApi.readNote.mockResolvedValue({ ...sampleNote, path: "Other.md" });
 
     useEditorStore.setState({
@@ -217,6 +227,74 @@ describe("openNote", () => {
     await useEditorStore.getState().openNote("Other.md");
 
     expect(useEditorStore.getState().editedFrontmatter).toBeNull();
+  });
+
+  it("auto-saves before switching when autoSave is enabled", async () => {
+    mockAutoSave = true;
+    mockApi.updateNote.mockResolvedValue(undefined);
+    mockApi.readNote.mockResolvedValueOnce({ ...sampleNote, modified: "2026-03-12" });
+    mockApi.readNote.mockResolvedValueOnce({ ...sampleNote, path: "Other.md", title: "Other" });
+
+    useEditorStore.setState({
+      activeNote: sampleNote,
+      isDirty: true,
+      editedBody: "changed body",
+    });
+
+    await useEditorStore.getState().openNote("Other.md");
+
+    expect(mockApi.updateNote).toHaveBeenCalledWith(
+      expect.objectContaining({ path: "Concepts/Test.md", body: "changed body" })
+    );
+    expect(useEditorStore.getState().activeNote?.path).toBe("Other.md");
+  });
+
+  it("discards changes when autoSave is disabled", async () => {
+    mockAutoSave = false;
+    mockApi.readNote.mockResolvedValue({ ...sampleNote, path: "Other.md" });
+
+    useEditorStore.setState({
+      activeNote: sampleNote,
+      isDirty: true,
+      editedBody: "changed body",
+    });
+
+    await useEditorStore.getState().openNote("Other.md");
+
+    expect(mockApi.updateNote).not.toHaveBeenCalled();
+    expect(useEditorStore.getState().activeNote?.path).toBe("Other.md");
+  });
+
+  it("skips auto-save on switch when title is empty", async () => {
+    mockAutoSave = true;
+    mockApi.readNote.mockResolvedValue({ ...sampleNote, path: "Other.md" });
+
+    useEditorStore.setState({
+      activeNote: sampleNote,
+      isDirty: true,
+      editedFrontmatter: { title: "" },
+    });
+
+    await useEditorStore.getState().openNote("Other.md");
+
+    expect(mockApi.updateNote).not.toHaveBeenCalled();
+    expect(useEditorStore.getState().activeNote?.path).toBe("Other.md");
+  });
+
+  it("auto-save failure during switch still allows navigation", async () => {
+    mockAutoSave = true;
+    mockApi.updateNote.mockRejectedValue(new Error("disk full"));
+    mockApi.readNote.mockResolvedValue({ ...sampleNote, path: "Other.md" });
+
+    useEditorStore.setState({
+      activeNote: sampleNote,
+      isDirty: true,
+      editedBody: "changed",
+    });
+
+    await useEditorStore.getState().openNote("Other.md");
+
+    expect(useEditorStore.getState().activeNote?.path).toBe("Other.md");
   });
 });
 

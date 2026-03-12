@@ -177,6 +177,35 @@ describe("emptyFolders actions", () => {
   });
 });
 
+describe("autoSave", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useUIStore.setState({ autoSave: true });
+  });
+
+  it("defaults to true", () => {
+    expect(useUIStore.getState().autoSave).toBe(true);
+  });
+
+  it("setAutoSave(false) updates state", () => {
+    useUIStore.getState().setAutoSave(false);
+    expect(useUIStore.getState().autoSave).toBe(false);
+  });
+
+  it("setAutoSave persists to localStorage", () => {
+    useUIStore.getState().setAutoSave(false);
+    const stored = JSON.parse(localStorage.getItem("brainmap:uiPrefs") ?? "{}");
+    expect(stored.autoSave).toBe(false);
+  });
+
+  it("other prefs preserve autoSave in localStorage", () => {
+    useUIStore.getState().setAutoSave(false);
+    useUIStore.getState().zoomIn();
+    const stored = JSON.parse(localStorage.getItem("brainmap:uiPrefs") ?? "{}");
+    expect(stored.autoSave).toBe(false);
+  });
+});
+
 describe("graph visual toggles", () => {
   beforeEach(() => {
     useUIStore.setState({
