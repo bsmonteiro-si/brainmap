@@ -4,6 +4,7 @@ import { getAPI } from "../../api/bridge";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { useUIStore } from "../../stores/uiStore";
+import { log } from "../../utils/logger";
 
 // User-selectable edge types (excludes auto-generated: contains, part-of, mentioned-in)
 const LINK_TYPES = [
@@ -92,7 +93,7 @@ export function LinksEditor({ notePath, links }: Props) {
       });
       await useEditorStore.getState().refreshActiveNote();
     } catch (e) {
-      console.error("Failed to delete link:", e);
+      log.error("components::LinksEditor", "failed to delete link", { notePath, target: link.target, error: String(e) });
       setError("Failed to remove link");
     } finally {
       setBusy(false);
@@ -118,7 +119,7 @@ export function LinksEditor({ notePath, links }: Props) {
       await useEditorStore.getState().refreshActiveNote();
       setNewTarget("");
     } catch (e) {
-      console.error("Failed to create link:", e);
+      log.error("components::LinksEditor", "failed to create link", { notePath, target: resolvedTarget, error: String(e) });
       setError("Failed to add link");
     } finally {
       setBusy(false);

@@ -5,6 +5,7 @@ import { useUIStore } from "./uiStore";
 import { useGraphStore } from "./graphStore";
 import { useEditorStore } from "./editorStore";
 import { useSegmentStore } from "./segmentStore";
+import { log } from "../utils/logger";
 
 interface WorkspaceState {
   info: WorkspaceInfo | null;
@@ -42,6 +43,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       useUIStore.getState().clearHiddenEdgeTypes();
       set({ info, stats, isLoading: false });
     } catch (e) {
+      log.error("stores::workspace", "failed to open workspace", { path, error: String(e) });
       set({ error: String(e), isLoading: false });
     }
   },
@@ -61,7 +63,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       const stats = await api.getStats();
       set({ stats });
     } catch (e) {
-      console.error("Failed to refresh stats:", e);
+      log.error("stores::workspace", "failed to refresh stats", { error: String(e) });
     }
   },
 }));

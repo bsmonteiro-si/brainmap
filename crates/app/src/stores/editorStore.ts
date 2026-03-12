@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { NoteDetail } from "../api/types";
 import { getAPI } from "../api/bridge";
 import { useGraphStore } from "./graphStore";
+import { log } from "../utils/logger";
 
 export type EditableFrontmatter = Pick<NoteDetail, 'title' | 'note_type' | 'tags' | 'status' | 'source' | 'summary' | 'extra'>;
 
@@ -39,7 +40,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     if (isDirty) {
       // Discard unsaved changes when switching notes in v1
-      console.warn("Discarding unsaved changes for", activeNote?.path);
+      log.warn("stores::editor", "discarding unsaved changes", { path: activeNote?.path });
     }
 
     set({ isLoading: true, isDirty: false, conflictState: "none", editedBody: null, editedFrontmatter: null });
@@ -48,7 +49,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const note = await api.readNote(path);
       set({ activeNote: note, isLoading: false });
     } catch (e) {
-      console.error("Failed to open note:", e);
+      log.error("stores::editor", "failed to open note", { path, error: String(e) });
       set({ isLoading: false });
     }
   },
@@ -61,7 +62,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const note = await api.readNote(activeNote.path);
       set({ activeNote: note });
     } catch (e) {
-      console.error("Failed to refresh note:", e);
+      log.error("stores::editor", "failed to refresh note", { error: String(e) });
     }
   },
 
@@ -130,7 +131,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         savingInProgress: false,
       });
     } catch (e) {
-      console.error("Failed to save note:", e);
+      log.error("stores::editor", "failed to save note", { path: activeNote.path, error: String(e) });
       set({ savingInProgress: false });
     }
   },
@@ -149,7 +150,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const note = await api.readNote(activeNote.path);
         set({ activeNote: note, conflictState: "none" });
       } catch (e) {
-        console.error("Failed to reload note:", e);
+        log.error("stores::editor", "failed to reload note", { error: String(e) });
       }
     }
   },

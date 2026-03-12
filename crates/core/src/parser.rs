@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use regex::Regex;
+use tracing::{debug, warn};
 
 use crate::error::{BrainMapError, Result};
 use crate::model::{Frontmatter, InlineLink, Note, NoteId, RelativePath};
@@ -8,6 +9,7 @@ use crate::model::{Frontmatter, InlineLink, Note, NoteId, RelativePath};
 pub fn parse_note(content: &str, path: &RelativePath) -> Result<Note> {
     let (raw_yaml, body) = split_frontmatter(content)?;
     let mut frontmatter: Frontmatter = serde_yaml::from_str(&raw_yaml).map_err(|e| {
+        warn!(path = %path, error = %e, "YAML parse failed");
         BrainMapError::InvalidYaml(format!("{}: {}", path, e))
     })?;
 
@@ -45,6 +47,7 @@ pub fn parse_file(workspace_root: &Path, file_path: &Path) -> Result<Note> {
     let content = std::fs::read_to_string(file_path)
         .map_err(|_| BrainMapError::FileNotFound(file_path.display().to_string()))?;
 
+    debug!(path = %rel_path, "parsing file");
     parse_note(&content, &rel_path)
 }
 

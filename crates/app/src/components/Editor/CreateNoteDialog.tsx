@@ -4,6 +4,7 @@ import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { getAPI } from "../../api/bridge";
+import { log } from "../../utils/logger";
 
 /** Derive a human-readable title from a file path like "Concepts/My-Note.md" */
 function titleFromPath(path: string): string {
@@ -111,7 +112,7 @@ export function CreateNoteDialog() {
         } catch (linkErr) {
           // Note was created but link failed — close dialog, the new note now
           // exists in the graph so the user can link to it manually from LinksEditor
-          console.warn("Note created but linking failed:", linkErr);
+          log.warn("components::CreateNoteDialog", "note created but linking failed", { error: String(linkErr) });
           close();
           return;
         }

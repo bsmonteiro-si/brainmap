@@ -6,6 +6,7 @@ import { useUIStore } from "../../stores/uiStore";
 import { getAPI } from "../../api/bridge";
 import type { NodeDto } from "../../api/types";
 import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
+import { log } from "../../utils/logger";
 
 interface TreeNode {
   name: string;
@@ -424,9 +425,9 @@ export function FileTreePanel() {
             // Couldn't parse partial results
           }
         }
-        console.error("Partial folder deletion:", msg);
+        log.error("components::FileTreePanel", "partial folder deletion", { message: msg });
       } else {
-        console.error("Delete failed:", msg);
+        log.error("components::FileTreePanel", "delete failed", { message: msg });
       }
     }
 

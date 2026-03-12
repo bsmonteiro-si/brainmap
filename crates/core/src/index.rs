@@ -1,6 +1,7 @@
 use rusqlite::{params, Connection};
 use serde::Serialize;
 use std::path::Path;
+use tracing::{debug, error};
 
 use crate::error::{BrainMapError, Result};
 use crate::model::{Edge, EdgeKind, Note, RelativePath};
@@ -27,11 +28,15 @@ pub struct SearchFilters {
 
 impl Index {
     pub fn open(db_path: &Path) -> Result<Self> {
-        let conn = Connection::open(db_path)?;
+        let conn = Connection::open(db_path).map_err(|e| {
+            error!(path = %db_path.display(), error = %e, "failed to open SQLite index");
+            e
+        })?;
         conn.busy_timeout(std::time::Duration::from_secs(5))?;
         conn.pragma_update(None, "journal_mode", "WAL")?;
         let index = Self { conn };
         index.create_schema()?;
+        debug!(path = %db_path.display(), "search index opened");
         Ok(index)
     }
 
@@ -229,6 +234,7 @@ impl Index {
     }
 
     pub fn rebuild(&self, notes: &[(&Note, i64)], edges: &[Edge]) -> Result<()> {
+        debug!(note_count = notes.len(), edge_count = edges.len(), "rebuilding search index");
         let tx = self.conn.unchecked_transaction()?;
 
         tx.execute_batch(

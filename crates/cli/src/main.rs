@@ -4,6 +4,7 @@ mod output;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use brainmap_core::logging::{cleanup_old_logs, init_logging, LogConfig};
 use brainmap_core::model::Direction;
 use clap::{Parser, Subcommand};
 
@@ -176,14 +177,37 @@ enum Commands {
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
+
+    let is_serve = matches!(cli.command, Commands::Serve);
     let workspace_path = cli
         .workspace
+        .clone()
         .unwrap_or_else(|| {
             std::env::current_dir().unwrap_or_else(|e| {
                 eprintln!("error: cannot determine current directory: {}", e);
                 std::process::exit(1);
             })
         });
+
+    let log_config = if is_serve {
+        LogConfig {
+            log_dir: Some(workspace_path.join(".brainmap/logs")),
+            stderr_enabled: true,
+            stderr_json: true,
+            default_level: "info",
+        }
+    } else {
+        LogConfig {
+            log_dir: None,
+            stderr_enabled: true,
+            stderr_json: false,
+            default_level: "warn",
+        }
+    };
+    let _log_guard = init_logging(&log_config);
+    if let Some(ref dir) = log_config.log_dir {
+        cleanup_old_logs(dir, 3);
+    }
 
     let result = match cli.command {
         Commands::Init { path } => commands::init::execute(path, &cli.format, cli.quiet),

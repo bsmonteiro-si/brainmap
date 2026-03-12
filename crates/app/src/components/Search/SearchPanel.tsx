@@ -5,6 +5,7 @@ import { useEditorStore } from "../../stores/editorStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useUIStore } from "../../stores/uiStore";
 import type { SearchResult } from "../../api/types";
+import { log } from "../../utils/logger";
 
 export function SearchPanel() {
   const expanded = useUIStore((s) => s.searchExpanded);
@@ -43,7 +44,7 @@ export function SearchPanel() {
           setResults(res);
         }
       } catch (e) {
-        console.error("Search failed:", e);
+        log.error("components::SearchPanel", "search failed", { query: q, error: String(e) });
       } finally {
         if (thisSearch === searchCounterRef.current) {
           setIsSearching(false);

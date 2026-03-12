@@ -4,9 +4,17 @@ pub mod handlers;
 pub mod state;
 pub mod watcher;
 
+use brainmap_core::logging::{init_logging, LogConfig};
 use state::AppState;
 
 pub fn run() {
+    let _log_guard = init_logging(&LogConfig {
+        log_dir: None,
+        stderr_enabled: true,
+        stderr_json: false,
+        default_level: "info",
+    });
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())

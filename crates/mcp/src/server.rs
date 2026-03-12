@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use brainmap_core::workspace::Workspace;
+use tracing::{info, warn};
 use rmcp::model::{
     CallToolResult, Content, Implementation, ListResourcesResult, ListToolsResult,
     PaginatedRequestParam, RawResource, ReadResourceRequestParam, ReadResourceResult,
@@ -78,6 +79,7 @@ impl BrainMapMcp {
         name: &str,
         arguments: &Option<serde_json::Map<String, serde_json::Value>>,
     ) -> CallToolResult {
+        info!(tool = name, "MCP tool called");
         match name {
             "node_get" => tools::node::node_get(&self.workspace, arguments),
             "node_list" => tools::node::node_list(&self.workspace, arguments),
@@ -103,10 +105,13 @@ impl BrainMapMcp {
             "federation_add" => tools::federation::federation_add(&self.workspace, arguments),
             "federation_remove" => tools::federation::federation_remove(&self.workspace, arguments),
             "batch" => self.batch_execute(arguments),
-            _ => CallToolResult {
-                content: vec![Content::text(format!("Unknown tool: {}", name))],
-                is_error: Some(true),
-            },
+            _ => {
+                warn!(tool = name, "unknown MCP tool requested");
+                CallToolResult {
+                    content: vec![Content::text(format!("Unknown tool: {}", name))],
+                    is_error: Some(true),
+                }
+            }
         }
     }
 

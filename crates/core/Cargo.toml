@@ -14,5 +14,12 @@ rusqlite = { version = "0.32", features = ["bundled", "modern_sqlite"] }
 walkdir = "2"
 regex = "1"
 
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, optional = true }
+tracing-appender = { workspace = true, optional = true }
+
+[features]
+logging = ["tracing-subscriber", "tracing-appender"]
+
 [dev-dependencies]
 tempfile = "3"

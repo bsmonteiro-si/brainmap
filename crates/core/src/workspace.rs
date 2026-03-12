@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
+use tracing::{debug, info, warn};
 use walkdir::WalkDir;
 
 use chrono::Local;
@@ -71,6 +72,7 @@ impl Workspace {
         let index_path = brainmap_dir.join("index.db");
         Index::open(&index_path)?;
 
+        info!(path = %path.display(), "workspace initialized");
         Ok(())
     }
 
@@ -107,10 +109,10 @@ impl Workspace {
             match parser::parse_file(root, file_path) {
                 Ok(note) => {
                     if config.register_note_type(&note.frontmatter.note_type) {
-                        eprintln!(
-                            "warning: unregistered note type '{}' in {}",
-                            note.frontmatter.note_type,
-                            note.path
+                        warn!(
+                            note_type = %note.frontmatter.note_type,
+                            path = %note.path,
+                            "unregistered note type"
                         );
                     }
                     notes.insert(note.path.clone(), note);
@@ -122,9 +124,9 @@ impl Workspace {
         }
 
         if !parse_errors.is_empty() {
-            eprintln!("Parse errors ({}):", parse_errors.len());
+            warn!(count = parse_errors.len(), "parse errors during workspace load");
             for err in &parse_errors {
-                eprintln!("  {}", err);
+                warn!(error = %err, "note parse failed");
             }
         }
 
@@ -154,9 +156,10 @@ impl Workspace {
                     kind: EdgeKind::Explicit,
                 };
                 if config.register_edge_type(&link.rel) {
-                    eprintln!(
-                        "warning: unregistered edge type '{}' in {}",
-                        link.rel, note.path
+                    warn!(
+                        edge_type = %link.rel,
+                        path = %note.path,
+                        "unregistered edge type"
                     );
                 }
                 all_edges.push(edge);
@@ -216,6 +219,13 @@ impl Workspace {
             .collect();
 
         index.rebuild(&note_refs, &all_edges)?;
+
+        info!(
+            root = %root.display(),
+            node_count = notes.len(),
+            edge_count = all_edges.len(),
+            "workspace opened"
+        );
 
         Ok(Self {
             root: root.to_path_buf(),
@@ -350,6 +360,7 @@ impl Workspace {
             },
         );
 
+        info!(path = rel_path, title = title, note_type = note_type, "note created");
         self.notes.insert(path.clone(), note);
         Ok(path)
     }
@@ -425,6 +436,7 @@ impl Workspace {
             },
         );
 
+        info!(path = rel_path, "note updated");
         Ok(())
     }
 
@@ -451,6 +463,7 @@ impl Workspace {
         self.graph.remove_node(&path);
         self.index.remove_note(&path)?;
 
+        info!(path = rel_path, force = force, "note deleted");
         Ok(())
     }
 
@@ -514,6 +527,7 @@ impl Workspace {
         self.graph.add_edge(edge.clone());
         self.index.add_edges(&[edge])?;
 
+        info!(source = source_path, target = target_path, rel = rel, "link created");
         Ok(())
     }
 
@@ -603,6 +617,7 @@ impl Workspace {
         self.graph.remove_edge(&source, &target, rel);
         self.index.remove_edge(&source, &target, rel)?;
 
+        info!(source = source_path, target = target_path, rel = rel, "link deleted");
         Ok(())
     }
 
@@ -677,6 +692,7 @@ impl Workspace {
         // Update in-memory note
         self.notes.insert(path, new_note);
 
+        debug!(path = rel_path, "file reloaded");
         Ok(GraphDiff {
             added_nodes: vec![], // node already existed, just updated
             removed_nodes: vec![],
@@ -738,6 +754,7 @@ impl Workspace {
         self.index.add_note(&note, mtime)?;
         self.notes.insert(path, note);
 
+        debug!(path = rel_path, "file added");
         Ok(GraphDiff {
             added_nodes: vec![node_data],
             removed_nodes: vec![],
@@ -766,6 +783,7 @@ impl Workspace {
         self.graph.remove_node(&path);
         self.index.remove_note(&path)?;
 
+        debug!(path = rel_path, "file removed");
         Ok(GraphDiff {
             added_nodes: vec![],
             removed_nodes: vec![path],
@@ -909,6 +927,7 @@ impl Workspace {
         // Sync rewired edges to index
         self.index.add_edges(&new_edges)?;
 
+        info!(old_path = old_path, new_path = new_path, rewritten_count = rewritten.len(), "note moved");
         Ok(rewritten)
     }
 
@@ -931,6 +950,7 @@ impl Workspace {
             .collect();
 
         self.index.rebuild(&note_refs, &all_edges)?;
+        info!("search index rebuilt");
         Ok(())
     }
 

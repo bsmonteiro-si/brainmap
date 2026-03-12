@@ -8,7 +8,8 @@ name = "brainmap"
 path = "src/main.rs"
 
 [dependencies]
-brainmap-core = { path = "../core" }
+brainmap-core = { path = "../core", features = ["logging"] }
+tracing = { workspace = true }
 brainmap-mcp = { path = "../mcp" }
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }

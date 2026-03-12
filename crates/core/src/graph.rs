@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use serde::Serialize;
+use tracing::{debug, trace};
 
 use crate::model::{Direction, Edge, EdgeKind, NodeData, RelativePath};
 
@@ -95,6 +96,7 @@ impl Graph {
         direction: &Direction,
         rel_filter: Option<&[String]>,
     ) -> Subgraph {
+        debug!(path = %path, depth = depth, "computing neighbors");
         let max = depth.min(MAX_DEPTH);
         let mut visited_nodes = HashSet::new();
         let mut collected_edges = Vec::new();
@@ -155,6 +157,7 @@ impl Graph {
         target: &RelativePath,
         max_depth: Option<usize>,
     ) -> Option<Vec<Edge>> {
+        debug!(source = %source, target = %target, "finding shortest path");
         let max = max_depth.unwrap_or(MAX_DEPTH).min(MAX_DEPTH);
         let mut visited = HashSet::new();
         let mut queue: VecDeque<(RelativePath, Vec<Edge>)> = VecDeque::new();
@@ -251,6 +254,7 @@ impl Graph {
     }
 
     pub fn edges_for(&self, path: &RelativePath, direction: &Direction) -> Vec<&Edge> {
+        trace!(path = %path, direction = ?direction, "computing edges");
         let mut result = Vec::new();
         match direction {
             Direction::Outgoing => {

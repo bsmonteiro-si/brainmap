@@ -5,6 +5,7 @@ use notify_debouncer_mini::{new_debouncer, notify::RecursiveMode, DebouncedEvent
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::mpsc;
+use tracing::{error, warn};
 
 use brainmap_core::model::{EdgeKind, RelativePath};
 
@@ -118,7 +119,7 @@ async fn process_change(app: &AppHandle, path: PathBuf) {
     let diff = match diff_result {
         Ok(d) => d,
         Err(e) => {
-            eprintln!("watcher: error processing {}: {}", rel_path_str, e);
+            warn!(path = %rel_path_str, error = %e, "watcher: error processing file change");
             return;
         }
     };
@@ -145,7 +146,7 @@ async fn process_change(app: &AppHandle, path: PathBuf) {
     };
 
     if let Err(e) = app.emit("brainmap://workspace-event", payload) {
-        eprintln!("watcher: failed to emit event: {}", e);
+        error!(error = %e, "watcher: failed to emit event");
     }
 }
 

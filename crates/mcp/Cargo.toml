@@ -4,7 +4,8 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-brainmap-core = { path = "../core" }
+brainmap-core = { path = "../core", features = ["logging"] }
+tracing = { workspace = true }
 rmcp = { version = "0.1", features = ["server", "transport-io"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }

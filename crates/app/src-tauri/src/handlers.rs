@@ -2,6 +2,7 @@ use brainmap_core::error::BrainMapError;
 use brainmap_core::index::SearchFilters;
 use brainmap_core::model::Direction;
 use brainmap_core::workspace::Workspace;
+use tracing::info;
 
 use crate::dto::*;
 
@@ -9,6 +10,7 @@ use crate::dto::*;
 /// Uses `open_or_init` which loads from the exact path (no ancestor walk-up)
 /// and auto-initializes if `.brainmap` doesn't exist.
 pub fn handle_open_workspace(path: &str) -> Result<(Workspace, WorkspaceInfoDto), String> {
+    info!(path = path, "opening workspace");
     let p = std::path::Path::new(path);
     let ws = Workspace::open_or_init(p).map_err(|e: BrainMapError| e.to_string())?;
     let stats = ws.stats();
@@ -228,6 +230,7 @@ pub fn handle_list_nodes(ws: &Workspace, params: ListNodesParams) -> Vec<NodeSum
 
 /// Full-text search.
 pub fn handle_search(ws: &Workspace, params: SearchParams) -> Result<Vec<SearchResultDto>, String> {
+    info!(query = %params.query, "searching workspace");
     let filters = SearchFilters {
         note_type: params.note_type,
         tag: params.tag,

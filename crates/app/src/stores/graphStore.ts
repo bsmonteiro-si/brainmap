@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { EdgeDto, NodeDto, WorkspaceEvent } from "../api/types";
 import { getAPI } from "../api/bridge";
+import { log } from "../utils/logger";
 
 interface GraphState {
   nodes: Map<string, NodeDto>;
@@ -35,7 +36,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       }
       set({ nodes, edges: topology.edges, isLoading: false });
     } catch (e) {
-      console.error("Failed to load topology:", e);
+      log.error("stores::graph", "failed to load topology", { error: String(e) });
       set({ isLoading: false });
     }
   },
@@ -75,7 +76,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
 
       set({ nodes: newNodes, edges: newEdges, expandedNodes: newExpanded });
     } catch (e) {
-      console.error("Failed to expand node:", e);
+      log.error("stores::graph", "failed to expand node", { path, error: String(e) });
     }
   },
 
