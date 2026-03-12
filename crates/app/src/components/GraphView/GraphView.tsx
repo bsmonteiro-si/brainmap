@@ -103,6 +103,7 @@ export function GraphView() {
   const cachedHullsRef = useRef<CachedHull[]>([]);
   const particleCanvasRef = useRef<HTMLCanvasElement>(null);
   const particleCleanupRef = useRef<(() => void) | null>(null);
+  const entranceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Zustand action functions are stable references; initialise once and never update
   const selectNodeRef = useRef(useGraphStore.getState().selectNode);
   const expandNodeRef = useRef(useGraphStore.getState().expandNode);
@@ -202,7 +203,7 @@ export function GraphView() {
     });
 
     const clearHoverState = () => {
-      cy.nodes().stop(true).removeStyle("shadow-blur shadow-opacity");
+      cy.nodes().stop().removeStyle("shadow-blur shadow-opacity");
       cy.elements().removeClass("hover-dim hover-bright");
       setTooltip(null);
     };
@@ -213,68 +214,60 @@ export function GraphView() {
     });
 
     cy.on("mouseover", "node", (evt) => {
-      try {
-        const node = evt.target;
-        const nodePath = node.id();
-        console.log("[GraphView] mouseover node:", nodePath);
-        // Clear any previous highlight state first (defensive)
-        clearHoverState();
-        // Neighborhood highlight: dim everything, brighten neighbors
-        const neighborhood = node.closedNeighborhood();
-        cy.elements().addClass("hover-dim");
-        neighborhood.removeClass("hover-dim").addClass("hover-bright");
-        // Pulse animation on hovered node
-        node.animate(
-          { style: { "shadow-blur": 22, "shadow-opacity": 1.0 } },
-          { duration: 400, easing: "ease-in-out-sine" },
+      const node = evt.target;
+      const nodePath = node.id();
+      // Clear any previous highlight state first (defensive)
+      clearHoverState();
+      // Neighborhood highlight: dim everything, brighten neighbors
+      const neighborhood = node.closedNeighborhood();
+      cy.elements().addClass("hover-dim");
+      neighborhood.removeClass("hover-dim").addClass("hover-bright");
+      // Pulse animation on hovered node
+      node.animate(
+        { style: { "shadow-blur": 22, "shadow-opacity": 1.0 } },
+        { duration: 400, easing: "ease-in-out-sine" },
+      );
+      const pos = node.renderedPosition();
+      const container = containerRef.current;
+      const cw = container ? container.clientWidth : Infinity;
+      const ch = container ? container.clientHeight : Infinity;
+      // Clamp tooltip position within the container (280px max tooltip width, ~180px estimated max height)
+      const tx = Math.min(pos.x + 12, cw - 290);
+      const ty = Math.min(Math.max(pos.y - 8, 0), ch - 180);
+      const baseTooltip = {
+        x: tx,
+        y: ty,
+        nodePath,
+        label: node.data("label") as string,
+        noteType: node.data("noteType") as string,
+        color: node.data("color") as string,
+        connections: node.degree(false),
+      };
+      // Show basic tooltip immediately
+      const cached = tooltipCacheRef.current.get(nodePath);
+      if (cached) {
+        setTooltip({ ...baseTooltip, tags: cached.tags, summary: cached.summary });
+      } else {
+        setTooltip(baseTooltip);
+        // Lazy-load enriched data
+        getAPI().then((api) =>
+          api.getNodeSummary(nodePath).then((summary) => {
+            tooltipCacheRef.current.set(nodePath, summary);
+            // Only update if still hovering this node
+            setTooltip((prev) =>
+              prev && prev.nodePath === nodePath
+                ? { ...prev, tags: summary.tags, summary: summary.summary }
+                : prev,
+            );
+          }).catch(() => { /* ignore tooltip fetch errors */ }),
         );
-        const pos = node.renderedPosition();
-        const container = containerRef.current;
-        const cw = container ? container.clientWidth : Infinity;
-        const ch = container ? container.clientHeight : Infinity;
-        // Clamp tooltip position within the container (280px max tooltip width, ~180px estimated max height)
-        const tx = Math.min(pos.x + 12, cw - 290);
-        const ty = Math.min(Math.max(pos.y - 8, 0), ch - 180);
-        const baseTooltip = {
-          x: tx,
-          y: ty,
-          nodePath,
-          label: node.data("label") as string,
-          noteType: node.data("noteType") as string,
-          color: node.data("color") as string,
-          connections: node.degree(false),
-        };
-        console.log("[GraphView] tooltip data:", baseTooltip);
-        // Show basic tooltip immediately
-        const cached = tooltipCacheRef.current.get(nodePath);
-        if (cached) {
-          setTooltip({ ...baseTooltip, tags: cached.tags, summary: cached.summary });
-        } else {
-          setTooltip(baseTooltip);
-          // Lazy-load enriched data
-          getAPI().then((api) =>
-            api.getNodeSummary(nodePath).then((summary) => {
-              tooltipCacheRef.current.set(nodePath, summary);
-              // Only update if still hovering this node
-              setTooltip((prev) =>
-                prev && prev.nodePath === nodePath
-                  ? { ...prev, tags: summary.tags, summary: summary.summary }
-                  : prev,
-              );
-            }).catch((err) => console.warn("[GraphView] tooltip fetch error:", err)),
-          );
-        }
-      } catch (err) {
-        console.error("[GraphView] mouseover handler error:", err);
       }
     });
 
-    cy.on("mouseout", "node", () => {
-      console.log("[GraphView] mouseout node");
-      clearHoverState();
-    });
+    cy.on("mouseout", "node", () => clearHoverState());
 
     return () => {
+      if (entranceTimerRef.current) clearTimeout(entranceTimerRef.current);
       setTooltip(null);
       cy.destroy();
       cyRef.current = null;
@@ -365,6 +358,14 @@ export function GraphView() {
               { duration: 300, easing: "ease-out" },
             );
           });
+          // Safety net: ensure all nodes are visible after animations should have completed
+          const totalDuration = (nodeCount - 1) * stagger + 300 + 50;
+          entranceTimerRef.current = setTimeout(() => {
+            entranceTimerRef.current = null;
+            if (cyRef.current) {
+              cyRef.current.nodes().removeStyle("opacity");
+            }
+          }, totalDuration);
         } catch {
           // Ensure nodes are visible even if animation fails
           cy.nodes().style("opacity", 1);
@@ -626,14 +627,7 @@ export function GraphView() {
         {tooltip && (
           <div
             className="graph-node-tooltip"
-            style={{
-              left: tooltip.x,
-              top: tooltip.y,
-              zIndex: 9999,
-              background: "rgba(30, 30, 30, 0.92)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              color: "#eee",
-            }}
+            style={{ left: tooltip.x, top: tooltip.y }}
           >
             <div className="tooltip-header">
               <span className="tooltip-type-pill" style={{ background: tooltip.color }}>{tooltip.noteType}</span>

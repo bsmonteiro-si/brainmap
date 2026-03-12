@@ -66,6 +66,7 @@ export const graphStylesheet: any[] = [
       "shadow-opacity": 0.7,
       "shadow-offset-x": 0,
       "shadow-offset-y": 0,
+      opacity: 1,
     },
   },
   {
