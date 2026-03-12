@@ -319,11 +319,6 @@ export function FileTreePanel() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TreeNode | null>(null);
 
-  // folderInputValue: null = inactive; string = active (may have a folder prefix pre-filled)
-  const [folderInputValue, setFolderInputValue] = useState<string | null>(null);
-  const [folderInputError, setFolderInputError] = useState<string | null>(null);
-  const folderInputRef = useRef<HTMLInputElement>(null);
-
   const emptyFolders = useUIStore((s) => s.emptyFolders);
   const tree = useMemo(() => buildTree(nodes, emptyFolders), [nodes, emptyFolders]);
 
@@ -342,38 +337,6 @@ export function FileTreePanel() {
   };
 
   const handleCloseMenu = useCallback(() => setContextMenu(null), []);
-
-  // Activate the inline folder input (optionally with a pre-filled prefix)
-  const activateFolderInput = useCallback((prefix = "") => {
-    setFolderInputValue(prefix);
-    setFolderInputError(null);
-    // Focus after state update
-    setTimeout(() => folderInputRef.current?.focus(), 0);
-  }, []);
-
-  const cancelFolderInput = useCallback(() => {
-    setFolderInputValue(null);
-    setFolderInputError(null);
-  }, []);
-
-  const commitFolderInput = useCallback(async () => {
-    const val = folderInputValue?.trim();
-    if (!val) {
-      cancelFolderInput();
-      return;
-    }
-    try {
-      const api = await getAPI();
-      await api.createFolder(val);
-      setFolderInputValue(null);
-      setFolderInputError(null);
-      // Track the empty folder so it appears in the tree
-      useUIStore.getState().addEmptyFolder(val);
-      useUndoStore.getState().pushAction({ kind: "create-folder", folderPath: val });
-    } catch (e) {
-      setFolderInputError(e instanceof Error ? e.message : String(e));
-    }
-  }, [folderInputValue, cancelFolderInput]);
 
   const handleDeleteConfirm = useCallback(async (force: boolean) => {
     if (!deleteTarget) return;
@@ -472,16 +435,6 @@ export function FileTreePanel() {
     setDeleteTarget(null);
   }, [deleteTarget, nodes]);
 
-  const handleFolderKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      commitFolderInput();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      cancelFolderInput();
-    }
-  };
-
   return (
     <div className="file-tree-panel">
       {/* Toolbar */}
@@ -496,30 +449,11 @@ export function FileTreePanel() {
         <button
           className="file-tree-toolbar-btn"
           title="New Folder"
-          onClick={() => activateFolderInput()}
+          onClick={() => useUIStore.getState().openCreateFolderDialog()}
         >
           ⊞
         </button>
       </div>
-
-      {/* Inline folder creation input */}
-      {folderInputValue !== null && (
-        <div className="file-tree-folder-input-wrap">
-          <input
-            ref={folderInputRef}
-            className="file-tree-search-input"
-            placeholder="folder/path…"
-            value={folderInputValue}
-            onChange={(e) => { setFolderInputValue(e.target.value); setFolderInputError(null); }}
-            onKeyDown={handleFolderKeyDown}
-          />
-          {folderInputError && (
-            <span style={{ fontSize: 11, color: "var(--danger)", padding: "2px 8px", display: "block" }}>
-              {folderInputError}
-            </span>
-          )}
-        </div>
-      )}
 
       <div className="file-tree-search">
         <span className="file-tree-search-icon" aria-hidden="true">⌕</span>
@@ -539,10 +473,6 @@ export function FileTreePanel() {
         <ContextMenu
           state={contextMenu}
           onClose={handleCloseMenu}
-          onNewFolderHere={(prefix) => {
-            handleCloseMenu();
-            activateFolderInput(prefix);
-          }}
           onDelete={(node) => setDeleteTarget(node)}
         />
       )}

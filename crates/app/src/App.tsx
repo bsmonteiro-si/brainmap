@@ -9,6 +9,7 @@ import { SegmentPicker } from "./components/Layout/SegmentPicker";
 import { AppLayout } from "./components/Layout/AppLayout";
 import { CommandPalette } from "./components/CommandPalette/CommandPalette";
 import { CreateNoteDialog } from "./components/Editor/CreateNoteDialog";
+import { CreateFolderDialog } from "./components/Layout/CreateFolderDialog";
 import { SettingsModal } from "./components/Settings/SettingsModal";
 import { UndoToast } from "./components/Layout/UndoToast";
 
@@ -20,6 +21,7 @@ function App() {
   const applyEvent = useGraphStore((s) => s.applyEvent);
   const commandPaletteOpen = useUIStore((s) => s.commandPaletteOpen);
   const createNoteDialogOpen = useUIStore((s) => s.createNoteDialogOpen);
+  const createFolderDialogOpen = useUIStore((s) => s.createFolderDialogOpen);
   const settingsOpen = useUIStore((s) => s.settingsOpen);
   const effectiveTheme = useUIStore((s) => s.effectiveTheme);
   const uiFontFamily = useUIStore((s) => s.uiFontFamily);
@@ -171,6 +173,7 @@ function App() {
       <AppLayout />
       {commandPaletteOpen && <CommandPalette />}
       {createNoteDialogOpen && <CreateNoteDialog />}
+      {createFolderDialogOpen && <CreateFolderDialog />}
       {settingsOpen && <SettingsModal />}
       <UndoToast />
     </div>
