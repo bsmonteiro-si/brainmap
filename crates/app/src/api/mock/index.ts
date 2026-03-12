@@ -272,6 +272,23 @@ export class MockBridge implements BrainMapAPI {
     // No-op in mock: no real filesystem
   }
 
+  async deleteFolder(path: string): Promise<{ deleted_paths: string[] }> {
+    await mockDelay("deleteNote");
+    const prefix = path.endsWith("/") ? path : path + "/";
+    const deleted_paths: string[] = [];
+    for (const [notePath] of mockState.notes) {
+      if (notePath.startsWith(prefix)) {
+        deleted_paths.push(notePath);
+      }
+    }
+    for (const p of deleted_paths) {
+      mockState.notes.delete(p);
+      mockState.edges = mockState.edges.filter((e) => e.source !== p && e.target !== p);
+      eventBus.emit({ type: "node-deleted", path: p });
+    }
+    return { deleted_paths };
+  }
+
   onEvent(callback: (event: WorkspaceEvent) => void): () => void {
     return eventBus.subscribe(callback);
   }

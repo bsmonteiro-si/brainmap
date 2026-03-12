@@ -141,6 +141,51 @@ pub fn get_stats(state: State<'_, AppState>) -> Result<StatsDto, String> {
 }
 
 #[tauri::command]
+pub fn delete_folder(
+    state: State<'_, AppState>,
+    path: String,
+    force: Option<bool>,
+) -> Result<DeleteFolderResultDto, String> {
+    // Validate the folder path (same pattern as create_folder)
+    let abs_path = state.with_workspace(|ws| {
+        let p = std::path::Path::new(&path);
+        if p.is_absolute() {
+            return Err("Folder path must be relative".to_string());
+        }
+        let normalized = ws.root.join(p).components().fold(
+            std::path::PathBuf::new(),
+            |mut acc, c| {
+                match c {
+                    std::path::Component::ParentDir => { acc.pop(); acc }
+                    _ => { acc.push(c); acc }
+                }
+            },
+        );
+        if !normalized.starts_with(&ws.root) {
+            return Err("Path escapes workspace root".to_string());
+        }
+        Ok(normalized)
+    })?;
+
+    // Register expected writes for ALL note files in the folder before deleting
+    let prefix = if path.ends_with('/') { path.clone() } else { format!("{}/", path) };
+    let note_paths: Vec<std::path::PathBuf> = state.with_workspace(|ws| {
+        Ok(ws.notes.keys()
+            .filter(|p| p.as_str().starts_with(&prefix))
+            .map(|p| ws.root.join(p.as_str()))
+            .collect())
+    })?;
+
+    for note_abs_path in &note_paths {
+        state.register_expected_write(note_abs_path.clone());
+    }
+    // Also register the folder itself in case the watcher fires on directory removal
+    state.register_expected_write(abs_path);
+
+    state.with_workspace_mut(|ws| handlers::handle_delete_folder(ws, &path, force.unwrap_or(false)))
+}
+
+#[tauri::command]
 pub fn create_folder(state: State<'_, AppState>, path: String) -> Result<(), String> {
     let abs_path = state.with_workspace(|ws| {
         let p = std::path::Path::new(&path);

@@ -253,6 +253,20 @@ impl From<WorkspaceStats> for StatsDto {
     }
 }
 
+// ── Delete Folder DTOs ────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct DeleteFolderResultDto {
+    pub deleted_paths: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ExternalBacklinkDto {
+    pub source_path: String,
+    pub target_path: String,
+    pub rel: String,
+}
+
 // ── Helpers ────────────────────────────────────────────────────────
 
 /// Convert serde_yaml::Value map to serde_json::Value map for IPC boundary.

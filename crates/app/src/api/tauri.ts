@@ -99,6 +99,10 @@ export class TauriBridge implements BrainMapAPI {
     return invoke<void>("create_folder", { path });
   }
 
+  async deleteFolder(path: string, force?: boolean): Promise<{ deleted_paths: string[] }> {
+    return invoke<{ deleted_paths: string[] }>("delete_folder", { path, force: force ?? false });
+  }
+
   onEvent(callback: (event: WorkspaceEvent) => void): () => void {
     let unlisten: (() => void) | null = null;
     let cancelled = false;

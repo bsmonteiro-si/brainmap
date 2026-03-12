@@ -1161,6 +1161,12 @@ body {
 .context-menu-item:hover {
   background: var(--bg-tertiary);
 }
+.context-menu-item--danger {
+  color: var(--danger, #e53935);
+}
+.context-menu-item--danger:hover {
+  background: color-mix(in srgb, var(--danger, #e53935) 12%, transparent);
+}
 .context-menu-separator {
   height: 1px;
   background: var(--border-color);
@@ -1556,7 +1562,7 @@ body {
 /* ── Graph Node Tooltip ───────────────────────────────────── */
 .graph-node-tooltip {
   position: absolute;
-  z-index: 100;
+  z-index: 9999;
   pointer-events: none;
   border-radius: 6px;
   padding: 8px 10px;
@@ -1568,6 +1574,9 @@ body {
   max-width: 280px;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  background: rgba(30, 30, 30, 0.88);
+  color: #eee;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 [data-theme="dark"] .graph-node-tooltip {
   background: rgba(30, 30, 30, 0.88);

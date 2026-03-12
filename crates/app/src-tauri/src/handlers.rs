@@ -109,6 +109,111 @@ pub fn handle_delete_note(ws: &mut Workspace, path: &str, force: bool) -> Result
     ws.delete_note(path, force).map_err(|e: BrainMapError| e.to_string())
 }
 
+/// Delete a folder and all notes inside it.
+///
+/// When `force=false`, checks for external backlinks (from notes outside the folder)
+/// and returns them as a structured error string if any exist.
+/// When `force=true`, deletes all notes regardless of backlinks.
+///
+/// Notes are deleted in reverse-sorted order (deeper paths first) to avoid issues
+/// with parent directories being cleaned up before children.
+/// Uses non-recursive `remove_dir` to avoid silently deleting non-note files.
+pub fn handle_delete_folder(
+    ws: &mut Workspace,
+    folder_path: &str,
+    force: bool,
+) -> Result<DeleteFolderResultDto, String> {
+    let prefix = if folder_path.ends_with('/') {
+        folder_path.to_string()
+    } else {
+        format!("{}/", folder_path)
+    };
+
+    // Collect all note paths under this folder
+    let mut note_paths: Vec<String> = ws
+        .notes
+        .keys()
+        .filter(|p| p.as_str().starts_with(&prefix))
+        .map(|p| p.as_str().to_string())
+        .collect();
+
+    // Check for external backlinks when force=false
+    if !force {
+        let folder_note_set: std::collections::HashSet<&str> =
+            note_paths.iter().map(|s| s.as_str()).collect();
+
+        let mut external_backlinks: Vec<ExternalBacklinkDto> = Vec::new();
+        for note_path in &note_paths {
+            let rp = brainmap_core::model::RelativePath::new(note_path);
+            if let Ok(backlinks) = ws.index.backlinks(&rp) {
+                for (source, rel) in backlinks {
+                    // Only report backlinks from notes OUTSIDE the folder
+                    if !folder_note_set.contains(source.as_str()) {
+                        external_backlinks.push(ExternalBacklinkDto {
+                            source_path: source,
+                            target_path: note_path.clone(),
+                            rel,
+                        });
+                    }
+                }
+            }
+        }
+
+        if !external_backlinks.is_empty() {
+            let bl_json = serde_json::to_string(&external_backlinks)
+                .unwrap_or_else(|_| "[]".to_string());
+            return Err(format!("EXTERNAL_BACKLINKS:{}", bl_json));
+        }
+    }
+
+    // Delete notes in reverse-sorted order (deeper paths first)
+    note_paths.sort();
+    note_paths.reverse();
+
+    let mut deleted_paths: Vec<String> = Vec::new();
+    for note_path in &note_paths {
+        match ws.delete_note(note_path, true) {
+            Ok(()) => deleted_paths.push(note_path.clone()),
+            Err(e) => {
+                // Partial failure: return what we managed to delete + the error
+                let partial_json = serde_json::to_string(&deleted_paths)
+                    .unwrap_or_else(|_| "[]".to_string());
+                return Err(format!(
+                    "PARTIAL_DELETE:{}:{}",
+                    partial_json,
+                    e.to_string()
+                ));
+            }
+        }
+    }
+
+    // Try to remove the directory (non-recursive — won't delete non-note files)
+    let dir_path = ws.root.join(folder_path);
+    if dir_path.is_dir() {
+        // Walk bottom-up to remove empty subdirectories
+        let _ = remove_empty_dirs_recursive(&dir_path);
+    }
+
+    Ok(DeleteFolderResultDto { deleted_paths })
+}
+
+/// Recursively remove empty directories bottom-up.
+/// Ignores errors (non-empty dirs with non-note files will simply remain).
+fn remove_empty_dirs_recursive(dir: &std::path::Path) -> std::io::Result<()> {
+    if dir.is_dir() {
+        for entry in std::fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                let _ = remove_empty_dirs_recursive(&path);
+            }
+        }
+        // Try to remove this directory — will fail if non-empty, which is fine
+        let _ = std::fs::remove_dir(dir);
+    }
+    Ok(())
+}
+
 /// List nodes with optional filters.
 pub fn handle_list_nodes(ws: &Workspace, params: ListNodesParams) -> Vec<NodeSummaryDto> {
     ws.list_nodes(

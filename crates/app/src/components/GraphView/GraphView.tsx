@@ -203,7 +203,8 @@ export function GraphView() {
     });
 
     const clearHoverState = () => {
-      cy.nodes().stop().removeStyle("shadow-blur shadow-opacity");
+      // Reset hover pulse to stylesheet defaults (avoid stop()/removeStyle() — broken in Cytoscape 3.33)
+      cy.nodes().style({ "shadow-blur": null as never, "shadow-opacity": null as never });
       cy.elements().removeClass("hover-dim hover-bright");
       setTooltip(null);
     };
@@ -222,11 +223,8 @@ export function GraphView() {
       const neighborhood = node.closedNeighborhood();
       cy.elements().addClass("hover-dim");
       neighborhood.removeClass("hover-dim").addClass("hover-bright");
-      // Pulse animation on hovered node
-      node.animate(
-        { style: { "shadow-blur": 22, "shadow-opacity": 1.0 } },
-        { duration: 400, easing: "ease-in-out-sine" },
-      );
+      // Pulse effect on hovered node (direct style — animate() crashes in Cytoscape 3.33)
+      node.style({ "shadow-blur": 22, "shadow-opacity": 1.0 });
       const pos = node.renderedPosition();
       const container = containerRef.current;
       const cw = container ? container.clientWidth : Infinity;
@@ -345,31 +343,25 @@ export function GraphView() {
       runLayout(cy, graphLayoutRef.current);
       applyEdgeLabelVisibility(cy, showEdgeLabelsRef.current, selectedNodePathRef.current);
 
-      // Staggered fade-in entrance animation (first load only)
+      // Staggered fade-in entrance (first load only)
+      // Note: cy.animate() is broken in Cytoscape 3.33 (prop.name crash), so
+      // we use setTimeout-based opacity staging instead.
       if (!hasEnteredRef.current) {
         hasEnteredRef.current = true;
-        try {
-          const nodeCount = cy.nodes().length;
-          const stagger = Math.min(8, 300 / Math.max(nodeCount, 1));
-          cy.nodes().style("opacity", 0);
-          cy.nodes().forEach((node, i) => {
-            node.delay(i * stagger).animate(
-              { style: { opacity: 1 } },
-              { duration: 300, easing: "ease-out" },
-            );
-          });
-          // Safety net: ensure all nodes are visible after animations should have completed
-          const totalDuration = (nodeCount - 1) * stagger + 300 + 50;
-          entranceTimerRef.current = setTimeout(() => {
-            entranceTimerRef.current = null;
-            if (cyRef.current) {
-              cyRef.current.nodes().removeStyle("opacity");
-            }
-          }, totalDuration);
-        } catch {
-          // Ensure nodes are visible even if animation fails
-          cy.nodes().style("opacity", 1);
-        }
+        const nodeCount = cy.nodes().length;
+        const stagger = Math.min(8, 300 / Math.max(nodeCount, 1));
+        cy.nodes().style("opacity", 0);
+        cy.nodes().forEach((node, i) => {
+          setTimeout(() => node.style("opacity", 1), i * stagger);
+        });
+        // Safety net: clear inline opacity after all stages complete
+        const totalDuration = (nodeCount - 1) * stagger + 50;
+        entranceTimerRef.current = setTimeout(() => {
+          entranceTimerRef.current = null;
+          if (cyRef.current) {
+            cyRef.current.nodes().style("opacity", null as never);
+          }
+        }, totalDuration);
       }
     }
   }, [filteredNodes, filteredEdges, hiddenEdgeTypes, focalPath]);

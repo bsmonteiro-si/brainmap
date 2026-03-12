@@ -5,6 +5,7 @@ import { useEditorStore } from "../../stores/editorStore";
 import { useUIStore } from "../../stores/uiStore";
 import { getAPI } from "../../api/bridge";
 import type { NodeDto } from "../../api/types";
+import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 
 interface TreeNode {
   name: string;
@@ -108,10 +109,12 @@ function ContextMenu({
   state,
   onClose,
   onNewFolderHere,
+  onDelete,
 }: {
   state: ContextMenuState;
   onClose: () => void;
   onNewFolderHere: (prefix: string) => void;
+  onDelete: (node: TreeNode) => void;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [clampedPos, setClampedPos] = useState(() => ({
@@ -174,6 +177,12 @@ function ContextMenu({
     onNewFolderHere(prefix);
   };
 
+  const handleDelete = () => {
+    if (!state.node) return;
+    onClose();
+    onDelete(state.node);
+  };
+
   // Determine label for the file-level "new note" item
   const isRootLevelFile =
     state.node !== null &&
@@ -203,6 +212,10 @@ function ContextMenu({
           <div className="context-menu-item" onClick={handleFocusInGraph}>
             Focus in Graph
           </div>
+          <div className="context-menu-separator" />
+          <div className="context-menu-item context-menu-item--danger" onClick={handleDelete}>
+            Delete Folder
+          </div>
         </>
       ) : (
         <>
@@ -212,6 +225,10 @@ function ContextMenu({
           <div className="context-menu-separator" />
           <div className="context-menu-item" onClick={handleFocusInGraph}>
             Focus in Graph
+          </div>
+          <div className="context-menu-separator" />
+          <div className="context-menu-item context-menu-item--danger" onClick={handleDelete}>
+            Delete
           </div>
         </>
       )}
@@ -291,6 +308,7 @@ export function FileTreePanel() {
   const nodes = useGraphStore((s) => s.nodes);
   const [filter, setFilter] = useState("");
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TreeNode | null>(null);
 
   // folderInputValue: null = inactive; string = active (may have a folder prefix pre-filled)
   // Note: if the user creates a folder but cancels the subsequent note creation dialog,
@@ -348,6 +366,72 @@ export function FileTreePanel() {
       setFolderInputError(e instanceof Error ? e.message : String(e));
     }
   }, [folderInputValue, cancelFolderInput]);
+
+  const handleDeleteConfirm = useCallback(async (force: boolean) => {
+    if (!deleteTarget) return;
+    const api = await getAPI();
+    const activeNotePath = useEditorStore.getState().activeNote?.path;
+
+    // 1. Close editor if active note is in delete scope (before API call)
+    if (activeNotePath) {
+      const inScope = deleteTarget.isFolder
+        ? activeNotePath.startsWith(deleteTarget.fullPath + "/")
+        : activeNotePath === deleteTarget.fullPath;
+      if (inScope) {
+        useEditorStore.getState().clear();
+        useGraphStore.getState().selectNode(null);
+      }
+    }
+
+    // 2. Clear graph focus if it targets the deleted item
+    const { graphFocusPath } = useUIStore.getState();
+    if (graphFocusPath) {
+      const focusInScope = deleteTarget.isFolder
+        ? graphFocusPath === deleteTarget.fullPath || graphFocusPath.startsWith(deleteTarget.fullPath + "/")
+        : graphFocusPath === deleteTarget.fullPath;
+      if (focusInScope) {
+        useUIStore.getState().clearGraphFocus();
+      }
+    }
+
+    try {
+      if (deleteTarget.isFolder) {
+        // 3. Delete folder
+        const result = await api.deleteFolder(deleteTarget.fullPath, force);
+        // 4. Update graph for each deleted path
+        for (const path of result.deleted_paths) {
+          useGraphStore.getState().applyEvent({ type: "node-deleted", path });
+        }
+      } else {
+        // 3. Delete note
+        await api.deleteNote(deleteTarget.fullPath, force);
+        // 4. Update graph
+        useGraphStore.getState().applyEvent({ type: "node-deleted", path: deleteTarget.fullPath });
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // Handle partial folder deletion
+      if (msg.startsWith("PARTIAL_DELETE:")) {
+        const rest = msg.slice("PARTIAL_DELETE:".length);
+        const colonIdx = rest.indexOf(":");
+        if (colonIdx > 0) {
+          try {
+            const deletedPaths = JSON.parse(rest.slice(0, colonIdx)) as string[];
+            for (const path of deletedPaths) {
+              useGraphStore.getState().applyEvent({ type: "node-deleted", path });
+            }
+          } catch {
+            // Couldn't parse partial results
+          }
+        }
+        console.error("Partial folder deletion:", msg);
+      } else {
+        console.error("Delete failed:", msg);
+      }
+    }
+
+    setDeleteTarget(null);
+  }, [deleteTarget]);
 
   const handleFolderKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -420,6 +504,14 @@ export function FileTreePanel() {
             handleCloseMenu();
             activateFolderInput(prefix);
           }}
+          onDelete={(node) => setDeleteTarget(node)}
+        />
+      )}
+      {deleteTarget && (
+        <ConfirmDeleteDialog
+          target={deleteTarget}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteTarget(null)}
         />
       )}
     </div>

@@ -130,5 +130,6 @@ export interface BrainMapAPI {
   getNeighbors(path: string, depth: number, direction?: string, relFilter?: string): Promise<Subgraph>;
   getStats(): Promise<StatsDto>;
   createFolder(path: string): Promise<void>;
+  deleteFolder(path: string, force?: boolean): Promise<{ deleted_paths: string[] }>;
   onEvent(callback: (event: WorkspaceEvent) => void): () => void;
 }

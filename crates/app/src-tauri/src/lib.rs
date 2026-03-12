@@ -27,6 +27,7 @@ pub fn run() {
             commands::get_node_summary,
             commands::get_stats,
             commands::create_folder,
+            commands::delete_folder,
         ])
         .run(tauri::generate_context!())
         .expect("error while running BrainMap");
