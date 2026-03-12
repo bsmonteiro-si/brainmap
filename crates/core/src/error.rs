@@ -23,8 +23,14 @@ pub enum BrainMapError {
         rel: String,
     },
 
-    #[error("link not found: {from} -> {to}")]
-    LinkNotFound { from: String, to: String },
+    #[error("link not found: {from} -> {to} ({rel})")]
+    LinkNotFound { from: String, to: String, rel: String },
+
+    #[error("invalid argument: {0}")]
+    InvalidArgument(String),
+
+    #[error("note has incoming links and cannot be deleted without --force")]
+    HasBacklinks { path: String, backlinks: Vec<(String, String)> },
 
     #[error("invalid workspace: {0}")]
     InvalidWorkspace(String),
@@ -46,4 +52,26 @@ pub enum BrainMapError {
 
     #[error(transparent)]
     Sqlite(#[from] rusqlite::Error),
+}
+
+impl BrainMapError {
+    pub fn error_code(&self) -> &str {
+        match self {
+            BrainMapError::FileNotFound(_) => "FILE_NOT_FOUND",
+            BrainMapError::DuplicatePath(_) => "DUPLICATE_PATH",
+            BrainMapError::InvalidYaml(_) => "INVALID_YAML",
+            BrainMapError::BrokenLinkTarget { .. } => "BROKEN_LINK_TARGET",
+            BrainMapError::DuplicateLink { .. } => "DUPLICATE_LINK",
+            BrainMapError::LinkNotFound { .. } => "LINK_NOT_FOUND",
+            BrainMapError::InvalidArgument(_) => "INVALID_ARGUMENT",
+            BrainMapError::HasBacklinks { .. } => "HAS_BACKLINKS",
+            BrainMapError::InvalidWorkspace(_) => "INVALID_WORKSPACE",
+            BrainMapError::WorkspaceExists(_) => "WORKSPACE_EXISTS",
+            BrainMapError::IndexCorrupt(_) => "INDEX_CORRUPT",
+            BrainMapError::ConfigError(_) => "CONFIG_ERROR",
+            BrainMapError::Io(_) => "IO_ERROR",
+            BrainMapError::Yaml(_) => "YAML_ERROR",
+            BrainMapError::Sqlite(_) => "SQLITE_ERROR",
+        }
+    }
 }

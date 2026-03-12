@@ -98,6 +98,20 @@ pub enum Status {
     Archived,
 }
 
+impl std::str::FromStr for Status {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "draft" => Ok(Status::Draft),
+            "review" => Ok(Status::Review),
+            "final" => Ok(Status::Final),
+            "archived" => Ok(Status::Archived),
+            other => Err(format!("invalid status: '{}'", other)),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TypedLink {
     pub target: String,
@@ -107,7 +121,7 @@ pub struct TypedLink {
     pub annotation: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct InlineLink {
     pub target: String,
     pub label: Option<String>,
@@ -136,7 +150,7 @@ pub struct Frontmatter {
     pub extra: HashMap<String, serde_yaml::Value>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Note {
     pub path: RelativePath,
     pub frontmatter: Frontmatter,
@@ -151,7 +165,7 @@ pub enum EdgeKind {
     Inline,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Edge {
     pub source: RelativePath,
     pub target: RelativePath,
@@ -159,18 +173,27 @@ pub struct Edge {
     pub kind: EdgeKind,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Direction {
     Outgoing,
     Incoming,
     Both,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct NodeData {
     pub title: String,
     pub note_type: String,
+    pub tags: Vec<String>,
     pub path: RelativePath,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct GraphDiff {
+    pub added_nodes: Vec<NodeData>,
+    pub removed_nodes: Vec<RelativePath>,
+    pub added_edges: Vec<Edge>,
+    pub removed_edges: Vec<Edge>,
 }
 
 impl From<PathBuf> for RelativePath {

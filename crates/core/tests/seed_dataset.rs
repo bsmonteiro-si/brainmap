@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::{LazyLock, Mutex};
 
 use brainmap_core::workspace::{Severity, Workspace};
 
@@ -11,11 +12,13 @@ fn seed_path() -> PathBuf {
         .join("seed")
 }
 
+static SEED_WORKSPACE: LazyLock<Mutex<Workspace>> = LazyLock::new(|| {
+    Mutex::new(Workspace::open(&seed_path()).expect("seed workspace should open without fatal errors"))
+});
+
 #[test]
 fn test_seed_workspace_opens() {
-    let path = seed_path();
-    let ws = Workspace::open(&path).expect("seed workspace should open without fatal errors");
-
+    let ws = SEED_WORKSPACE.lock().unwrap_or_else(|e| e.into_inner());
     assert!(
         ws.notes.len() >= 30,
         "expected at least 30 notes, got {}",
@@ -25,7 +28,7 @@ fn test_seed_workspace_opens() {
 
 #[test]
 fn test_seed_all_note_types_present() {
-    let ws = Workspace::open(&seed_path()).unwrap();
+    let ws = SEED_WORKSPACE.lock().unwrap_or_else(|e| e.into_inner());
     let stats = ws.stats();
 
     let expected_types = vec![
@@ -51,7 +54,7 @@ fn test_seed_all_note_types_present() {
 
 #[test]
 fn test_seed_validation_catches_broken_link() {
-    let ws = Workspace::open(&seed_path()).unwrap();
+    let ws = SEED_WORKSPACE.lock().unwrap_or_else(|e| e.into_inner());
     let issues = ws.validate();
 
     let broken_links: Vec<_> = issues
@@ -67,7 +70,7 @@ fn test_seed_validation_catches_broken_link() {
 
 #[test]
 fn test_seed_validation_catches_orphan() {
-    let ws = Workspace::open(&seed_path()).unwrap();
+    let ws = SEED_WORKSPACE.lock().unwrap_or_else(|e| e.into_inner());
     let issues = ws.validate();
 
     let orphans: Vec<_> = issues
@@ -83,7 +86,7 @@ fn test_seed_validation_catches_orphan() {
 
 #[test]
 fn test_seed_validation_federation_warning() {
-    let ws = Workspace::open(&seed_path()).unwrap();
+    let ws = SEED_WORKSPACE.lock().unwrap_or_else(|e| e.into_inner());
     let issues = ws.validate();
 
     let federation_warnings: Vec<_> = issues
@@ -99,7 +102,7 @@ fn test_seed_validation_federation_warning() {
 
 #[test]
 fn test_seed_search_works() {
-    let ws = Workspace::open(&seed_path()).unwrap();
+    let ws = SEED_WORKSPACE.lock().unwrap_or_else(|e| e.into_inner());
     let results = ws
         .index
         .search("causality", &brainmap_core::index::SearchFilters::default())
@@ -113,7 +116,7 @@ fn test_seed_search_works() {
 
 #[test]
 fn test_seed_graph_has_edges() {
-    let ws = Workspace::open(&seed_path()).unwrap();
+    let ws = SEED_WORKSPACE.lock().unwrap_or_else(|e| e.into_inner());
     let stats = ws.stats();
 
     assert!(

@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
+use serde::Serialize;
+
 use crate::model::{Direction, Edge, EdgeKind, NodeData, RelativePath};
 
 const MAX_DEPTH: usize = 10;
@@ -10,13 +12,13 @@ pub struct Graph {
     incoming: HashMap<RelativePath, Vec<Edge>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Subgraph {
     pub nodes: Vec<NodeData>,
     pub edges: Vec<Edge>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct GraphStats {
     pub node_count: usize,
     pub edge_count: usize,
@@ -96,6 +98,7 @@ impl Graph {
         let max = depth.min(MAX_DEPTH);
         let mut visited_nodes = HashSet::new();
         let mut collected_edges = Vec::new();
+        let mut seen_edges: HashSet<(String, String, String)> = HashSet::new();
         let mut queue = VecDeque::new();
 
         visited_nodes.insert(path.clone());
@@ -120,7 +123,14 @@ impl Graph {
                     &edge.source
                 };
 
-                collected_edges.push(edge.clone());
+                let key = (
+                    edge.source.as_str().to_string(),
+                    edge.target.as_str().to_string(),
+                    edge.rel.clone(),
+                );
+                if seen_edges.insert(key) {
+                    collected_edges.push(edge.clone());
+                }
 
                 if visited_nodes.insert(neighbor.clone()) {
                     queue.push_back((neighbor.clone(), d + 1));
@@ -236,7 +246,11 @@ impl Graph {
         }
     }
 
-    fn edges_for(&self, path: &RelativePath, direction: &Direction) -> Vec<&Edge> {
+    pub fn edges_for_all(&self) -> Vec<&Edge> {
+        self.outgoing.values().flat_map(|edges| edges.iter()).collect()
+    }
+
+    pub fn edges_for(&self, path: &RelativePath, direction: &Direction) -> Vec<&Edge> {
         let mut result = Vec::new();
         match direction {
             Direction::Outgoing => {
@@ -341,6 +355,7 @@ mod tests {
         let data = NodeData {
             title: path.to_string(),
             note_type: note_type.to_string(),
+            tags: vec![],
             path: p.clone(),
         };
         (p, data)

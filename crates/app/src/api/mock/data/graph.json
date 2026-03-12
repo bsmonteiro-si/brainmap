@@ -1,0 +1,878 @@
+{
+  "success": true,
+  "data": {
+    "content": {
+      "edges": [
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "The Book of Why/Ch3 - Reverend Bayes Meets Mr Holmes/Ch3 - Reverend Bayes Meets Mr Holmes.md",
+          "target": "Concepts/Bayesian Networks.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "The Book of Why/Introduction - Mind Over Data/A Blueprint of Reality/A Blueprint of Reality.md",
+          "target": "Concepts/Causal Inference.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "The Book of Why/Introduction - Mind Over Data/A Blueprint of Reality/A Blueprint of Reality.md",
+          "target": "Concepts/Causal Diagrams.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "part-of",
+          "source": "The Book of Why/Introduction - Mind Over Data/A Blueprint of Reality/A Blueprint of Reality.md",
+          "target": "The Book of Why/Introduction - Mind Over Data/Introduction - Mind Over Data.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "leads-to",
+          "source": "Concepts/Seeing vs Doing.md",
+          "target": "Concepts/Do-Calculus.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Concepts/Seeing vs Doing.md",
+          "target": "Concepts/Randomized Controlled Trials.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Concepts/Seeing vs Doing.md",
+          "target": "Concepts/Confounding.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "part-of",
+          "source": "Concepts/Seeing vs Doing.md",
+          "target": "Concepts/The Ladder of Causation.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "Concepts/Seeing vs Doing.md",
+          "target": "Concepts/Confounding.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "Concepts/Seeing vs Doing.md",
+          "target": "Concepts/Randomized Controlled Trials.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "Concepts/Seeing vs Doing.md",
+          "target": "Concepts/Do-Calculus.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "Concepts/Seeing vs Doing.md",
+          "target": "Concepts/The Ladder of Causation.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "People/Ronald Fisher.md",
+          "target": "Concepts/Randomized Controlled Trials.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contradicts",
+          "source": "People/Ronald Fisher.md",
+          "target": "Concepts/Causal Inference.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "authored-by",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "People/Judea Pearl.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Introduction - Mind Over Data/Introduction - Mind Over Data.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Ch1 - The Ladder of Causation/Ch1 - The Ladder of Causation.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Ch2 - Genesis of Causal Inference/Ch2 - Genesis of Causal Inference.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Ch3 - Reverend Bayes Meets Mr Holmes/Ch3 - Reverend Bayes Meets Mr Holmes.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Ch4 - Confounding and Deconfounding/Ch4 - Confounding and Deconfounding.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Ch7 - The Conquest of Mount Intervention/Ch7 - The Conquest of Mount Intervention.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Ch8 - Counterfactuals/Ch8 - Counterfactuals.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Ch10 - Big Data AI and the Big Questions/Ch10 - Big Data AI and the Big Questions.md"
+        },
+        {
+          "kind": "implicit",
+          "rel": "contains",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Ch7 - The Conquest of Mount Intervention/Ch7 - The Conquest of Mount Intervention.md"
+        },
+        {
+          "kind": "implicit",
+          "rel": "contains",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Introduction - Mind Over Data/Introduction - Mind Over Data.md"
+        },
+        {
+          "kind": "implicit",
+          "rel": "contains",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Ch1 - The Ladder of Causation/Ch1 - The Ladder of Causation.md"
+        },
+        {
+          "kind": "implicit",
+          "rel": "contains",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Ch8 - Counterfactuals/Ch8 - Counterfactuals.md"
+        },
+        {
+          "kind": "implicit",
+          "rel": "contains",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Ch10 - Big Data AI and the Big Questions/Ch10 - Big Data AI and the Big Questions.md"
+        },
+        {
+          "kind": "implicit",
+          "rel": "contains",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Ch4 - Confounding and Deconfounding/Ch4 - Confounding and Deconfounding.md"
+        },
+        {
+          "kind": "implicit",
+          "rel": "contains",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Ch3 - Reverend Bayes Meets Mr Holmes/Ch3 - Reverend Bayes Meets Mr Holmes.md"
+        },
+        {
+          "kind": "implicit",
+          "rel": "contains",
+          "source": "The Book of Why/The Book of Why.md",
+          "target": "The Book of Why/Ch2 - Genesis of Causal Inference/Ch2 - Genesis of Causal Inference.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "The Book of Why/Introduction - Mind Over Data/Introduction - Mind Over Data.md",
+          "target": "Concepts/Causal Inference.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "The Book of Why/Introduction - Mind Over Data/Introduction - Mind Over Data.md",
+          "target": "Concepts/Seeing vs Doing.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "The Book of Why/Introduction - Mind Over Data/Introduction - Mind Over Data.md",
+          "target": "Concepts/Do-Calculus.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "The Book of Why/Introduction - Mind Over Data/Introduction - Mind Over Data.md",
+          "target": "Concepts/Causal Diagrams.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "The Book of Why/Introduction - Mind Over Data/Introduction - Mind Over Data.md",
+          "target": "Concepts/Counterfactual Reasoning.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "leads-to",
+          "source": "The Book of Why/Introduction - Mind Over Data/Introduction - Mind Over Data.md",
+          "target": "Questions/Can Machines Think Causally.md"
+        },
+        {
+          "kind": "implicit",
+          "rel": "contains",
+          "source": "The Book of Why/Introduction - Mind Over Data/Introduction - Mind Over Data.md",
+          "target": "The Book of Why/Introduction - Mind Over Data/A Blueprint of Reality/A Blueprint of Reality.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "The Book of Why/Ch2 - Genesis of Causal Inference/Ch2 - Genesis of Causal Inference.md",
+          "target": "People/Francis Galton.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "The Book of Why/Ch2 - Genesis of Causal Inference/Ch2 - Genesis of Causal Inference.md",
+          "target": "People/Karl Pearson.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "The Book of Why/Ch2 - Genesis of Causal Inference/Ch2 - Genesis of Causal Inference.md",
+          "target": "People/Sewall Wright.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "The Book of Why/Ch2 - Genesis of Causal Inference/Ch2 - Genesis of Causal Inference.md",
+          "target": "People/Ronald Fisher.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "Concepts/The Ladder of Causation.md",
+          "target": "Concepts/Seeing vs Doing.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "Concepts/The Ladder of Causation.md",
+          "target": "Concepts/Counterfactual Reasoning.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Concepts/The Ladder of Causation.md",
+          "target": "Arguments/Causal Reasoning is Formalizable.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Concepts/Confounding.md",
+          "target": "Concepts/Seeing vs Doing.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Concepts/Confounding.md",
+          "target": "Concepts/Randomized Controlled Trials.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "Concepts/Causal Inference.md",
+          "target": "Concepts/Do-Calculus.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "Concepts/Causal Inference.md",
+          "target": "Concepts/Structural Causal Models.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "Concepts/Causal Inference.md",
+          "target": "Concepts/Counterfactual Reasoning.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "Concepts/Causal Inference.md",
+          "target": "Concepts/Causal Diagrams.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Concepts/Causal Inference.md",
+          "target": "Concepts/Confounding.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Concepts/Causal Inference.md",
+          "target": "Concepts/Potential Outcomes Framework.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "authored-by",
+          "source": "Concepts/Causal Inference.md",
+          "target": "People/Judea Pearl.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "Concepts/Causal Inference.md",
+          "target": "Concepts/Potential Outcomes Framework.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "supports",
+          "source": "Evidence/Smoking and Lung Cancer Studies.md",
+          "target": "Arguments/Causal Reasoning is Formalizable.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Evidence/Smoking and Lung Cancer Studies.md",
+          "target": "People/Ronald Fisher.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Evidence/Smoking and Lung Cancer Studies.md",
+          "target": "Concepts/Confounding.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Evidence/Smoking and Lung Cancer Studies.md",
+          "target": "Concepts/Randomized Controlled Trials.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Evidence/Smoking and Lung Cancer Studies.md",
+          "target": "Evidence/Personal::Notes/Some Topic.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "evolved-from",
+          "source": "People/Karl Pearson.md",
+          "target": "People/Francis Galton.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contradicts",
+          "source": "People/Karl Pearson.md",
+          "target": "Concepts/Causal Inference.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Questions/Can Machines Think Causally.md",
+          "target": "Concepts/Causal Inference.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Questions/Can Machines Think Causally.md",
+          "target": "People/Judea Pearl.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "extends",
+          "source": "Concepts/Do-Calculus.md",
+          "target": "Concepts/Structural Causal Models.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "depends-on",
+          "source": "Concepts/Do-Calculus.md",
+          "target": "Concepts/Causal Diagrams.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "part-of",
+          "source": "Concepts/Causal Diagrams.md",
+          "target": "Concepts/Causal Inference.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Concepts/Causal Diagrams.md",
+          "target": "Concepts/Bayesian Networks.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "precedes",
+          "source": "People/Francis Galton.md",
+          "target": "People/Karl Pearson.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "leads-to",
+          "source": "People/Francis Galton.md",
+          "target": "Concepts/Causal Diagrams.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "The Book of Why/Ch7 - The Conquest of Mount Intervention/Ch7 - The Conquest of Mount Intervention.md",
+          "target": "Concepts/Do-Calculus.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "exemplifies",
+          "source": "Concepts/Simpsons Paradox.md",
+          "target": "Concepts/Confounding.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "sourced-from",
+          "source": "Concepts/Simpsons Paradox.md",
+          "target": "The Book of Why/Ch4 - Confounding and Deconfounding/Ch4 - Confounding and Deconfounding.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Concepts/Randomized Controlled Trials.md",
+          "target": "Concepts/Seeing vs Doing.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Concepts/Randomized Controlled Trials.md",
+          "target": "Concepts/Confounding.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Concepts/Randomized Controlled Trials.md",
+          "target": "People/Ronald Fisher.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Questions/Why Did Statistics Resist Causation.md",
+          "target": "People/Ronald Fisher.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Questions/Why Did Statistics Resist Causation.md",
+          "target": "People/Karl Pearson.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Questions/Why Did Statistics Resist Causation.md",
+          "target": "Concepts/Causal Inference.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Questions/Why Did Statistics Resist Causation.md",
+          "target": "People/Sewall Wright.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "Questions/Why Did Statistics Resist Causation.md",
+          "target": "People/Karl Pearson.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "Questions/Why Did Statistics Resist Causation.md",
+          "target": "People/Ronald Fisher.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "Questions/Why Did Statistics Resist Causation.md",
+          "target": "People/Sewall Wright.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "The Book of Why/Ch8 - Counterfactuals/Ch8 - Counterfactuals.md",
+          "target": "Concepts/Counterfactual Reasoning.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "authored-by",
+          "source": "People/Judea Pearl.md",
+          "target": "Concepts/Causal Inference.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "authored-by",
+          "source": "People/Judea Pearl.md",
+          "target": "Concepts/Do-Calculus.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "authored-by",
+          "source": "People/Judea Pearl.md",
+          "target": "Concepts/Bayesian Networks.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "authored-by",
+          "source": "People/Judea Pearl.md",
+          "target": "Concepts/Structural Causal Models.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "authored-by",
+          "source": "People/Judea Pearl.md",
+          "target": "The Book of Why/The Book of Why.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "People/Judea Pearl.md",
+          "target": "People/Concepts/Deleted Note.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "People/Judea Pearl.md",
+          "target": "People/Francis Galton.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "People/Judea Pearl.md",
+          "target": "People/Karl Pearson.md"
+        },
+        {
+          "kind": "inline",
+          "rel": "mentioned-in",
+          "source": "People/Judea Pearl.md",
+          "target": "People/Sewall Wright.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "The Book of Why/Ch10 - Big Data AI and the Big Questions/Ch10 - Big Data AI and the Big Questions.md",
+          "target": "Questions/Can Machines Think Causally.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "authored-by",
+          "source": "Experiments/Wrights Guinea Pig Genetics.md",
+          "target": "People/Sewall Wright.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "leads-to",
+          "source": "Experiments/Wrights Guinea Pig Genetics.md",
+          "target": "Concepts/Causal Diagrams.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "The Book of Why/Ch1 - The Ladder of Causation/Ch1 - The Ladder of Causation.md",
+          "target": "Concepts/The Ladder of Causation.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "leads-to",
+          "source": "People/Sewall Wright.md",
+          "target": "Concepts/Causal Diagrams.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "The Book of Why/Ch4 - Confounding and Deconfounding/Ch4 - Confounding and Deconfounding.md",
+          "target": "Concepts/Confounding.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "The Book of Why/Ch4 - Confounding and Deconfounding/Ch4 - Confounding and Deconfounding.md",
+          "target": "Concepts/Simpsons Paradox.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "precedes",
+          "source": "Concepts/Bayesian Networks.md",
+          "target": "Concepts/Causal Diagrams.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "part-of",
+          "source": "Concepts/Counterfactual Reasoning.md",
+          "target": "Concepts/The Ladder of Causation.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Concepts/Counterfactual Reasoning.md",
+          "target": "Concepts/Structural Causal Models.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Concepts/Potential Outcomes Framework.md",
+          "target": "Concepts/Causal Inference.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contradicts",
+          "source": "Concepts/Potential Outcomes Framework.md",
+          "target": "Concepts/Do-Calculus.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "supports",
+          "source": "Arguments/Causal Reasoning is Formalizable.md",
+          "target": "Concepts/Causal Inference.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "authored-by",
+          "source": "Arguments/Causal Reasoning is Formalizable.md",
+          "target": "People/Judea Pearl.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Arguments/Causal Reasoning is Formalizable.md",
+          "target": "Concepts/Do-Calculus.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Arguments/Causal Reasoning is Formalizable.md",
+          "target": "Concepts/Structural Causal Models.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "Concepts/Structural Causal Models.md",
+          "target": "Concepts/Do-Calculus.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "extends",
+          "source": "Concepts/Structural Causal Models.md",
+          "target": "Concepts/Bayesian Networks.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "Projects/The Causal Revolution.md",
+          "target": "Concepts/Do-Calculus.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "contains",
+          "source": "Projects/The Causal Revolution.md",
+          "target": "Concepts/Structural Causal Models.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "authored-by",
+          "source": "Projects/The Causal Revolution.md",
+          "target": "People/Judea Pearl.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Projects/The Causal Revolution.md",
+          "target": "Concepts/Causal Inference.md"
+        },
+        {
+          "kind": "explicit",
+          "rel": "related-to",
+          "source": "Projects/The Causal Revolution.md",
+          "target": "Concepts/Bayesian Networks.md"
+        }
+      ],
+      "nodes": [
+        {
+          "note_type": "question",
+          "path": "Questions/Can Machines Think Causally.md",
+          "title": "Can Machines Think Causally?"
+        },
+        {
+          "note_type": "concept",
+          "path": "Concepts/Counterfactual Reasoning.md",
+          "title": "Counterfactual Reasoning"
+        },
+        {
+          "note_type": "experiment",
+          "path": "Experiments/Wrights Guinea Pig Genetics.md",
+          "title": "Wright's Guinea Pig Genetics"
+        },
+        {
+          "note_type": "concept",
+          "path": "Concepts/Randomized Controlled Trials.md",
+          "title": "Randomized Controlled Trials"
+        },
+        {
+          "note_type": "question",
+          "path": "Questions/Why Did Statistics Resist Causation.md",
+          "title": "Why Did Statistics Resist Causation?"
+        },
+        {
+          "note_type": "book-note",
+          "path": "The Book of Why/Ch1 - The Ladder of Causation/Ch1 - The Ladder of Causation.md",
+          "title": "Ch1 - The Ladder of Causation"
+        },
+        {
+          "note_type": "person",
+          "path": "People/Karl Pearson.md",
+          "title": "Karl Pearson"
+        },
+        {
+          "note_type": "concept",
+          "path": "Concepts/Bayesian Networks.md",
+          "title": "Bayesian Networks"
+        },
+        {
+          "note_type": "concept",
+          "path": "Concepts/The Ladder of Causation.md",
+          "title": "The Ladder of Causation"
+        },
+        {
+          "note_type": "person",
+          "path": "People/Sewall Wright.md",
+          "title": "Sewall Wright"
+        },
+        {
+          "note_type": "concept",
+          "path": "Concepts/Causal Diagrams.md",
+          "title": "Causal Diagrams"
+        },
+        {
+          "note_type": "book-note",
+          "path": "The Book of Why/Ch2 - Genesis of Causal Inference/Ch2 - Genesis of Causal Inference.md",
+          "title": "Ch2 - Genesis of Causal Inference"
+        },
+        {
+          "note_type": "project",
+          "path": "Projects/The Causal Revolution.md",
+          "title": "The Causal Revolution"
+        },
+        {
+          "note_type": "concept",
+          "path": "Concepts/Do-Calculus.md",
+          "title": "Do-Calculus"
+        },
+        {
+          "note_type": "book-note",
+          "path": "The Book of Why/Introduction - Mind Over Data/A Blueprint of Reality/A Blueprint of Reality.md",
+          "title": "A Blueprint of Reality"
+        },
+        {
+          "note_type": "concept",
+          "path": "Concepts/Granger Causality.md",
+          "title": "Granger Causality"
+        },
+        {
+          "note_type": "book-note",
+          "path": "The Book of Why/Ch10 - Big Data AI and the Big Questions/Ch10 - Big Data AI and the Big Questions.md",
+          "title": "Ch10 - Big Data AI and the Big Questions"
+        },
+        {
+          "note_type": "evidence",
+          "path": "Evidence/Smoking and Lung Cancer Studies.md",
+          "title": "Smoking and Lung Cancer Studies"
+        },
+        {
+          "note_type": "concept",
+          "path": "Concepts/Simpsons Paradox.md",
+          "title": "Simpson's Paradox"
+        },
+        {
+          "note_type": "book-note",
+          "path": "The Book of Why/Introduction - Mind Over Data/Introduction - Mind Over Data.md",
+          "title": "Introduction - Mind Over Data"
+        },
+        {
+          "note_type": "person",
+          "path": "People/Ronald Fisher.md",
+          "title": "Ronald Fisher"
+        },
+        {
+          "note_type": "concept",
+          "path": "Concepts/Confounding.md",
+          "title": "Confounding"
+        },
+        {
+          "note_type": "person",
+          "path": "People/Francis Galton.md",
+          "title": "Francis Galton"
+        },
+        {
+          "note_type": "concept",
+          "path": "Concepts/Structural Causal Models.md",
+          "title": "Structural Causal Models"
+        },
+        {
+          "note_type": "book-note",
+          "path": "The Book of Why/Ch8 - Counterfactuals/Ch8 - Counterfactuals.md",
+          "title": "Ch8 - Counterfactuals"
+        },
+        {
+          "note_type": "argument",
+          "path": "Arguments/Causal Reasoning is Formalizable.md",
+          "title": "Causal Reasoning is Formalizable"
+        },
+        {
+          "note_type": "concept",
+          "path": "Concepts/Potential Outcomes Framework.md",
+          "title": "Potential Outcomes Framework"
+        },
+        {
+          "note_type": "book-note",
+          "path": "The Book of Why/Ch7 - The Conquest of Mount Intervention/Ch7 - The Conquest of Mount Intervention.md",
+          "title": "Ch7 - The Conquest of Mount Intervention"
+        },
+        {
+          "note_type": "index",
+          "path": "The Book of Why/The Book of Why.md",
+          "title": "The Book of Why - The New Science of Cause and Effect"
+        },
+        {
+          "note_type": "concept",
+          "path": "Concepts/Seeing vs Doing.md",
+          "title": "Seeing vs Doing"
+        },
+        {
+          "note_type": "person",
+          "path": "People/Judea Pearl.md",
+          "title": "Judea Pearl"
+        },
+        {
+          "note_type": "book-note",
+          "path": "The Book of Why/Ch3 - Reverend Bayes Meets Mr Holmes/Ch3 - Reverend Bayes Meets Mr Holmes.md",
+          "title": "Ch3 - Reverend Bayes Meets Mr Holmes"
+        },
+        {
+          "note_type": "book-note",
+          "path": "The Book of Why/Ch4 - Confounding and Deconfounding/Ch4 - Confounding and Deconfounding.md",
+          "title": "Ch4 - Confounding and Deconfounding"
+        },
+        {
+          "note_type": "concept",
+          "path": "Concepts/Causal Inference.md",
+          "title": "Causal Inference"
+        }
+      ]
+    },
+    "format": "json"
+  }
+}

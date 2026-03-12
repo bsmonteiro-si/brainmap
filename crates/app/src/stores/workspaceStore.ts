@@ -1,0 +1,67 @@
+import { create } from "zustand";
+import type { StatsDto, WorkspaceInfo } from "../api/types";
+import { getAPI } from "../api/bridge";
+import { useUIStore } from "./uiStore";
+import { useGraphStore } from "./graphStore";
+import { useEditorStore } from "./editorStore";
+import { useSegmentStore } from "./segmentStore";
+
+interface WorkspaceState {
+  info: WorkspaceInfo | null;
+  stats: StatsDto | null;
+  isLoading: boolean;
+  error: string | null;
+  noteTypes: string[];
+  edgeTypes: string[];
+  openWorkspace: (path: string) => Promise<void>;
+  closeWorkspace: () => void;
+  refreshStats: () => Promise<void>;
+}
+
+export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
+  info: null,
+  stats: null,
+  isLoading: false,
+  error: null,
+  noteTypes: [
+    "concept", "book-note", "question", "reference", "index",
+    "argument", "evidence", "experiment", "person", "project",
+  ],
+  edgeTypes: [
+    "contains", "part-of", "causes", "supports", "contradicts",
+    "extends", "depends-on", "exemplifies", "precedes", "leads-to",
+    "evolved-from", "related-to", "authored-by", "sourced-from", "mentioned-in",
+  ],
+
+  openWorkspace: async (path: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const api = await getAPI();
+      const info = await api.openWorkspace(path);
+      const stats = await api.getStats();
+      useUIStore.getState().clearHiddenEdgeTypes();
+      set({ info, stats, isLoading: false });
+    } catch (e) {
+      set({ error: String(e), isLoading: false });
+    }
+  },
+
+  closeWorkspace: () => {
+    if (!get().info) return;
+    useEditorStore.getState().clear();
+    useGraphStore.getState().reset();
+    useUIStore.getState().resetWorkspaceState();
+    useSegmentStore.getState().setActiveSegmentId(null);
+    set({ info: null, stats: null, error: null });
+  },
+
+  refreshStats: async () => {
+    try {
+      const api = await getAPI();
+      const stats = await api.getStats();
+      set({ stats });
+    } catch (e) {
+      console.error("Failed to refresh stats:", e);
+    }
+  },
+}));

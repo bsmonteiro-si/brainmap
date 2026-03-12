@@ -46,6 +46,20 @@ impl WorkspaceConfig {
         self.edge_types.push(edge_type.to_string());
         true
     }
+
+    pub fn add_federation(&mut self, name: &str, path: &str) {
+        self.federation.retain(|f| f.name != name);
+        self.federation.push(FederatedWorkspace {
+            name: name.to_string(),
+            path: path.to_string(),
+        });
+    }
+
+    pub fn remove_federation(&mut self, name: &str) -> bool {
+        let before = self.federation.len();
+        self.federation.retain(|f| f.name != name);
+        self.federation.len() < before
+    }
 }
 
 pub fn load_config(brainmap_dir: &Path) -> Result<WorkspaceConfig> {

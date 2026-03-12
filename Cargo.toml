@@ -3,7 +3,10 @@ resolver = "2"
 members = [
     "crates/core",
     "crates/cli",
-    "crates/tauri-plugin",
+    "crates/mcp",
+]
+exclude = [
+    "crates/app/src-tauri",  # Phase 1c: not yet complete
 ]
 
 [workspace.package]

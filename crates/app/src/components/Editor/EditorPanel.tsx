@@ -1,0 +1,123 @@
+import { useState, useEffect, useCallback } from "react";
+import { useEditorStore } from "../../stores/editorStore";
+import { useUIStore } from "../../stores/uiStore";
+import { MarkdownEditor } from "./MarkdownEditor";
+import { MarkdownPreview } from "./MarkdownPreview";
+import { FrontmatterForm } from "./FrontmatterForm";
+import { RelatedNotesFooter } from "./RelatedNotesFooter";
+import { getNodeColor } from "../GraphView/graphStyles";
+
+export function EditorPanel() {
+  const activeNote = useEditorStore((s) => s.activeNote);
+  const isLoading = useEditorStore((s) => s.isLoading);
+  const conflictState = useEditorStore((s) => s.conflictState);
+  const resolveConflict = useEditorStore((s) => s.resolveConflict);
+  const focusMode = useUIStore((s) => s.focusMode);
+  const toggleFocusMode = useUIStore((s) => s.toggleFocusMode);
+  const isDirty = useEditorStore((s) => s.isDirty);
+  const editedFm = useEditorStore((s) => s.editedFrontmatter);
+  const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
+  const editedBody = useEditorStore((s) => s.editedBody);
+  const onEditorChange = useCallback((body: string) => {
+    useEditorStore.getState().updateContent(body);
+  }, []);
+
+  useEffect(() => {
+    setViewMode("edit");
+  }, [activeNote?.path]);
+
+  if (isLoading) {
+    return <div className="editor-placeholder">Loading note...</div>;
+  }
+
+  if (!activeNote) {
+    return (
+      <div className="editor-empty-state">
+        <div className="editor-empty-icon">{"\u{1F9E0}"}</div>
+        <div className="editor-empty-brand">BrainMap</div>
+        <div className="editor-empty-hint">Select a note to start exploring</div>
+      </div>
+    );
+  }
+
+  const displayTitle = editedFm?.title ?? activeNote.title;
+  const displayType = editedFm?.note_type ?? activeNote.note_type;
+  const displayTags = editedFm?.tags ?? activeNote.tags;
+  const displayStatus = editedFm?.status !== undefined ? editedFm.status : activeNote.status;
+  const displaySource = editedFm?.source !== undefined ? editedFm.source : activeNote.source;
+
+  return (
+    <div className="editor-panel">
+      <div className="editor-hero">
+        <div className="editor-hero-top">
+          <div className="editor-view-toggle">
+            <button
+              className={`editor-view-btn${viewMode === "edit" ? " editor-view-btn--active" : ""}`}
+              onClick={() => setViewMode("edit")}
+              type="button"
+            >Edit</button>
+            <button
+              className={`editor-view-btn${viewMode === "preview" ? " editor-view-btn--active" : ""}`}
+              onClick={() => setViewMode("preview")}
+              type="button"
+            >Preview</button>
+          </div>
+          <button
+            className="editor-focus-btn"
+            onClick={toggleFocusMode}
+            title={focusMode ? "Exit focus mode" : "Focus mode"}
+          >
+            {focusMode ? "\u2921" : "\u2922"}
+          </button>
+        </div>
+        <h1 className="editor-hero-title">
+          {displayTitle}
+          {isDirty && <span className="editor-dirty-dot" title="Unsaved changes" />}
+          <span
+            className="meta-type-pill"
+            style={{ backgroundColor: getNodeColor(displayType) }}
+          >
+            {displayType}
+          </span>
+        </h1>
+        {(displayTags.length > 0 || displayStatus || displaySource) && (
+          <div className="meta-row">
+            {displayTags.map((t) => (
+              <span key={t} className="meta-tag-chip">{t}</span>
+            ))}
+            {displayStatus && (
+              <span className="meta-status">
+                <span className="meta-status-dot" data-status={displayStatus} />
+                {displayStatus}
+              </span>
+            )}
+            {displaySource && (
+              <span className="meta-source">{displaySource}</span>
+            )}
+          </div>
+        )}
+      </div>
+      {conflictState === "external-change" && (
+        <div className="conflict-banner">
+          <span>File changed externally.</span>
+          <button onClick={() => resolveConflict("keep-mine")}>Keep Mine</button>
+          <button onClick={() => resolveConflict("accept-theirs")}>Accept Theirs</button>
+        </div>
+      )}
+      <FrontmatterForm note={activeNote} />
+      <div className="editor-body">
+        <div className={`editor-view-layer${viewMode === "edit" ? " editor-view-layer--active" : ""}`}>
+          <MarkdownEditor
+            notePath={activeNote.path}
+            content={editedBody ?? activeNote.body}
+            onChange={onEditorChange}
+          />
+        </div>
+        <div className={`editor-view-layer${viewMode === "preview" ? " editor-view-layer--active" : ""}`}>
+          <MarkdownPreview content={editedBody ?? activeNote.body} notePath={activeNote.path} />
+        </div>
+      </div>
+      <RelatedNotesFooter />
+    </div>
+  );
+}

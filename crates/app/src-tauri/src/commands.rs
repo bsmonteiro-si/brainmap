@@ -1,0 +1,168 @@
+use tauri::State;
+
+use crate::dto::*;
+use crate::handlers;
+use crate::state::AppState;
+use crate::watcher;
+
+#[tauri::command]
+pub fn open_workspace(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<WorkspaceInfoDto, String> {
+    let (workspace, info) = handlers::handle_open_workspace(&path)?;
+    let root = workspace.root.clone();
+
+    // Stop the old watcher before replacing the workspace so its Tokio task
+    // cannot process events for the new workspace.
+    if let Ok(mut w) = state.watcher.lock() {
+        *w = None;
+    }
+
+    {
+        let mut guard = state.lock_workspace()?;
+        *guard = Some(workspace);
+    }
+
+    // Start a new watcher for this workspace.
+    let debouncer = watcher::start_watcher(app, &root);
+    if let Ok(mut w) = state.watcher.lock() {
+        *w = Some(debouncer);
+    }
+
+    Ok(info)
+}
+
+#[tauri::command]
+pub fn get_graph_topology(state: State<'_, AppState>) -> Result<GraphTopologyDto, String> {
+    state.with_workspace(|ws| Ok(handlers::handle_get_topology(ws)))
+}
+
+#[tauri::command]
+pub fn get_node_content(state: State<'_, AppState>, path: String) -> Result<NoteDetailDto, String> {
+    state.with_workspace(|ws| handlers::handle_read_note(ws, &path))
+}
+
+#[tauri::command]
+pub fn create_node(
+    state: State<'_, AppState>,
+    params: CreateNoteParams,
+) -> Result<String, String> {
+    let abs_path = state.with_workspace(|ws| Ok(ws.root.join(&params.path)))?;
+    state.register_expected_write(abs_path);
+    state.with_workspace_mut(|ws| handlers::handle_create_note(ws, params))
+}
+
+#[tauri::command]
+pub fn update_node(
+    state: State<'_, AppState>,
+    params: UpdateNoteParams,
+) -> Result<(), String> {
+    let abs_path = state.with_workspace(|ws| Ok(ws.root.join(&params.path)))?;
+    state.register_expected_write(abs_path);
+    state.with_workspace_mut(|ws| handlers::handle_update_note(ws, params))
+}
+
+#[tauri::command]
+pub fn delete_node(
+    state: State<'_, AppState>,
+    path: String,
+    force: Option<bool>,
+) -> Result<(), String> {
+    let abs_path = state.with_workspace(|ws| Ok(ws.root.join(&path)))?;
+    state.register_expected_write(abs_path);
+    state.with_workspace_mut(|ws| handlers::handle_delete_note(ws, &path, force.unwrap_or(false)))
+}
+
+#[tauri::command]
+pub fn list_nodes(
+    state: State<'_, AppState>,
+    params: ListNodesParams,
+) -> Result<Vec<NodeSummaryDto>, String> {
+    state.with_workspace(|ws| Ok(handlers::handle_list_nodes(ws, params)))
+}
+
+#[tauri::command]
+pub fn search_notes(
+    state: State<'_, AppState>,
+    params: SearchParams,
+) -> Result<Vec<SearchResultDto>, String> {
+    state.with_workspace(|ws| handlers::handle_search(ws, params))
+}
+
+#[tauri::command]
+pub fn get_neighbors(
+    state: State<'_, AppState>,
+    params: NeighborsParams,
+) -> Result<SubgraphDto, String> {
+    state.with_workspace(|ws| handlers::handle_get_neighbors(ws, params))
+}
+
+#[tauri::command]
+pub fn create_link(
+    state: State<'_, AppState>,
+    params: LinkParams,
+) -> Result<(), String> {
+    // Links modify the source note's file.
+    let abs_path = state.with_workspace(|ws| Ok(ws.root.join(&params.source)))?;
+    state.register_expected_write(abs_path);
+    state.with_workspace_mut(|ws| handlers::handle_create_link(ws, params))
+}
+
+#[tauri::command]
+pub fn delete_link(
+    state: State<'_, AppState>,
+    source: String,
+    target: String,
+    rel: String,
+) -> Result<(), String> {
+    let abs_path = state.with_workspace(|ws| Ok(ws.root.join(&source)))?;
+    state.register_expected_write(abs_path);
+    state.with_workspace_mut(|ws| handlers::handle_delete_link(ws, &source, &target, &rel))
+}
+
+#[tauri::command]
+pub fn list_links(
+    state: State<'_, AppState>,
+    params: ListLinksParams,
+) -> Result<Vec<EdgeDto>, String> {
+    state.with_workspace(|ws| handlers::handle_list_links(ws, params))
+}
+
+#[tauri::command]
+pub fn get_node_summary(state: State<'_, AppState>, path: String) -> Result<NodeSummaryDto, String> {
+    state.with_workspace(|ws| handlers::handle_get_node_summary(ws, &path))
+}
+
+#[tauri::command]
+pub fn get_stats(state: State<'_, AppState>) -> Result<StatsDto, String> {
+    state.with_workspace(|ws| Ok(handlers::handle_get_stats(ws)))
+}
+
+#[tauri::command]
+pub fn create_folder(state: State<'_, AppState>, path: String) -> Result<(), String> {
+    let abs_path = state.with_workspace(|ws| {
+        let p = std::path::Path::new(&path);
+        // Reject absolute paths: PathBuf::join replaces the base for absolute inputs.
+        if p.is_absolute() {
+            return Err("Folder path must be relative".to_string());
+        }
+        // Normalize ".." components without requiring the directory to exist yet,
+        // then verify the result stays within the workspace root.
+        let normalized = ws.root.join(p).components().fold(
+            std::path::PathBuf::new(),
+            |mut acc, c| {
+                match c {
+                    std::path::Component::ParentDir => { acc.pop(); acc }
+                    _ => { acc.push(c); acc }
+                }
+            },
+        );
+        if !normalized.starts_with(&ws.root) {
+            return Err("Path escapes workspace root".to_string());
+        }
+        Ok(normalized)
+    })?;
+    std::fs::create_dir_all(&abs_path).map_err(|e| e.to_string())
+}

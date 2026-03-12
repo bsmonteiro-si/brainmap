@@ -1,0 +1,624 @@
+import { useRef, useEffect, useState, useMemo } from "react";
+import cytoscape, { type Core } from "cytoscape";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — cytoscape-fcose ships its own types but may not resolve in all configs
+import fcose from "cytoscape-fcose";
+import dagre from "cytoscape-dagre";
+import { useGraphStore } from "../../stores/graphStore";
+import { useEditorStore } from "../../stores/editorStore";
+import { useUIStore } from "../../stores/uiStore";
+import { getAPI } from "../../api/bridge";
+import type { NodeSummary } from "../../api/types";
+import { graphStylesheet, getNodeColor, getNodeShape } from "./graphStyles";
+import { filterGraphByFocus } from "./graphFocusFilter";
+import { computeHulls, drawCachedHulls, type CachedHull } from "./graphHulls";
+import { startParticleAnimation } from "./graphParticles";
+import { GraphToolbar } from "./GraphToolbar";
+import { GraphLegend } from "./GraphLegend";
+
+cytoscape.use(fcose);
+cytoscape.use(dagre);
+
+const DIRECTIONAL_RELS = new Set([
+  "precedes",
+  "leads-to",
+  "causes",
+  "extends",
+  "depends-on",
+  "evolved-from",
+  "part-of",
+  "contains",
+]);
+
+function applyEdgeLabelVisibility(cy: Core, show: boolean, selectedPath: string | null) {
+  if (show) {
+    cy.edges().addClass("labeled");
+  } else {
+    cy.edges().removeClass("labeled");
+  }
+  if (selectedPath) {
+    cy.getElementById(selectedPath).connectedEdges().addClass("labeled");
+  }
+}
+
+function runLayout(cy: Core, layout: "force" | "hierarchical", animate = false) {
+  if (layout === "hierarchical") {
+    cy.elements()
+      .filter((el) => el.isNode() || DIRECTIONAL_RELS.has(el.data("label") as string))
+      .layout({
+        name: "dagre",
+        rankDir: "LR",
+        nodeSep: 60,
+        rankSep: 120,
+        animate,
+        animationDuration: 500,
+        animationEasing: "ease-in-out-sine",
+        fit: true,
+        padding: 40,
+      } as cytoscape.LayoutOptions)
+      .run();
+  } else {
+    cy.layout({
+      name: "fcose",
+      animate,
+      animationDuration: 500,
+      animationEasing: "ease-in-out-sine",
+      quality: "proof",
+      idealEdgeLength: 280,
+      nodeRepulsion: 75000,
+      edgeElasticity: 0.30,
+      gravity: 0.04,
+      gravityRange: 5.0,
+      numIter: 2500,
+      fit: true,
+      padding: 60,
+      nodeDimensionsIncludeLabels: false,
+    } as cytoscape.LayoutOptions).run();
+  }
+}
+
+export function GraphView() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cyRef = useRef<Core | null>(null);
+  const hasBeenFittedRef = useRef(false);
+  const hasEnteredRef = useRef(false);
+  const { nodes, edges, selectedNodePath, isLoading } = useGraphStore();
+  const showEdgeLabels = useUIStore((s) => s.showEdgeLabels);
+  const showLegend = useUIStore((s) => s.showLegend);
+  const graphLayout = useUIStore((s) => s.graphLayout);
+  const treeOpen = useUIStore((s) => s.treeOpen);
+  const hiddenEdgeTypes = useUIStore((s) => s.hiddenEdgeTypes);
+  const graphFocusPath = useUIStore((s) => s.graphFocusPath);
+  const graphFocusKind = useUIStore((s) => s.graphFocusKind);
+  const showMinimap = useUIStore((s) => s.showMinimap);
+  const showClusterHulls = useUIStore((s) => s.showClusterHulls);
+  const showEdgeParticles = useUIStore((s) => s.showEdgeParticles);
+  const showEdgeLabelsRef = useRef(showEdgeLabels);
+  const graphLayoutRef = useRef(graphLayout);
+  const selectedNodePathRef = useRef(selectedNodePath);
+  const minimapContainerRef = useRef<HTMLDivElement>(null);
+  const minimapCyRef = useRef<Core | null>(null);
+  const minimapCanvasRef = useRef<HTMLCanvasElement>(null);
+  const hullCanvasRef = useRef<HTMLCanvasElement>(null);
+  const cachedHullsRef = useRef<CachedHull[]>([]);
+  const particleCanvasRef = useRef<HTMLCanvasElement>(null);
+  const particleCleanupRef = useRef<(() => void) | null>(null);
+  // Zustand action functions are stable references; initialise once and never update
+  const selectNodeRef = useRef(useGraphStore.getState().selectNode);
+  const expandNodeRef = useRef(useGraphStore.getState().expandNode);
+
+  const { filteredNodes, filteredEdges, focalPath } = useMemo(() => {
+    if (!graphFocusPath || !graphFocusKind) {
+      return { filteredNodes: [...nodes.values()], filteredEdges: edges, focalPath: null };
+    }
+    return filterGraphByFocus(nodes, edges, graphFocusPath, graphFocusKind);
+  }, [graphFocusPath, graphFocusKind, nodes, edges]);
+
+  const [tooltip, setTooltip] = useState<{
+    x: number;
+    y: number;
+    label: string;
+    noteType: string;
+    color: string;
+    connections: number;
+    tags?: string[];
+    summary?: string | null;
+  } | null>(null);
+  const tooltipCacheRef = useRef<Map<string, NodeSummary>>(new Map());
+
+  // When graph tab becomes visible after being hidden (display:none), resize
+  // the Cytoscape canvas. Fit on first reveal only so subsequent tab switches
+  // don't discard the user's zoom/pan. hasBeenFittedRef is more reliable than
+  // reading offsetWidth after layout (which may already be non-zero by effect time).
+  useEffect(() => {
+    if (!treeOpen) {
+      const cy = cyRef.current;
+      if (cy) {
+        cy.resize();
+        if (!hasBeenFittedRef.current && cy.nodes().length > 0) {
+          cy.fit(undefined, 40);
+          hasBeenFittedRef.current = true;
+        }
+      }
+    }
+  }, [treeOpen]);
+
+  // Sync showEdgeLabels → cy classes
+  useEffect(() => {
+    showEdgeLabelsRef.current = showEdgeLabels;
+    const cy = cyRef.current;
+    if (cy) applyEdgeLabelVisibility(cy, showEdgeLabels, selectedNodePathRef.current);
+  }, [showEdgeLabels]);
+
+  // Re-run layout when graphLayout changes (animated transition)
+  useEffect(() => {
+    graphLayoutRef.current = graphLayout;
+    const cy = cyRef.current;
+    if (cy && cy.nodes().length > 0) {
+      runLayout(cy, graphLayout, true);
+    }
+  }, [graphLayout]);
+
+  // Initialize Cytoscape
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const cy = cytoscape({
+      container: containerRef.current,
+      style: graphStylesheet,
+      layout: { name: "preset" },
+      minZoom: 0.1,
+      maxZoom: 5,
+      wheelSensitivity: 0.3,
+    });
+
+    cyRef.current = cy;
+
+    cy.on("tap", "node", (evt) => {
+      const nodePath = evt.target.id();
+      selectNodeRef.current(nodePath);
+      useEditorStore.getState().openNote(nodePath);
+    });
+
+    cy.on("dbltap", "node", (evt) => {
+      const nodePath = evt.target.id();
+      expandNodeRef.current(nodePath);
+    });
+
+    cy.on("tap", (evt) => {
+      if (evt.target === cy) {
+        selectNodeRef.current(null);
+      }
+    });
+
+    cy.on("zoom", () => {
+      const autoShow = cy.zoom() >= 0.8;
+      applyEdgeLabelVisibility(
+        cy,
+        showEdgeLabelsRef.current || autoShow,
+        selectedNodePathRef.current
+      );
+    });
+
+    cy.on("mouseover", "node", (evt) => {
+      const node = evt.target;
+      const nodePath = node.id();
+      // Neighborhood highlight: dim everything, brighten neighbors
+      const neighborhood = node.closedNeighborhood();
+      cy.elements().addClass("hover-dim");
+      neighborhood.removeClass("hover-dim").addClass("hover-bright");
+      // Pulse animation on hovered node
+      node.animate(
+        { style: { "shadow-blur": 22, "shadow-opacity": 1.0 } },
+        { duration: 400, easing: "ease-in-out-sine" },
+      );
+      const pos = node.renderedPosition();
+      const baseTooltip = {
+        x: pos.x + 12,
+        y: pos.y - 8,
+        label: node.data("label") as string,
+        noteType: node.data("noteType") as string,
+        color: node.data("color") as string,
+        connections: node.degree(false),
+      };
+      // Show basic tooltip immediately
+      const cached = tooltipCacheRef.current.get(nodePath);
+      if (cached) {
+        setTooltip({ ...baseTooltip, tags: cached.tags, summary: cached.summary });
+      } else {
+        setTooltip(baseTooltip);
+        // Lazy-load enriched data
+        getAPI().then((api) =>
+          api.getNodeSummary(nodePath).then((summary) => {
+            tooltipCacheRef.current.set(nodePath, summary);
+            // Only update if still hovering this node
+            setTooltip((prev) =>
+              prev && prev.label === baseTooltip.label
+                ? { ...prev, tags: summary.tags, summary: summary.summary }
+                : prev,
+            );
+          }).catch(() => { /* ignore tooltip fetch errors */ }),
+        );
+      }
+    });
+
+    cy.on("mouseout", "node", () => {
+      cy.nodes().stop(true).removeStyle("shadow-blur shadow-opacity");
+      cy.elements().removeClass("hover-dim hover-bright");
+      setTooltip(null);
+    });
+
+    return () => {
+      setTooltip(null);
+      cy.destroy();
+      cyRef.current = null;
+    };
+  }, []);
+
+  // Sync graph data to Cytoscape
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const cyNodes = filteredNodes.map((n) => ({
+      data: {
+        id: n.path,
+        label: n.title,
+        color: getNodeColor(n.note_type),
+        noteType: n.note_type,
+        shape: getNodeShape(n.note_type),
+        size: 8,
+      },
+    }));
+
+    const cyEdges = filteredEdges.map((e) => {
+      const srcNode = nodes.get(e.source);
+      const tgtNode = nodes.get(e.target);
+      return {
+        data: {
+          id: `${e.source}|${e.target}|${e.rel}`,
+          source: e.source,
+          target: e.target,
+          label: e.rel,
+          kind: e.kind,
+          sourceColor: getNodeColor(srcNode?.note_type ?? "reference"),
+          targetColor: getNodeColor(tgtNode?.note_type ?? "reference"),
+        },
+      };
+    });
+
+    const nodeIds = new Set(cyNodes.map((n) => n.data.id));
+    const validEdges = cyEdges.filter(
+      (e) =>
+        nodeIds.has(e.data.source) &&
+        nodeIds.has(e.data.target) &&
+        !hiddenEdgeTypes.has(e.data.label)
+    );
+
+    cy.elements().remove();
+    cy.add([...cyNodes, ...validEdges]);
+
+    // Store size as data so stylesheet selectors (node:selected, node.highlighted) can override
+    cy.nodes().forEach((n) => {
+      n.data("size", Math.max(8, 8 + n.indegree(false) * 2));
+    });
+
+    // Apply edge gradient colors imperatively (data() mappers don't work inside gradient arrays)
+    cy.edges().forEach((edge) => {
+      const src = edge.data("sourceColor") as string;
+      const tgt = edge.data("targetColor") as string;
+      if (src && tgt) {
+        edge.style({
+          "line-fill": "linear-gradient",
+          "line-gradient-stop-colors": [src, tgt],
+          "line-gradient-stop-positions": [0, 100],
+          "target-arrow-color": tgt,
+        });
+      }
+    });
+
+    // Mark the focal node visually distinct when focus mode is active
+    if (focalPath) {
+      cy.getElementById(focalPath).addClass("graph-focus-node");
+    }
+
+    if (cyNodes.length > 0) {
+      runLayout(cy, graphLayoutRef.current);
+      applyEdgeLabelVisibility(cy, showEdgeLabelsRef.current, selectedNodePathRef.current);
+
+      // Staggered fade-in entrance animation (first load only)
+      if (!hasEnteredRef.current) {
+        hasEnteredRef.current = true;
+        try {
+          const nodeCount = cy.nodes().length;
+          const stagger = Math.min(8, 300 / Math.max(nodeCount, 1));
+          cy.nodes().style("opacity", 0);
+          cy.nodes().forEach((node, i) => {
+            node.delay(i * stagger).animate(
+              { style: { opacity: 1 } },
+              { duration: 300, easing: "ease-out" },
+            );
+          });
+        } catch {
+          // Ensure nodes are visible even if animation fails
+          cy.nodes().style("opacity", 1);
+        }
+      }
+    }
+  }, [filteredNodes, filteredEdges, hiddenEdgeTypes, focalPath]);
+
+  // Highlight selected node
+  useEffect(() => {
+    // Keep ref in sync inside the effect that depends on selectedNodePath
+    selectedNodePathRef.current = selectedNodePath;
+
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    cy.elements().removeClass("highlighted");
+    cy.$("node:selected").unselect();
+
+    if (selectedNodePath) {
+      const node = cy.getElementById(selectedNodePath);
+      if (node.length > 0) {
+        node.select();
+        node.connectedEdges().addClass("highlighted");
+        node.neighborhood("node").addClass("highlighted");
+      }
+    }
+
+    // Reapply label visibility to clear accumulated labeled classes from prior selection
+    applyEdgeLabelVisibility(cy, showEdgeLabelsRef.current, selectedNodePath);
+  }, [selectedNodePath]);
+
+  // ── Minimap ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!showMinimap || !minimapContainerRef.current) {
+      // Destroy minimap cy when hidden
+      if (minimapCyRef.current) {
+        minimapCyRef.current.destroy();
+        minimapCyRef.current = null;
+      }
+      return;
+    }
+
+    const miniCy = cytoscape({
+      container: minimapContainerRef.current,
+      style: [
+        {
+          selector: "node",
+          style: {
+            width: 4,
+            height: 4,
+            "background-color": "data(color)" as never,
+            "border-width": 0,
+            label: "",
+          } as never,
+        },
+        {
+          selector: "edge",
+          style: {
+            width: 0.5,
+            "line-color": "#555",
+            "target-arrow-shape": "none",
+          } as never,
+        },
+      ],
+      layout: { name: "preset" },
+      userZoomingEnabled: false,
+      userPanningEnabled: false,
+      autoungrabify: true,
+      autounselectify: true,
+    });
+    minimapCyRef.current = miniCy;
+
+    return () => {
+      miniCy.destroy();
+      minimapCyRef.current = null;
+    };
+  }, [showMinimap]);
+
+  // Sync minimap data & positions with main cy
+  useEffect(() => {
+    const cy = cyRef.current;
+    const miniCy = minimapCyRef.current;
+    if (!cy || !miniCy || !showMinimap) return;
+
+    // Mirror elements
+    miniCy.elements().remove();
+    const els = cy.elements().map((el) => ({
+      group: el.group() as "nodes" | "edges",
+      data: { ...el.data() },
+      position: el.isNode() ? { ...el.position() } : undefined,
+    }));
+    miniCy.add(els);
+    miniCy.fit(undefined, 4);
+
+    // Draw viewport rectangle on canvas
+    function drawViewport() {
+      const canvas = minimapCanvasRef.current;
+      if (!canvas || !cy || !miniCy) return;
+      const container = canvas.parentElement;
+      if (!container) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = container.clientWidth * dpr;
+      canvas.height = container.clientHeight * dpr;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Map main cy viewport extent into minimap coordinates
+      const ext = cy.extent();
+      const miniZoom = miniCy.zoom();
+      const miniPan = miniCy.pan();
+
+      const x1 = ext.x1 * miniZoom + miniPan.x;
+      const y1 = ext.y1 * miniZoom + miniPan.y;
+      const x2 = ext.x2 * miniZoom + miniPan.x;
+      const y2 = ext.y2 * miniZoom + miniPan.y;
+
+      ctx.strokeStyle = "rgba(74, 158, 255, 0.6)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+      ctx.fillStyle = "rgba(74, 158, 255, 0.08)";
+      ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+    }
+
+    drawViewport();
+
+    // Redraw on viewport changes
+    const onViewport = () => drawViewport();
+    cy.on("viewport", onViewport);
+
+    // Also sync positions after layout
+    const onLayout = () => {
+      cy.nodes().forEach((n) => {
+        const miniNode = miniCy.getElementById(n.id());
+        if (miniNode.length > 0) {
+          miniNode.position(n.position());
+        }
+      });
+      miniCy.fit(undefined, 4);
+      drawViewport();
+    };
+    cy.on("layoutstop", onLayout);
+
+    return () => {
+      cy.off("viewport", onViewport);
+      cy.off("layoutstop", onLayout);
+    };
+  }, [showMinimap, filteredNodes, filteredEdges, hiddenEdgeTypes, focalPath]);
+
+  // ── Cluster Hulls ────────────────────────────────────────────────
+  useEffect(() => {
+    const cy = cyRef.current;
+    const canvas = hullCanvasRef.current;
+    if (!cy || !canvas || !showClusterHulls) {
+      cachedHullsRef.current = [];
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+      return;
+    }
+
+    // Compute hull geometry (model coords) and cache
+    const recompute = () => {
+      cachedHullsRef.current = computeHulls(cy);
+      drawCachedHulls(cy, canvas, cachedHullsRef.current);
+    };
+
+    // Redraw cached hulls (screen transform only, no recomputation)
+    const redraw = () => drawCachedHulls(cy, canvas, cachedHullsRef.current);
+
+    recompute();
+
+    cy.on("render", redraw);
+    cy.on("layoutstop", recompute);
+
+    return () => {
+      cy.off("render", redraw);
+      cy.off("layoutstop", recompute);
+      cachedHullsRef.current = [];
+      const ctx = canvas.getContext("2d");
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
+  }, [showClusterHulls, filteredNodes]);
+
+  // ── Edge Particles ───────────────────────────────────────────────
+  useEffect(() => {
+    const cy = cyRef.current;
+    const canvas = particleCanvasRef.current;
+    if (!cy || !canvas || !showEdgeParticles) {
+      if (particleCleanupRef.current) {
+        particleCleanupRef.current();
+        particleCleanupRef.current = null;
+      }
+      return;
+    }
+
+    particleCleanupRef.current = startParticleAnimation(cy, canvas);
+
+    return () => {
+      if (particleCleanupRef.current) {
+        particleCleanupRef.current();
+        particleCleanupRef.current = null;
+      }
+    };
+  }, [showEdgeParticles, filteredNodes]);
+
+  const showOverlay = isLoading || filteredNodes.length === 0;
+  const overlayText = isLoading
+    ? "Loading graph..."
+    : graphFocusPath
+    ? "No notes match this focus."
+    : "No nodes to display. Create your first note.";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", position: "relative" }}>
+      <GraphToolbar />
+      {showOverlay && (
+        <div
+          style={{
+            position: "absolute",
+            inset: "36px 0 0 0",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "var(--text-muted)",
+            zIndex: 1,
+            background: "var(--bg-primary)",
+          }}
+        >
+          {overlayText}
+        </div>
+      )}
+      <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
+        <div ref={containerRef} className="graph-container" />
+        {showClusterHulls && (
+          <canvas
+            ref={hullCanvasRef}
+            className="graph-canvas-overlay"
+            style={{ pointerEvents: "none" }}
+          />
+        )}
+        {showEdgeParticles && (
+          <canvas
+            ref={particleCanvasRef}
+            className="graph-canvas-overlay"
+            style={{ pointerEvents: "none" }}
+          />
+        )}
+        {showMinimap && (
+          <div className="graph-minimap">
+            <div ref={minimapContainerRef} className="graph-minimap-cy" />
+            <canvas ref={minimapCanvasRef} className="graph-minimap-canvas" />
+          </div>
+        )}
+        {tooltip && (
+          <div
+            className="graph-node-tooltip"
+            style={{ left: tooltip.x, top: tooltip.y }}
+          >
+            <div className="tooltip-header">
+              <span className="tooltip-type-pill" style={{ background: tooltip.color }}>{tooltip.noteType}</span>
+              <span className="tooltip-connections">{tooltip.connections} links</span>
+            </div>
+            <span className="tooltip-title">{tooltip.label}</span>
+            {tooltip.summary && <span className="tooltip-summary">{tooltip.summary}</span>}
+            {tooltip.tags && tooltip.tags.length > 0 && (
+              <div className="tooltip-tags">
+                {tooltip.tags.slice(0, 4).map((t) => (
+                  <span key={t} className="tooltip-tag">{t}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {showLegend && <GraphLegend />}
+    </div>
+  );
+}

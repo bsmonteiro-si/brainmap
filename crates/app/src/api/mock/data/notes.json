@@ -1,0 +1,1385 @@
+{
+  "The Book of Why/Ch3 - Reverend Bayes Meets Mr Holmes/Ch3 - Reverend Bayes Meets Mr Holmes.md": {
+    "path": "The Book of Why/Ch3 - Reverend Bayes Meets Mr Holmes/Ch3 - Reverend Bayes Meets Mr Holmes.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000006",
+      "title": "Ch3 - Reverend Bayes Meets Mr Holmes",
+      "type": "book-note",
+      "tags": [
+        "causality",
+        "bayesian-networks",
+        "probability",
+        "reasoning"
+      ],
+      "status": "draft",
+      "created": "2026-01-25",
+      "modified": "2026-02-15",
+      "source": "The Book of Why, Chapter 3",
+      "summary": "Introduces Bayesian reasoning and Bayesian networks as the foundation for probabilistic inference, showing how they connect to causal reasoning while also revealing their limitations without causal interpretation.",
+      "links": [
+        {
+          "target": "../../Concepts/Bayesian Networks.md",
+          "type": "contains"
+        }
+      ],
+      "chapter": "3",
+      "page-range": "81-112"
+    },
+    "body": "\n# Ch3 - Reverend Bayes Meets Mr Holmes\n\nPearl explores the connection between Bayesian reasoning and causal inference through the lens of his own contributions to artificial intelligence. Bayes' theorem, formulated by Reverend Thomas Bayes in the 18th century, provides a principled way to update beliefs in light of new evidence. Pearl's key insight was that Bayesian networks could make this updating computationally tractable by encoding the structure of probabilistic relationships in a directed graph.\n\nThe chapter illustrates Bayesian reasoning through vivid examples, including a burglar alarm scenario that became a classic in AI textbooks. If your alarm goes off and your neighbor calls to tell you, how should you update your beliefs about whether a burglary occurred versus an earthquake triggering the alarm? Bayesian networks provide an elegant framework for propagating evidence through chains of reasoning, handling multiple uncertain causes simultaneously.\n\nHowever, Pearl is careful to distinguish between Bayesian networks as tools for probabilistic inference and the causal interpretation he later gave them. A Bayesian network encodes conditional independencies and allows efficient computation of probabilities, but it does not inherently represent causal direction. The same graph structure can represent different causal stories. It was only by adding causal semantics \u2014 interpreting arrows as causal influences rather than mere statistical associations \u2014 that Pearl transformed Bayesian networks into the foundation for his causal revolution.\n",
+    "inline_links": []
+  },
+  "Arguments/Causal Reasoning is Formalizable.md": {
+    "path": "Arguments/Causal Reasoning is Formalizable.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000030",
+      "title": "Causal Reasoning is Formalizable",
+      "type": "argument",
+      "tags": [
+        "causality",
+        "formalization",
+        "pearl",
+        "philosophy-of-science"
+      ],
+      "status": "review",
+      "created": "2026-02-10",
+      "modified": "2026-03-01",
+      "source": "The Book of Why, Introduction + Ch10",
+      "summary": "Pearl's central claim that causal reasoning can and should be mechanized \u2014 that cause-and-effect relationships are amenable to formal mathematical treatment, not merely philosophical speculation.",
+      "links": [
+        {
+          "target": "../Concepts/Causal Inference.md",
+          "type": "supports"
+        },
+        {
+          "target": "../People/Judea Pearl.md",
+          "type": "authored-by"
+        },
+        {
+          "target": "../Concepts/Do-Calculus.md",
+          "type": "related-to"
+        },
+        {
+          "target": "../Concepts/Structural Causal Models.md",
+          "type": "related-to"
+        }
+      ],
+      "stance": "for",
+      "claim": "Causal reasoning is not inherently subjective or unscientific. It can be formalized into a rigorous mathematical framework (causal diagrams + do-calculus + counterfactuals) that is complete, testable, and mechanizable."
+    },
+    "body": "\n# Causal Reasoning is Formalizable\n\nPearl's most fundamental argument, running through \"The Book of Why\" and his academic work, is that causal reasoning is not philosophical hand-waving but a rigorous, formalizable discipline.\n\n## The Claim\n\nFor centuries, the statistical establishment treated causation as too subjective for formal mathematics. \"Correlation is not causation\" was a stop sign. Pearl argues this was a failure of imagination, not a fundamental limitation.\n\n## Supporting Framework\n\nThe formalization rests on three pillars:\n1. **Causal Diagrams** \u2014 a visual language (DAGs) for encoding causal assumptions\n2. **Do-Calculus** \u2014 an algebraic system for deriving interventional quantities from observational data\n3. **Counterfactual Logic** \u2014 formal semantics for \"what if\" questions within structural causal models\n\nTogether, these provide a complete calculus of causation \u2014 as rigorous as probability theory itself.\n\n## Implications\n\nIf causal reasoning is formalizable, then:\n- Machines can be taught to reason causally (not just correlate)\n- Scientific claims about causation can be evaluated algorithmically\n- The gap between data and policy can be bridged systematically\n",
+    "inline_links": []
+  },
+  "Concepts/Potential Outcomes Framework.md": {
+    "path": "Concepts/Potential Outcomes Framework.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000019",
+      "title": "Potential Outcomes Framework",
+      "type": "concept",
+      "tags": [
+        "causality",
+        "rubin",
+        "statistics",
+        "potential-outcomes",
+        "counterfactuals"
+      ],
+      "status": "review",
+      "created": "2026-02-10",
+      "modified": "2026-03-01",
+      "source": "The Book of Why, Ch8 + general literature",
+      "summary": "Donald Rubin's framework for causal inference based on potential outcomes (what would happen under each possible treatment). An alternative to Pearl's graphical approach, widely used in statistics and economics.",
+      "links": [
+        {
+          "target": "./Causal Inference.md",
+          "type": "related-to"
+        },
+        {
+          "target": "./Do-Calculus.md",
+          "type": "contradicts"
+        }
+      ],
+      "maturity": "established",
+      "domain": "statistics",
+      "aliases": [
+        "Rubin causal model",
+        "Neyman-Rubin framework",
+        "potential outcomes"
+      ]
+    },
+    "body": "\n# Potential Outcomes Framework\n\nThe Potential Outcomes Framework, developed primarily by Donald Rubin (building on earlier work by Jerzy Neyman), defines causal effects in terms of potential outcomes: for each unit, there exists a potential outcome under each possible treatment. The causal effect is the difference between these potential outcomes.\n\n## The Fundamental Problem\n\nThe fundamental problem of causal inference, in this framework, is that for any individual unit we can observe at most one potential outcome \u2014 the one corresponding to the treatment actually received. The counterfactual outcome (what would have happened under the alternative treatment) is inherently unobservable. Causal inference therefore reduces to a missing data problem.\n\n## Comparison with Pearl's Framework\n\nThe potential outcomes framework and Pearl's graphical framework are mathematically compatible but differ in emphasis and methodology. Pearl's approach foregrounds causal assumptions through explicit DAGs, making them transparent and testable. The potential outcomes approach works with assignment mechanisms and focuses on estimating average treatment effects, often without explicitly drawing a causal diagram. Pearl has argued that his framework is more general: every SCM defines potential outcomes, but potential outcomes alone do not specify the causal mechanisms needed for some types of reasoning.\n\n## Applications\n\nThe potential outcomes framework is widely used in economics (Angrist, Imbens), biostatistics, and political science. Methods like instrumental variables, regression discontinuity, and propensity score matching are naturally expressed in potential outcomes language. The framework's strength lies in its close connection to experimental design and its emphasis on clearly defining the causal estimand before estimation.\n",
+    "inline_links": []
+  },
+  "People/Sewall Wright.md": {
+    "path": "People/Sewall Wright.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000023",
+      "title": "Sewall Wright",
+      "type": "person",
+      "tags": [
+        "genetics",
+        "path-analysis",
+        "causal-diagrams",
+        "history"
+      ],
+      "status": "draft",
+      "created": "2026-02-01",
+      "modified": "2026-02-15",
+      "source": "The Book of Why, Ch2",
+      "summary": "Pioneer of path analysis who used directed diagrams to represent causal relationships in genetics decades before Pearl's formalization. His work was rejected by the statistical establishment but later recognized as a direct precursor to modern causal inference.",
+      "links": [
+        {
+          "target": "../Concepts/Causal Diagrams.md",
+          "type": "leads-to"
+        }
+      ],
+      "affiliation": "University of Chicago",
+      "field": "Genetics, Statistics",
+      "era": "1920s-1988"
+    },
+    "body": "\n# Sewall Wright\n\nSewall Wright (1889-1988) was an American geneticist who developed path analysis \u2014 the first systematic method for representing causal relationships using directed diagrams. Working at the USDA and later at the University of Chicago, Wright applied his method to problems in genetics, particularly the inheritance of coat color in guinea pigs.\n\n## Path Analysis\n\nWright's key innovation was the use of directed diagrams with arrows connecting variables to represent hypothesized causal influences. Each arrow carried a \"path coefficient\" quantifying the strength of the causal effect. The diagram as a whole encoded a complete causal model that could decompose observed correlations into direct and indirect causal pathways.\n\n## Rejection and Vindication\n\nThe statistical establishment, still under the influence of Karl Pearson's anti-causal philosophy, rejected Wright's approach. His path diagrams were dismissed as unscientific speculation \u2014 arrows representing causal claims were seen as going beyond what data could support. This rejection kept path analysis confined to genetics for decades. It was only with Pearl's formalization in the 1990s that Wright's fundamental insight \u2014 that directed graphs could serve as a formal language for causal assumptions \u2014 was vindicated and generalized into the framework of causal diagrams and the do-calculus.\n",
+    "inline_links": []
+  },
+  "Concepts/Causal Inference.md": {
+    "path": "Concepts/Causal Inference.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000010",
+      "title": "Causal Inference",
+      "type": "concept",
+      "tags": [
+        "causality",
+        "inference",
+        "methodology",
+        "foundations"
+      ],
+      "status": "review",
+      "created": "2026-01-18",
+      "modified": "2026-03-05",
+      "source": "The Book of Why, Introduction + Ch1",
+      "summary": "The science of drawing conclusions about causal relationships from data and assumptions, formalized through causal models, the do-calculus, and counterfactual reasoning.",
+      "links": [
+        {
+          "target": "./Do-Calculus.md",
+          "type": "contains"
+        },
+        {
+          "target": "./Structural Causal Models.md",
+          "type": "contains"
+        },
+        {
+          "target": "./Counterfactual Reasoning.md",
+          "type": "contains"
+        },
+        {
+          "target": "./Causal Diagrams.md",
+          "type": "contains"
+        },
+        {
+          "target": "./Confounding.md",
+          "type": "related-to"
+        },
+        {
+          "target": "./Potential Outcomes Framework.md",
+          "type": "related-to"
+        },
+        {
+          "target": "../People/Judea Pearl.md",
+          "type": "authored-by"
+        }
+      ],
+      "domain": "causal-ml",
+      "aliases": [
+        "causal analysis",
+        "causal reasoning"
+      ],
+      "maturity": "foundational"
+    },
+    "body": "\n# Causal Inference\n\nCausal inference is the science of drawing conclusions about cause-and-effect relationships. It goes beyond correlation (statistical association) to determine whether and how one variable actually influences another.\n\n## The Core Problem\n\nStatistics alone cannot answer causal questions. \"Correlation is not causation\" was used more as a stop sign than a starting point for centuries. Before Pearl's formalization, there was no systematic way to say *when* correlation **does** imply causation.\n\n## The Inference Engine\n\nPearl proposes a general framework \u2014 the \"inference engine\" \u2014 that accepts three inputs:\n\n1. **Assumptions** \u2014 encoded as a causal model (a DAG)\n2. **Queries** \u2014 the causal question we want answered\n3. **Data** \u2014 observations from the real world\n\nAnd produces three outputs:\n\n1. **Identifiability** \u2014 can this question be answered given our assumptions? (Yes/No)\n2. **Estimand** \u2014 if yes, a mathematical recipe for the answer\n3. **Estimate** \u2014 the actual numerical answer with uncertainty bounds\n\nA fundamental insight: data is collected *after* the causal model and query are specified, not before. This inverts the typical data-first approach of machine learning.\n\n## Historical Context\n\nBefore Pearl's work, causal inference was fragmented:\n- **Statisticians** had tools (regression, randomized trials) but avoided causal language\n- **Economists** (Heckman, Angrist) developed instrumental variables and other techniques, but these were domain-specific without unifying theory\n- **Epidemiologists** used qualitative checklists like Bradford Hill's criteria\n\nPearl's contribution was a unified mathematical foundation: DAGs as formal language for assumptions, do-calculus as the algebra for interventions, and the inference engine as the algorithmic pipeline.\n\n## Adoption\n\nThe framework is now mainstream in academia and growing in industry:\n- **AI/ML research** \u2014 DAGs and do-calculus are standard language\n- **Epidemiology** \u2014 causal diagrams standard in observational study design\n- **Tech industry** \u2014 Microsoft (DoWhy/EconML), Uber (CausalML), Netflix built toolkits around it\n\nIt coexists with the [Potential Outcomes Framework](./Potential Outcomes Framework.md), which achieves similar goals with different formalism (the \"Pearl vs. Rubin\" divide).\n",
+    "inline_links": [
+      {
+        "target": "Concepts/Potential Outcomes Framework.md",
+        "label": "Potential Outcomes Framework",
+        "position": 2171
+      }
+    ]
+  },
+  "Concepts/Granger Causality.md": {
+    "path": "Concepts/Granger Causality.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-00000000001c",
+      "title": "Granger Causality",
+      "type": "concept",
+      "tags": [
+        "causality",
+        "time-series",
+        "econometrics",
+        "statistics"
+      ],
+      "status": "draft",
+      "created": "2026-03-01",
+      "modified": "2026-03-09",
+      "source": "General knowledge; not directly from The Book of Why",
+      "summary": "A statistical test for whether one time series is useful in forecasting another. Despite its name, Granger causality measures predictive precedence, not true causation in Pearl's sense.",
+      "aliases": [
+        "Granger test",
+        "predictive causality"
+      ],
+      "domain": "econometrics",
+      "maturity": "established"
+    },
+    "body": "\n# Granger Causality\n\nGranger causality (Clive Granger, 1969) is a statistical concept for testing whether one time series helps predict another. Despite its name, it does not establish causation in the interventionist sense used by Pearl.\n\n## Definition\n\nA time series X \"Granger-causes\" Y if past values of X contain information that helps predict Y beyond what past values of Y alone provide.\n\n## Limitations\n\nGranger causality is purely predictive \u2014 it measures temporal precedence and correlation, not intervention. Pearl and others have shown that Granger causality can be misleading when confounders exist or when the true causal structure involves contemporaneous effects.\n\n## Relevance\n\nGranger causality is widely used in economics and neuroscience as a practical tool, but it occupies rung 1 (Association) of the Ladder of Causation, not rung 2 (Intervention). It is a useful statistical tool that should not be confused with genuine causal inference.\n",
+    "inline_links": []
+  },
+  "Questions/Can Machines Think Causally.md": {
+    "path": "Questions/Can Machines Think Causally.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000035",
+      "title": "Can Machines Think Causally?",
+      "type": "question",
+      "tags": [
+        "ai",
+        "causality",
+        "machine-learning",
+        "intelligence",
+        "pearl"
+      ],
+      "status": "draft",
+      "created": "2026-02-25",
+      "modified": "2026-03-01",
+      "source": "The Book of Why, Introduction + Ch10",
+      "summary": "Can artificial intelligence achieve genuine causal understanding, or is it fundamentally limited to pattern recognition? Pearl argues that causal reasoning requires explicit causal models, not just more data.",
+      "links": [
+        {
+          "target": "../Concepts/Causal Inference.md",
+          "type": "related-to"
+        },
+        {
+          "target": "../People/Judea Pearl.md",
+          "type": "related-to"
+        }
+      ],
+      "answered": false,
+      "answer-in": null
+    },
+    "body": "\n# Can Machines Think Causally?\n\nThis question lies at the intersection of artificial intelligence and causal inference, and it is one of Pearl's central concerns throughout The Book of Why. Current AI systems, including the most advanced deep learning models, operate exclusively on rung one of the Ladder of Causation \u2014 they detect patterns and correlations in data but cannot reason about interventions or counterfactuals.\n\n## The Limitation\n\nModern machine learning excels at association: given enough data, it can learn to predict outcomes with remarkable accuracy. But prediction is not causation. A model trained on observational data cannot answer \"What will happen if we change X?\" without a causal model. It cannot explain its decisions, adapt to distributional shifts caused by interventions, or reason about hypothetical alternatives.\n\n## Pearl's Position\n\nPearl argues that genuine causal understanding requires three components that current AI lacks: an explicit causal model (a DAG encoding the system's causal structure), the ability to perform interventional reasoning (the do-calculus), and the capacity for counterfactual analysis (reasoning about alternative histories). These cannot emerge from data alone \u2014 they require structural assumptions about how the world works. The question remains open: can these capabilities be integrated into practical AI systems, or will the gap between pattern recognition and causal understanding prove insurmountable?\n",
+    "inline_links": []
+  },
+  "People/Karl Pearson.md": {
+    "path": "People/Karl Pearson.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000022",
+      "title": "Karl Pearson",
+      "type": "person",
+      "tags": [
+        "statistics",
+        "correlation",
+        "anti-causation",
+        "history"
+      ],
+      "status": "draft",
+      "created": "2026-01-28",
+      "modified": "2026-02-15",
+      "source": "The Book of Why, Ch2",
+      "summary": "Champion of purely descriptive statistics who rejected causal language from scientific discourse. His anti-causal philosophy dominated statistics for decades, delaying the development of formal causal methods.",
+      "links": [
+        {
+          "target": "./Francis Galton.md",
+          "type": "evolved-from"
+        },
+        {
+          "target": "../Concepts/Causal Inference.md",
+          "type": "contradicts"
+        }
+      ],
+      "field": "Statistics",
+      "affiliation": "University College London",
+      "era": "1890s-1936"
+    },
+    "body": "\n# Karl Pearson\n\nKarl Pearson (1857-1936) was one of the founders of modern mathematical statistics and a central figure in the history of causal inference \u2014 paradoxically, as its most influential opponent. As Galton's intellectual heir and the first professor of statistics at University College London, Pearson wielded enormous influence over the direction of the field.\n\n## The Anti-Causal Crusade\n\nPearson believed that science should restrict itself to describing correlations and associations, never claiming to explain causes. He argued that \"causation\" was a metaphysical concept with no place in rigorous science. This philosophy, codified in his influential textbook \"The Grammar of Science,\" became the dominant paradigm in statistics for most of the 20th century.\n\n## Consequences\n\nPearson's anti-causal orthodoxy had profound consequences. Generations of statisticians were trained to avoid causal language, to report associations without interpretation, and to treat \"correlation is not causation\" as a final answer rather than a starting point. This delayed the development of formal causal methods by decades and left fields like epidemiology, economics, and social science without the tools needed to answer their most important questions. Pearl's formalization eventually showed that causal reasoning is not unscientific speculation but a rigorous, mechanizable discipline.\n",
+    "inline_links": []
+  },
+  "Concepts/Confounding.md": {
+    "path": "Concepts/Confounding.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000014",
+      "title": "Confounding",
+      "type": "concept",
+      "tags": [
+        "causality",
+        "confounding",
+        "bias",
+        "statistics"
+      ],
+      "status": "review",
+      "created": "2026-01-28",
+      "modified": "2026-03-01",
+      "source": "The Book of Why, Ch4",
+      "summary": "The phenomenon where a third variable influences both treatment and outcome, creating a spurious association that can mislead causal conclusions. Central obstacle in observational studies, resolved through causal diagrams.",
+      "links": [
+        {
+          "target": "./Seeing vs Doing.md",
+          "type": "related-to"
+        },
+        {
+          "target": "./Randomized Controlled Trials.md",
+          "type": "related-to"
+        }
+      ],
+      "aliases": [
+        "confounders",
+        "confounding bias",
+        "spurious association"
+      ],
+      "domain": "causal-ml",
+      "maturity": "foundational"
+    },
+    "body": "\n# Confounding\n\nConfounding occurs when a third variable (the confounder) causally influences both the treatment and the outcome under study, creating a non-causal path between them. This spurious association can lead to incorrect conclusions: a treatment may appear effective when it is not, or harmful when it is actually beneficial.\n\n## The Problem\n\nIn observational studies, treatment assignment is not random. People who take a drug may differ systematically from those who do not \u2014 they may be sicker, wealthier, or more health-conscious. These differences can create associations between treatment and outcome that have nothing to do with the treatment's actual effect. Without accounting for confounders, any observed association is a mixture of causal effect and spurious correlation.\n\n## Resolution Through Causal Diagrams\n\nPearl's back-door criterion provides a graphical test for identifying which variables must be controlled to eliminate confounding. Given a causal diagram, the criterion can be checked mechanically: if a set of variables blocks all back-door paths from treatment to outcome, adjusting for those variables eliminates confounding. This transforms confounding from a vague concern into a precise, algorithmically solvable problem.\n\n## Relationship to Randomization\n\nRandomized controlled trials solve confounding by design: random assignment ensures that treatment groups are balanced on all variables, observed and unobserved. The do-calculus extends this logic to observational settings, providing conditions under which observational data can achieve the same deconfounding as randomization.\n",
+    "inline_links": []
+  },
+  "Concepts/Randomized Controlled Trials.md": {
+    "path": "Concepts/Randomized Controlled Trials.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000016",
+      "title": "Randomized Controlled Trials",
+      "type": "concept",
+      "tags": [
+        "causality",
+        "methodology",
+        "rct",
+        "experimentation",
+        "fisher"
+      ],
+      "status": "review",
+      "created": "2026-02-03",
+      "modified": "2026-03-01",
+      "source": "The Book of Why, Ch2 + Ch4",
+      "summary": "The gold standard for establishing causal effects through randomization. By randomly assigning treatment, RCTs sever confounding paths and enable direct estimation of causal effects.",
+      "links": [
+        {
+          "target": "./Seeing vs Doing.md",
+          "type": "related-to"
+        },
+        {
+          "target": "./Confounding.md",
+          "type": "related-to"
+        },
+        {
+          "target": "../People/Ronald Fisher.md",
+          "type": "related-to"
+        }
+      ],
+      "aliases": [
+        "RCTs",
+        "randomized trials",
+        "randomized experiments"
+      ],
+      "domain": "methodology",
+      "maturity": "established"
+    },
+    "body": "\n# Randomized Controlled Trials\n\nRandomized controlled trials (RCTs) are the gold standard methodology for establishing causal effects. By randomly assigning subjects to treatment and control groups, RCTs ensure that the groups are statistically equivalent on all variables \u2014 observed and unobserved \u2014 thereby eliminating confounding by design.\n\n## Mechanism\n\nRandomization works by severing the causal connection between any confounders and the treatment assignment. When a coin flip determines who receives the drug, the treatment is independent of the patient's health status, socioeconomic background, or any other variable. This means the only systematic difference between groups is the treatment itself, and any observed difference in outcomes can be attributed to the treatment's causal effect.\n\n## Limitations\n\nDespite their power, RCTs are not always feasible. Ethical constraints prevent randomizing harmful exposures (you cannot randomly assign people to smoke). Practical constraints limit the scope of randomization (you cannot randomly assign countries to economic policies). Cost and time constraints make large-scale RCTs prohibitively expensive for many questions. These limitations motivate the development of methods for causal inference from observational data.\n\n## Historical Context\n\nRonald Fisher introduced the concept of randomized experimentation in the 1920s at Rothamsted Experimental Station. Paradoxically, despite inventing RCTs as a causal tool, Fisher resisted formal causal language in statistics and famously argued against the causal link between smoking and lung cancer, demonstrating the consequences of lacking a formal framework for causal reasoning.\n",
+    "inline_links": []
+  },
+  "The Book of Why/Ch2 - Genesis of Causal Inference/Ch2 - Genesis of Causal Inference.md": {
+    "path": "The Book of Why/Ch2 - Genesis of Causal Inference/Ch2 - Genesis of Causal Inference.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000005",
+      "title": "Ch2 - Genesis of Causal Inference",
+      "type": "book-note",
+      "tags": [
+        "causality",
+        "history",
+        "statistics",
+        "galton",
+        "pearson",
+        "wright",
+        "fisher"
+      ],
+      "status": "draft",
+      "created": "2026-01-22",
+      "modified": "2026-02-15",
+      "source": "The Book of Why, Chapter 2",
+      "summary": "Traces the history of causal thinking from Francis Galton's regression and correlation through Karl Pearson's anti-causal crusade to Sewall Wright's pioneering path diagrams and Ronald Fisher's paradoxical legacy.",
+      "links": [
+        {
+          "target": "../../People/Francis Galton.md",
+          "type": "related-to"
+        },
+        {
+          "target": "../../People/Karl Pearson.md",
+          "type": "related-to"
+        },
+        {
+          "target": "../../People/Sewall Wright.md",
+          "type": "related-to"
+        },
+        {
+          "target": "../../People/Ronald Fisher.md",
+          "type": "related-to"
+        }
+      ],
+      "chapter": "2",
+      "page-range": "53-80"
+    },
+    "body": "\n# Ch2 - Genesis of Causal Inference\n\nPearl traces the intellectual lineage of causal thinking through four pivotal figures in the history of statistics. The story begins with Francis Galton, who discovered regression to the mean and correlation while studying heredity. Galton's insight that tall parents tend to have shorter children (and vice versa) was groundbreaking, but he struggled with the direction of causation. His tools could describe associations but not explain why they existed.\n\nKarl Pearson, Galton's intellectual heir, took this limitation and elevated it into a principle. He argued that science should restrict itself to describing correlations, never claiming to explain causes. This anti-causal philosophy dominated statistics for decades, creating a disciplinary taboo against causal language that delayed the development of formal causal methods by nearly a century.\n\nThe exception to this orthodoxy was Sewall Wright, a geneticist who developed path analysis in the 1920s. Wright used directed diagrams with arrows to represent causal relationships in his studies of guinea pig genetics, essentially inventing the first causal DAGs decades before Pearl. The statistical establishment rejected his approach, but Wright's work survived in genetics and was eventually recognized as a direct precursor to modern causal inference. Ronald Fisher, despite inventing the randomized controlled trial, paradoxically resisted formal causal language and famously argued against the causal link between smoking and lung cancer.\n",
+    "inline_links": []
+  },
+  "The Book of Why/Introduction - Mind Over Data/Introduction - Mind Over Data.md": {
+    "path": "The Book of Why/Introduction - Mind Over Data/Introduction - Mind Over Data.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000002",
+      "title": "Introduction - Mind Over Data",
+      "type": "book-note",
+      "tags": [
+        "causality",
+        "introduction",
+        "causal-inference",
+        "do-calculus"
+      ],
+      "status": "review",
+      "created": "2026-01-20",
+      "modified": "2026-02-15",
+      "source": "The Book of Why, Introduction",
+      "summary": "Introduces causal inference as the science studying cause-and-effect using causal models, formal language, and data. Presents the do-operator and the key distinction between seeing and doing.",
+      "links": [
+        {
+          "target": "../../Concepts/Causal Inference.md",
+          "type": "contains"
+        },
+        {
+          "target": "../../Concepts/Seeing vs Doing.md",
+          "type": "contains"
+        },
+        {
+          "target": "../../Concepts/Do-Calculus.md",
+          "type": "contains"
+        },
+        {
+          "target": "../../Concepts/Causal Diagrams.md",
+          "type": "contains"
+        },
+        {
+          "target": "../../Concepts/Counterfactual Reasoning.md",
+          "type": "contains"
+        },
+        {
+          "target": "../../Questions/Can Machines Think Causally.md",
+          "type": "leads-to"
+        }
+      ],
+      "chapter": "Introduction",
+      "page-range": "1-38"
+    },
+    "body": "\n# Introduction - Mind Over Data\n\nWhat is causal inference? The science that studies cause-and-effect relationships using a combination of a causal model, a formal language and data. It addresses seemingly straightforward questions like:\n\n- How effective is a given treatment in preventing a disease?\n- Did the new tax law cause our sales to go up, or was it our advertising campaign?\n- What is the health-care cost attributable to obesity?\n- Can hiring records prove an employer is guilty of a policy of sex discrimination?\n- I'm about to quit my job. Should I?\n\nThese questions share a concern with cause-and-effect relationships, recognizable through words such as \"preventing,\" \"cause,\" \"attributable to,\" \"policy,\" and \"should I.\"\n\n## The Calculus of Causation\n\nThe calculus of causation consists of two languages: causal diagrams, to express what we know, and a symbolic language, resembling algebra, to express what we want to know.\n\nCausal diagrams are dot-and-arrow pictures (directed acyclic graphs \u2014 DAGs) that summarize existing scientific knowledge.\n\n## Seeing vs Doing\n\nProbably the biggest insight the Causal Revolution introduces is the distinction between seeing and doing.\n\n**Seeing**: P(L | D) \u2014 plain conditional probability.\n**Doing**: P(L | do(D)) \u2014 something fundamentally different. You intervene, forcing the drug into someone's body regardless of who they are.\n\n## Implications for AI\n\nPearl's background in machine learning gave him another incentive for studying causation. A causal reasoning module would give machines the ability to reflect on their mistakes, pinpoint weaknesses in their software, function as moral entities.\n",
+    "inline_links": []
+  },
+  "The Book of Why/The Book of Why.md": {
+    "path": "The Book of Why/The Book of Why.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000001",
+      "title": "The Book of Why - The New Science of Cause and Effect",
+      "type": "index",
+      "tags": [
+        "causality",
+        "causal-inference",
+        "pearl",
+        "book"
+      ],
+      "status": "review",
+      "created": "2026-01-15",
+      "modified": "2026-03-01",
+      "source": "Pearl, J. & Mackenzie, D. (2018). The Book of Why. Basic Books.",
+      "summary": "A non-mathematical introduction to the Causal Revolution, covering the history, theory, and implications of causal inference.",
+      "links": [
+        {
+          "target": "../People/Judea Pearl.md",
+          "type": "authored-by"
+        }
+      ],
+      "publisher": "Basic Books",
+      "year": 2018,
+      "book-title": "The Book of Why: The New Science of Cause and Effect",
+      "isbn": "978-0-465-09760-9"
+    },
+    "body": "\n# The Book of Why - The New Science of Cause and Effect\n\nA comprehensive introduction to causal inference written for a general audience by Judea Pearl, winner of the Turing Award, and science writer Dana Mackenzie.\n\nThe book presents three main missions:\n1. To present the Causal Revolution in non-mathematical language\n2. To share scientific journeys confronting cause-effect questions\n3. To explore implications for artificial intelligence and causal reasoning\n\n## Chapters\n\n- [Introduction - Mind Over Data](./Introduction - Mind Over Data/Introduction - Mind Over Data.md)\n- [Ch1 - The Ladder of Causation](./Ch1 - The Ladder of Causation/Ch1 - The Ladder of Causation.md)\n- [Ch2 - Genesis of Causal Inference](./Ch2 - Genesis of Causal Inference/Ch2 - Genesis of Causal Inference.md)\n- [Ch3 - Reverend Bayes Meets Mr Holmes](./Ch3 - Reverend Bayes Meets Mr Holmes/Ch3 - Reverend Bayes Meets Mr Holmes.md)\n- [Ch4 - Confounding and Deconfounding](./Ch4 - Confounding and Deconfounding/Ch4 - Confounding and Deconfounding.md)\n- [Ch7 - The Conquest of Mount Intervention](./Ch7 - The Conquest of Mount Intervention/Ch7 - The Conquest of Mount Intervention.md)\n- [Ch8 - Counterfactuals](./Ch8 - Counterfactuals/Ch8 - Counterfactuals.md)\n- [Ch10 - Big Data AI and the Big Questions](./Ch10 - Big Data AI and the Big Questions/Ch10 - Big Data AI and the Big Questions.md)\n",
+    "inline_links": [
+      {
+        "target": "The Book of Why/Introduction - Mind Over Data/Introduction - Mind Over Data.md",
+        "label": "Introduction - Mind Over Data",
+        "position": 481
+      },
+      {
+        "target": "The Book of Why/Ch1 - The Ladder of Causation/Ch1 - The Ladder of Causation.md",
+        "label": "Ch1 - The Ladder of Causation",
+        "position": 581
+      },
+      {
+        "target": "The Book of Why/Ch2 - Genesis of Causal Inference/Ch2 - Genesis of Causal Inference.md",
+        "label": "Ch2 - Genesis of Causal Inference",
+        "position": 681
+      },
+      {
+        "target": "The Book of Why/Ch3 - Reverend Bayes Meets Mr Holmes/Ch3 - Reverend Bayes Meets Mr Holmes.md",
+        "label": "Ch3 - Reverend Bayes Meets Mr Holmes",
+        "position": 793
+      },
+      {
+        "target": "The Book of Why/Ch4 - Confounding and Deconfounding/Ch4 - Confounding and Deconfounding.md",
+        "label": "Ch4 - Confounding and Deconfounding",
+        "position": 914
+      },
+      {
+        "target": "The Book of Why/Ch7 - The Conquest of Mount Intervention/Ch7 - The Conquest of Mount Intervention.md",
+        "label": "Ch7 - The Conquest of Mount Intervention",
+        "position": 1032
+      },
+      {
+        "target": "The Book of Why/Ch8 - Counterfactuals/Ch8 - Counterfactuals.md",
+        "label": "Ch8 - Counterfactuals",
+        "position": 1165
+      },
+      {
+        "target": "The Book of Why/Ch10 - Big Data AI and the Big Questions/Ch10 - Big Data AI and the Big Questions.md",
+        "label": "Ch10 - Big Data AI and the Big Questions",
+        "position": 1241
+      }
+    ]
+  },
+  "The Book of Why/Ch1 - The Ladder of Causation/Ch1 - The Ladder of Causation.md": {
+    "path": "The Book of Why/Ch1 - The Ladder of Causation/Ch1 - The Ladder of Causation.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000004",
+      "title": "Ch1 - The Ladder of Causation",
+      "type": "book-note",
+      "tags": [
+        "causality",
+        "ladder-of-causation",
+        "hierarchy",
+        "reasoning"
+      ],
+      "status": "draft",
+      "created": "2026-01-20",
+      "modified": "2026-02-15",
+      "source": "The Book of Why, Chapter 1",
+      "summary": "Pearl's three-level hierarchy of causal reasoning: Association (seeing), Intervention (doing), and Counterfactuals (imagining). Each rung represents a qualitatively different type of cognitive ability.",
+      "links": [
+        {
+          "target": "../../Concepts/The Ladder of Causation.md",
+          "type": "contains"
+        }
+      ],
+      "chapter": "1",
+      "page-range": "23-51"
+    },
+    "body": "\n# Ch1 - The Ladder of Causation\n\nPearl introduces his central metaphor for understanding causal reasoning: a three-rung ladder where each level represents a fundamentally different type of cognitive ability. This hierarchy is not merely a pedagogical device but a formal classification with mathematical implications for what questions can be answered at each level.\n\nThe first rung is Association, which deals with passive observation and pattern detection. This is the domain of traditional statistics and most current machine learning. At this level, one can ask questions like \"What does a symptom tell me about a disease?\" or \"What is the correlation between education and income?\" These are questions about conditional probabilities, P(Y|X), and they require only the ability to observe and catalog.\n\nThe second rung is Intervention, where one moves from observing to acting on the world. The key question becomes \"What will happen if I do X?\" rather than \"What do I observe when X happens?\" This distinction, formalized through the do-operator, separates causal reasoning from mere statistical analysis. The third and highest rung is Counterfactuals, where one can reason about what did not happen but could have. Questions like \"What would have happened if I had acted differently?\" require the most sophisticated causal machinery and are essential for moral reasoning, legal attribution, and scientific explanation.\n",
+    "inline_links": []
+  },
+  "The Book of Why/Ch8 - Counterfactuals/Ch8 - Counterfactuals.md": {
+    "path": "The Book of Why/Ch8 - Counterfactuals/Ch8 - Counterfactuals.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000009",
+      "title": "Ch8 - Counterfactuals",
+      "type": "book-note",
+      "tags": [
+        "causality",
+        "counterfactuals",
+        "structural-equations",
+        "reasoning"
+      ],
+      "status": "draft",
+      "created": "2026-02-10",
+      "modified": "2026-02-25",
+      "source": "The Book of Why, Chapter 8",
+      "summary": "Formalizes counterfactual reasoning within structural causal models, showing how \"what would have happened if\" questions can be given precise mathematical semantics and computed algorithmically.",
+      "links": [
+        {
+          "target": "../../Concepts/Counterfactual Reasoning.md",
+          "type": "contains"
+        }
+      ],
+      "chapter": "8",
+      "page-range": "259-296"
+    },
+    "body": "\n# Ch8 - Counterfactuals\n\nCounterfactual reasoning occupies the highest rung of Pearl's Ladder of Causation. These are questions of the form \"What would have happened if things had been different?\" \u2014 retrospective queries about alternative histories that never actually occurred. Pearl shows that such questions, far from being unanswerable philosophical speculation, can be given precise mathematical treatment within structural causal models.\n\nThe formalization works through a three-step process. First, you use the structural causal model and observed evidence to determine the values of all unobserved (exogenous) variables. Second, you modify the model to reflect the hypothetical intervention. Third, you compute the outcome in this modified model. This procedure transforms a vague \"what if\" question into a concrete mathematical computation, producing a definite answer given the model and data.\n\nCounterfactual reasoning has deep practical implications. In law, it underpins questions of causation and liability: \"Would the patient have survived but for the doctor's negligence?\" In policy, it enables evaluation of interventions that were not taken: \"Would the economy have recovered faster under a different policy?\" Pearl argues that counterfactual reasoning is also essential for artificial intelligence. A machine that cannot reason counterfactually cannot explain its decisions, learn from mistakes, or engage in moral reasoning \u2014 all hallmarks of human-level intelligence.\n",
+    "inline_links": []
+  },
+  "The Book of Why/Ch7 - The Conquest of Mount Intervention/Ch7 - The Conquest of Mount Intervention.md": {
+    "path": "The Book of Why/Ch7 - The Conquest of Mount Intervention/Ch7 - The Conquest of Mount Intervention.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000008",
+      "title": "Ch7 - The Conquest of Mount Intervention",
+      "type": "book-note",
+      "tags": [
+        "causality",
+        "do-calculus",
+        "intervention",
+        "completeness"
+      ],
+      "status": "draft",
+      "created": "2026-02-05",
+      "modified": "2026-02-20",
+      "source": "The Book of Why, Chapter 7",
+      "summary": "Presents the do-calculus as a complete system for computing interventional distributions from observational data. Demonstrates how the three rules of do-calculus can determine any identifiable causal effect.",
+      "links": [
+        {
+          "target": "../../Concepts/Do-Calculus.md",
+          "type": "contains"
+        }
+      ],
+      "page-range": "219-252",
+      "chapter": "7"
+    },
+    "body": "\n# Ch7 - The Conquest of Mount Intervention\n\nPearl presents the do-calculus as the crowning achievement of the Causal Revolution. The central problem is deceptively simple: given a causal diagram and observational data, can we compute the effect of an intervention \u2014 P(Y | do(X)) \u2014 without actually performing the intervention? The do-calculus provides three rules that, together, form a complete system for answering this question.\n\nThe three rules of do-calculus govern when observations can substitute for interventions. Rule 1 deals with adding or removing observations, Rule 2 with exchanging interventions and observations, and Rule 3 with adding or removing interventions. Each rule has a graphical criterion that can be checked mechanically against the causal diagram. The completeness result, proved by Ilya Shpitser and Pearl in 2006, shows that if a causal effect can be identified from observational data at all, the three rules are sufficient to derive the formula.\n\nThe practical significance is profound. Many causal questions arise in contexts where experimentation is impossible, unethical, or prohibitively expensive. The do-calculus provides a principled way to extract causal answers from observational data whenever the causal structure permits it, and to determine conclusively when it does not. This transforms causal inference from an art requiring domain-specific tricks into a systematic, algorithmically solvable problem.\n",
+    "inline_links": []
+  },
+  "Concepts/The Ladder of Causation.md": {
+    "path": "Concepts/The Ladder of Causation.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000017",
+      "title": "The Ladder of Causation",
+      "type": "concept",
+      "tags": [
+        "causality",
+        "hierarchy",
+        "reasoning",
+        "association",
+        "intervention",
+        "counterfactuals"
+      ],
+      "status": "review",
+      "created": "2026-01-20",
+      "modified": "2026-03-01",
+      "source": "The Book of Why, Ch1",
+      "summary": "Pearl's three-rung hierarchy of causal reasoning: Association (seeing), Intervention (doing), and Counterfactuals (imagining). Each rung represents a qualitatively different cognitive and mathematical capability.",
+      "links": [
+        {
+          "target": "./Seeing vs Doing.md",
+          "type": "contains"
+        },
+        {
+          "target": "./Counterfactual Reasoning.md",
+          "type": "contains"
+        },
+        {
+          "target": "../Arguments/Causal Reasoning is Formalizable.md",
+          "type": "related-to"
+        }
+      ],
+      "aliases": [
+        "ladder of causation",
+        "causal hierarchy",
+        "three levels of causation"
+      ],
+      "domain": "causal-ml",
+      "maturity": "foundational"
+    },
+    "body": "\n# The Ladder of Causation\n\nThe Ladder of Causation is Pearl's central organizing metaphor for understanding different levels of causal reasoning. It classifies causal questions into three qualitatively distinct rungs, each requiring more sophisticated cognitive and mathematical machinery than the one below.\n\n## Rung 1: Association (Seeing)\n\nThe first rung deals with observational questions: \"What is?\" and \"How are X and Y related?\" At this level, one detects patterns, correlations, and conditional probabilities. Most current machine learning operates exclusively at this level. The typical question is P(Y|X) \u2014 what is the probability of Y given that we observe X?\n\n## Rung 2: Intervention (Doing)\n\nThe second rung deals with interventional questions: \"What will happen if I do X?\" This requires the do-operator and distinguishes between seeing and doing. The key question is P(Y|do(X)), which cannot be answered from observational data alone without a causal model. Randomized controlled trials operate at this rung by physically implementing the do-operator through randomization.\n\n## Rung 3: Counterfactuals (Imagining)\n\nThe third and highest rung deals with retrospective, hypothetical questions: \"What would have happened if I had done things differently?\" These questions require the most sophisticated causal machinery \u2014 structural causal models with fully specified functional relationships. Counterfactual reasoning is essential for attribution, explanation, and moral judgment. No purely data-driven system can reach this rung without an explicit causal model.\n",
+    "inline_links": []
+  },
+  "Concepts/Do-Calculus.md": {
+    "path": "Concepts/Do-Calculus.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000011",
+      "title": "Do-Calculus",
+      "type": "concept",
+      "tags": [
+        "causality",
+        "do-operator",
+        "intervention",
+        "formalization"
+      ],
+      "status": "review",
+      "created": "2026-02-05",
+      "modified": "2026-03-01",
+      "source": "The Book of Why, Ch7",
+      "summary": "A complete set of three rules for computing interventional distributions P(Y|do(X)) from observational data P(Y|X), given a causal diagram. Developed by Pearl in 1995, with completeness proved in 2006.",
+      "links": [
+        {
+          "target": "./Structural Causal Models.md",
+          "type": "extends"
+        },
+        {
+          "target": "./Causal Diagrams.md",
+          "type": "depends-on"
+        }
+      ],
+      "aliases": [
+        "do calculus",
+        "calculus of interventions"
+      ],
+      "domain": "causal-ml",
+      "maturity": "foundational"
+    },
+    "body": "\n# Do-Calculus\n\nThe do-calculus is a set of three inference rules developed by Judea Pearl in 1995 that provide a complete method for computing the effects of interventions from observational data. Given a causal diagram and observational distributions, the do-calculus can determine whether a causal effect P(Y|do(X)) is identifiable and, if so, derive the formula to compute it from non-interventional data.\n\n## The Three Rules\n\nEach rule specifies conditions under which certain transformations of probability expressions involving the do-operator are valid. The conditions are expressed as graphical criteria on the causal diagram, making them mechanically verifiable:\n\n1. **Rule 1 (Insertion/deletion of observations)** \u2014 allows adding or removing conditioning variables when they are irrelevant given the intervention\n2. **Rule 2 (Action/observation exchange)** \u2014 allows replacing an observation with an intervention (or vice versa) when the causal diagram warrants it\n3. **Rule 3 (Insertion/deletion of actions)** \u2014 allows adding or removing interventions when they have no effect on the outcome given the diagram\n\n## Completeness\n\nIn 2006, Ilya Shpitser and Pearl proved that the do-calculus is complete: if a causal effect can be identified from observational data given a causal diagram, the three rules are sufficient to derive the identifying formula. This means there is no causal effect that is identifiable but unreachable by the do-calculus.\n\n## Practical Significance\n\nThe do-calculus transforms causal inference from an art requiring domain-specific tricks into a systematic procedure. Algorithms based on the do-calculus can automatically determine identifiability and derive estimands, removing the need for case-by-case ingenuity.\n",
+    "inline_links": []
+  },
+  "The Book of Why/Introduction - Mind Over Data/A Blueprint of Reality/A Blueprint of Reality.md": {
+    "path": "The Book of Why/Introduction - Mind Over Data/A Blueprint of Reality/A Blueprint of Reality.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000003",
+      "title": "A Blueprint of Reality",
+      "type": "book-note",
+      "tags": [
+        "causality",
+        "causal-diagrams",
+        "models",
+        "introduction"
+      ],
+      "status": "draft",
+      "created": "2026-01-22",
+      "modified": "2026-02-10",
+      "source": "The Book of Why, Introduction",
+      "summary": "Explores how causal diagrams serve as blueprints of reality \u2014 compact representations of causal assumptions that enable formal reasoning about cause and effect.",
+      "links": [
+        {
+          "target": "../../../Concepts/Causal Inference.md",
+          "type": "related-to"
+        },
+        {
+          "target": "../../../Concepts/Causal Diagrams.md",
+          "type": "contains"
+        },
+        {
+          "target": "../Introduction - Mind Over Data.md",
+          "type": "part-of"
+        }
+      ],
+      "page-range": "23-30",
+      "chapter": "Introduction"
+    },
+    "body": "\n# A Blueprint of Reality\n\nPearl argues that causal diagrams are not merely illustrations \u2014 they are blueprints of reality. They encode our assumptions about how the world works in a precise, testable form.\n\n## Diagrams as Models\n\nA causal diagram is a compact summary of what we know (or assume) about the causal relationships in a system. Each arrow represents a direct causal influence. The absence of an arrow is equally important.\n\n## From Blueprint to Inference\n\nThe power of the blueprint metaphor is that, like an architectural blueprint, a causal diagram allows you to reason about properties of the system without building it.\n",
+    "inline_links": []
+  },
+  "Concepts/Causal Diagrams.md": {
+    "path": "Concepts/Causal Diagrams.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000013",
+      "title": "Causal Diagrams",
+      "type": "concept",
+      "tags": [
+        "causality",
+        "dag",
+        "graphs",
+        "visualization",
+        "formalization"
+      ],
+      "status": "review",
+      "created": "2026-01-20",
+      "modified": "2026-03-01",
+      "source": "The Book of Why, Introduction + Ch1",
+      "summary": "Directed acyclic graphs (DAGs) used to encode causal assumptions about a system. Each node represents a variable, each arrow a direct causal influence, and the absence of an arrow asserts no direct effect.",
+      "links": [
+        {
+          "target": "./Causal Inference.md",
+          "type": "part-of"
+        },
+        {
+          "target": "./Bayesian Networks.md",
+          "type": "related-to"
+        }
+      ],
+      "domain": "causal-ml",
+      "maturity": "foundational",
+      "aliases": [
+        "causal DAGs",
+        "causal graphs",
+        "directed acyclic graphs"
+      ]
+    },
+    "body": "\n# Causal Diagrams\n\nCausal diagrams are directed acyclic graphs (DAGs) that encode assumptions about causal relationships in a system. Each node represents a variable, each directed edge (arrow) represents a direct causal influence from one variable to another, and the absence of an arrow between two variables asserts that no direct causal path exists between them.\n\n## Encoding Assumptions\n\nA causal diagram is not derived from data \u2014 it is drawn from domain knowledge, scientific understanding, or explicit assumptions. The diagram represents what the researcher believes (or hypothesizes) about the causal structure of the system under study. This is a feature, not a limitation: making assumptions explicit and testable is a core contribution of the causal inference framework.\n\n## Graphical Criteria\n\nThe structure of a causal diagram enables powerful graphical criteria for answering causal questions. The back-door criterion identifies sufficient adjustment sets for deconfounding. The front-door criterion provides an alternative identification strategy when back-door adjustment is impossible. D-separation reads conditional independence relations directly from the graph structure.\n\n## From Bayesian Networks to Causal Diagrams\n\nCausal diagrams evolved from Bayesian networks, which Pearl developed in the 1980s. While Bayesian networks encode probabilistic relationships and enable efficient inference, causal diagrams add causal semantics \u2014 the arrows represent not just statistical dependencies but directional causal influences. This seemingly small addition enables entirely new types of reasoning: interventions, counterfactuals, and the full machinery of the do-calculus.\n",
+    "inline_links": []
+  },
+  "People/Ronald Fisher.md": {
+    "path": "People/Ronald Fisher.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000024",
+      "title": "Ronald Fisher",
+      "type": "person",
+      "tags": [
+        "statistics",
+        "rct",
+        "genetics",
+        "history",
+        "smoking-controversy"
+      ],
+      "status": "draft",
+      "created": "2026-02-03",
+      "modified": "2026-02-15",
+      "source": "The Book of Why, Ch2 + Ch4",
+      "summary": "Inventor of randomized controlled trials and one of the greatest statisticians of the 20th century, who paradoxically resisted formal causal language and famously argued against the smoking-cancer link.",
+      "links": [
+        {
+          "target": "../Concepts/Randomized Controlled Trials.md",
+          "type": "related-to"
+        },
+        {
+          "target": "../Concepts/Causal Inference.md",
+          "type": "contradicts"
+        }
+      ],
+      "affiliation": "University of Cambridge, Rothamsted",
+      "field": "Statistics, Genetics",
+      "era": "1920s-1962"
+    },
+    "body": "\n# Ronald Fisher\n\nSir Ronald Aylmer Fisher (1890-1962) was one of the most influential statisticians of the 20th century, whose contributions include the analysis of variance (ANOVA), maximum likelihood estimation, and the randomized controlled trial. His legacy in causal inference is deeply paradoxical: he invented the most powerful causal tool in science while simultaneously opposing formal causal reasoning.\n\n## The Randomized Controlled Trial\n\nFisher introduced randomization into experimental design at Rothamsted Experimental Station in the 1920s. His insight was that randomly assigning treatments to experimental units eliminates systematic bias and provides a valid basis for statistical inference. The RCT became the gold standard for establishing causal effects in medicine, agriculture, and the social sciences.\n\n## The Smoking Paradox\n\nDespite inventing a fundamentally causal methodology, Fisher resisted formal causal language in statistical analysis. Most notoriously, he argued against the causal interpretation of the association between smoking and lung cancer, suggesting that a genetic confounding factor could explain the correlation. Without formal causal tools (which did not exist in his time), his objection could not be rigorously evaluated. Pearl later showed that a properly specified causal diagram would have resolved the debate decades earlier, potentially saving millions of lives. Fisher's case illustrates both the consequences of lacking formal causal tools and the irony of a scientist who created causal methodology while rejecting causal reasoning.\n",
+    "inline_links": []
+  },
+  "Concepts/Bayesian Networks.md": {
+    "path": "Concepts/Bayesian Networks.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000018",
+      "title": "Bayesian Networks",
+      "type": "concept",
+      "tags": [
+        "ai",
+        "probability",
+        "graphical-models",
+        "pearl",
+        "reasoning"
+      ],
+      "status": "review",
+      "created": "2026-01-25",
+      "modified": "2026-03-01",
+      "source": "The Book of Why, Ch3",
+      "summary": "Probabilistic graphical models developed by Pearl in the 1980s that use directed acyclic graphs to represent conditional independence relationships and enable efficient probabilistic inference.",
+      "links": [
+        {
+          "target": "./Causal Diagrams.md",
+          "type": "precedes"
+        }
+      ],
+      "domain": "ai",
+      "maturity": "established",
+      "aliases": [
+        "belief networks",
+        "probabilistic graphical models",
+        "Bayes nets"
+      ]
+    },
+    "body": "\n# Bayesian Networks\n\nBayesian networks are probabilistic graphical models that represent a set of variables and their conditional dependencies using a directed acyclic graph (DAG). Developed by Judea Pearl in the 1980s, they revolutionized artificial intelligence by providing a principled and computationally efficient framework for reasoning under uncertainty.\n\n## Structure and Semantics\n\nIn a Bayesian network, each node represents a random variable, and each directed edge represents a direct probabilistic dependency. The key property is the Markov condition: each variable is conditionally independent of its non-descendants given its parents. This allows the joint probability distribution over all variables to be decomposed into a product of local conditional distributions, one for each node given its parents.\n\n## Computational Advantages\n\nBefore Bayesian networks, probabilistic reasoning in AI was intractable for realistic problems. The graph structure enables message-passing algorithms that perform exact or approximate inference efficiently by exploiting conditional independencies. Pearl's own algorithm for belief propagation in tree-structured networks was a landmark result.\n\n## From Probabilistic to Causal\n\nBayesian networks represent statistical relationships but do not inherently encode causal direction. The same graph can be consistent with multiple causal interpretations. Pearl's later work added causal semantics \u2014 interpreting arrows as causal influences \u2014 transforming Bayesian networks into causal diagrams capable of supporting interventional and counterfactual reasoning. This evolution from probabilistic to causal graphical models is a central narrative in The Book of Why.\n",
+    "inline_links": []
+  },
+  "Evidence/Smoking and Lung Cancer Studies.md": {
+    "path": "Evidence/Smoking and Lung Cancer Studies.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000031",
+      "title": "Smoking and Lung Cancer Studies",
+      "type": "evidence",
+      "tags": [
+        "epidemiology",
+        "smoking",
+        "causality",
+        "history"
+      ],
+      "status": "draft",
+      "created": "2026-02-12",
+      "modified": "2026-03-05",
+      "source": "The Book of Why, Ch4 + Ch7",
+      "summary": "The epidemiological evidence linking smoking to lung cancer \u2014 a landmark case in the history of causal inference, where the lack of formal causal tools delayed scientific consensus for decades.",
+      "links": [
+        {
+          "target": "../Arguments/Causal Reasoning is Formalizable.md",
+          "type": "supports"
+        },
+        {
+          "target": "../People/Ronald Fisher.md",
+          "type": "related-to"
+        },
+        {
+          "target": "../Concepts/Confounding.md",
+          "type": "related-to"
+        },
+        {
+          "target": "../Concepts/Randomized Controlled Trials.md",
+          "type": "related-to"
+        },
+        {
+          "target": "Personal::Notes/Some Topic.md",
+          "type": "related-to"
+        }
+      ],
+      "strength": "strong",
+      "evidence-type": "observational",
+      "domain": "epidemiology"
+    },
+    "body": "\n# Smoking and Lung Cancer Studies\n\nThe debate over whether smoking causes lung cancer is one of the most consequential episodes in the history of causal inference. It illustrates both the power and the limitations of pre-Pearl causal reasoning.\n\n## The Evidence\n\nBy the 1950s, overwhelming observational data showed a strong association between smoking and lung cancer:\n- Doll and Hill's British Doctors Study (1951-2001)\n- The US Surgeon General's report (1964)\n- Dozens of cohort and case-control studies across multiple countries\n\n## The Causal Edge: Smoking \u2192 Lung Cancer\n\nThe relationship between smoking and lung cancer is a canonical example of a `causes` edge: smoking directly increases the probability of developing lung cancer through biological mechanisms (tar deposits, DNA mutations, chronic inflammation).\n\n## The Controversy\n\nRonald Fisher \u2014 one of the greatest statisticians of the 20th century \u2014 argued that the association could be explained by a confounding variable (a genetic predisposition that causes both the desire to smoke and susceptibility to cancer). Without formal causal tools, this objection could not be rigorously refuted.\n\n## Resolution\n\nPearl shows that with a properly specified causal diagram, the confounding objection can be formally evaluated and, in this case, dismissed. The do-calculus provides the mathematical machinery to determine when observational data is sufficient to establish causation.\n",
+    "inline_links": []
+  },
+  "Questions/Why Did Statistics Resist Causation.md": {
+    "path": "Questions/Why Did Statistics Resist Causation.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000034",
+      "title": "Why Did Statistics Resist Causation?",
+      "type": "question",
+      "tags": [
+        "history",
+        "statistics",
+        "causality",
+        "philosophy-of-science"
+      ],
+      "status": "draft",
+      "created": "2026-02-01",
+      "modified": "2026-02-20",
+      "source": "The Book of Why, Introduction + Ch2",
+      "summary": "Why did the statistical establishment actively prohibit causal language for most of the 20th century, and what were the consequences?",
+      "links": [
+        {
+          "target": "../People/Ronald Fisher.md",
+          "type": "related-to"
+        },
+        {
+          "target": "../People/Karl Pearson.md",
+          "type": "related-to"
+        },
+        {
+          "target": "../Concepts/Causal Inference.md",
+          "type": "related-to"
+        },
+        {
+          "target": "../People/Sewall Wright.md",
+          "type": "related-to"
+        }
+      ],
+      "answer-in": null,
+      "answered": false
+    },
+    "body": "\n# Why Did Statistics Resist Causation?\n\nProbability and statistics were developed because someone needed them and no one stood in the way. Causal inference was stalled because the very people who should have developed it \u2014 statisticians \u2014 actively prohibited the language needed to even ask the questions.\n\n## The Prohibition\n\nFor most of the 20th century, mainstream statistics treated \"cause\" as a dirty word. The mantra \"correlation is not causation\" became a stop sign rather than a starting point. Researchers were trained to describe associations, never causes.\n\n## Key Figures in the Resistance\n\n[Karl Pearson](../People/Karl Pearson.md) championed a purely descriptive, correlation-based approach to statistics. He believed science should only describe patterns in data, never claim to explain *why* those patterns exist.\n\n[Ronald Fisher](../People/Ronald Fisher.md), despite inventing the randomized controlled trial \u2014 a fundamentally causal tool \u2014 paradoxically resisted formal causal language in statistical analysis. His famous defense of the tobacco industry's position on smoking and cancer illustrates the consequences of lacking formal causal reasoning tools.\n\n## The Exception\n\n[Sewall Wright](../People/Sewall Wright.md) was a notable exception. His path analysis (1920s) used diagrams with arrows to represent causal relationships in genetics \u2014 essentially a precursor to Pearl's causal diagrams. The statistical establishment rejected his approach for decades.\n\n## Consequences\n\nThe prohibition delayed the development of formal causal tools by nearly a century. Fields like epidemiology, economics, and social science had to develop ad-hoc methods independently, without a unifying framework. The cost in human lives (delayed understanding of smoking, treatments, public policy) is incalculable.\n\n## Resolution\n\nPearl's formalization showed that causal reasoning is not unscientific hand-waving but a rigorous, mechanizable process. The inference engine framework directly rebutted the objection that causation is too subjective for mathematics.\n",
+    "inline_links": [
+      {
+        "target": "People/Karl Pearson.md",
+        "label": "Karl Pearson",
+        "position": 608
+      },
+      {
+        "target": "People/Ronald Fisher.md",
+        "label": "Ronald Fisher",
+        "position": 836
+      },
+      {
+        "target": "People/Sewall Wright.md",
+        "label": "Sewall Wright",
+        "position": 1204
+      }
+    ]
+  },
+  "Concepts/Counterfactual Reasoning.md": {
+    "path": "Concepts/Counterfactual Reasoning.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-00000000001a",
+      "title": "Counterfactual Reasoning",
+      "type": "concept",
+      "tags": [
+        "causality",
+        "counterfactuals",
+        "reasoning",
+        "structural-equations"
+      ],
+      "status": "review",
+      "created": "2026-02-10",
+      "modified": "2026-03-01",
+      "source": "The Book of Why, Ch8",
+      "summary": "The formal analysis of \"what would have happened if\" questions, occupying the highest rung of Pearl's Ladder of Causation. Formalized through structural causal models to enable computable answers to hypothetical scenarios.",
+      "links": [
+        {
+          "target": "./The Ladder of Causation.md",
+          "type": "part-of"
+        },
+        {
+          "target": "./Structural Causal Models.md",
+          "type": "related-to"
+        }
+      ],
+      "domain": "causal-ml",
+      "maturity": "foundational",
+      "aliases": [
+        "counterfactuals",
+        "what-if reasoning",
+        "hypothetical reasoning"
+      ]
+    },
+    "body": "\n# Counterfactual Reasoning\n\nCounterfactual reasoning addresses questions of the form \"What would have happened if things had been different?\" These retrospective, hypothetical queries occupy the highest rung of Pearl's Ladder of Causation and require the most sophisticated causal machinery to answer formally.\n\n## Formalization\n\nPearl formalized counterfactuals within structural causal models using a three-step procedure. First, abduction: use the observed evidence and the structural model to infer the values of exogenous (background) variables. Second, action: modify the model by replacing the structural equation for the hypothetical intervention. Third, prediction: compute the outcome in the modified model. This transforms vague \"what if\" questions into precise mathematical computations.\n\n## Distinction from Intervention\n\nCounterfactuals differ from interventions in a crucial way. An intervention asks \"What will happen if I do X?\" \u2014 a prospective question about the future. A counterfactual asks \"What would have happened if I had done X instead of what I actually did?\" \u2014 a retrospective question about an alternative past. Counterfactuals require knowledge of the specific case (the actual values of exogenous variables), while interventions reason about populations.\n\n## Applications\n\nCounterfactual reasoning is indispensable in law (determining causation and liability), medicine (personalized treatment decisions), policy evaluation (assessing what would have happened under different policies), and artificial intelligence (enabling machines to explain their decisions and learn from hypothetical scenarios). Pearl argues that no system incapable of counterfactual reasoning can achieve human-level intelligence.\n",
+    "inline_links": []
+  },
+  "Projects/The Causal Revolution.md": {
+    "path": "Projects/The Causal Revolution.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000033",
+      "title": "The Causal Revolution",
+      "type": "project",
+      "tags": [
+        "causality",
+        "pearl",
+        "research-program",
+        "formalization"
+      ],
+      "status": "review",
+      "created": "2026-02-18",
+      "modified": "2026-03-09",
+      "source": "The Book of Why",
+      "summary": "Pearl's decades-long research program to formalize causal inference, resulting in causal diagrams, do-calculus, structural causal models, and the counterfactual framework.",
+      "links": [
+        {
+          "target": "../Concepts/Do-Calculus.md",
+          "type": "contains"
+        },
+        {
+          "target": "../Concepts/Structural Causal Models.md",
+          "type": "contains"
+        },
+        {
+          "target": "../People/Judea Pearl.md",
+          "type": "authored-by"
+        },
+        {
+          "target": "../Concepts/Causal Inference.md",
+          "type": "related-to"
+        },
+        {
+          "target": "../Concepts/Bayesian Networks.md",
+          "type": "related-to"
+        }
+      ],
+      "end-year": null,
+      "start-year": 1988,
+      "project-status": "completed"
+    },
+    "body": "\n# The Causal Revolution\n\n\"The Causal Revolution\" is Pearl's term for the paradigm shift in how science handles cause-and-effect questions. It refers both to a body of theoretical work and to the broader movement it sparked across disciplines.\n\n## Scope\n\nThe project encompasses several major contributions:\n- **Bayesian Networks** (1980s) \u2014 probabilistic reasoning with directed graphs\n- **Causal Diagrams** (1990s) \u2014 extending Bayesian networks to encode causal, not just probabilistic, relationships\n- **Do-Calculus** (1995) \u2014 a complete set of rules for identifying causal effects from observational data\n- **Structural Causal Models** \u2014 a unified mathematical framework combining structural equations with graphical models\n- **Counterfactual Formalization** \u2014 formal semantics for \"what would have happened if...\"\n\n## Impact\n\nThe Causal Revolution has transformed multiple fields:\n- Epidemiology now uses causal diagrams as standard methodology\n- AI/ML research increasingly incorporates causal reasoning\n- Tech companies have built production toolkits around the framework (Microsoft DoWhy, Uber CausalML)\n\n## Ongoing Work\n\nWhile the theoretical foundations are largely established, the revolution continues: integration with machine learning, scalable algorithms for large causal models, and the quest to give machines genuine causal understanding.\n",
+    "inline_links": []
+  },
+  "People/Judea Pearl.md": {
+    "path": "People/Judea Pearl.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000020",
+      "title": "Judea Pearl",
+      "type": "person",
+      "tags": [
+        "causality",
+        "ai",
+        "turing-award",
+        "researcher"
+      ],
+      "status": "review",
+      "created": "2026-01-15",
+      "modified": "2026-03-09",
+      "source": "The Book of Why",
+      "summary": "Computer scientist and philosopher, Turing Award winner (2011), who formalized causal inference through causal diagrams, do-calculus, and structural causal models.",
+      "links": [
+        {
+          "target": "../Concepts/Causal Inference.md",
+          "type": "authored-by"
+        },
+        {
+          "target": "../Concepts/Do-Calculus.md",
+          "type": "authored-by"
+        },
+        {
+          "target": "../Concepts/Bayesian Networks.md",
+          "type": "authored-by"
+        },
+        {
+          "target": "../Concepts/Structural Causal Models.md",
+          "type": "authored-by"
+        },
+        {
+          "target": "../The Book of Why/The Book of Why.md",
+          "type": "authored-by"
+        },
+        {
+          "target": "Concepts/Deleted Note.md",
+          "type": "related-to"
+        }
+      ],
+      "field": "Artificial Intelligence, Causal Inference",
+      "era": "1980s-present",
+      "affiliation": "UCLA, Computer Science Department"
+    },
+    "body": "\n# Judea Pearl\n\nJudea Pearl (born 1936) is an Israeli-American computer scientist and philosopher, best known for championing the probabilistic approach to artificial intelligence and for developing the theory of causal and counterfactual inference.\n\n## Key Contributions\n\n- **Bayesian Networks** (1980s) \u2014 formalized probabilistic reasoning in AI using directed acyclic graphs, enabling efficient computation of conditional probabilities in complex systems.\n- **Causal Diagrams / DAGs** \u2014 extended Bayesian networks to encode causal (not just probabilistic) relationships, creating a visual language for causal assumptions.\n- **Do-Calculus** (1995) \u2014 developed a complete set of rules for determining when causal effects can be identified from observational data, given a causal diagram.\n- **Structural Causal Models** \u2014 unified framework combining structural equations with graphical models, providing the mathematical backbone for causal reasoning.\n- **Counterfactual Formalization** \u2014 gave formal, computable semantics to counterfactual statements (\"what would have happened if...\").\n\n## Recognition\n\nAwarded the **Turing Award in 2011** for \"fundamental contributions to artificial intelligence through the development of a calculus for probabilistic and causal reasoning.\"\n\n## The Book of Why\n\nIn 2018, Pearl co-authored \"The Book of Why\" with Dana Mackenzie to present the Causal Revolution to a general audience. The book traces the history of causal thinking from [Galton](./Francis Galton.md) and [Pearson](./Karl Pearson.md) through [Wright](./Sewall Wright.md) to Pearl's own work, arguing that causal reasoning is both formalizable and essential for artificial intelligence.\n\n## Significance for AI\n\nPearl argues that machines' lack of causal understanding is the biggest roadblock to human-level intelligence. His position: strong AI requires a causal reasoning module, not just bigger datasets or deeper networks. This contrasts with the data-centric approach of modern deep learning.\n",
+    "inline_links": [
+      {
+        "target": "People/Francis Galton.md",
+        "label": "Galton",
+        "position": 1483
+      },
+      {
+        "target": "People/Karl Pearson.md",
+        "label": "Pearson",
+        "position": 1517
+      },
+      {
+        "target": "People/Sewall Wright.md",
+        "label": "Wright",
+        "position": 1554
+      }
+    ]
+  },
+  "The Book of Why/Ch4 - Confounding and Deconfounding/Ch4 - Confounding and Deconfounding.md": {
+    "path": "The Book of Why/Ch4 - Confounding and Deconfounding/Ch4 - Confounding and Deconfounding.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000007",
+      "title": "Ch4 - Confounding and Deconfounding",
+      "type": "book-note",
+      "tags": [
+        "causality",
+        "confounding",
+        "simpsons-paradox",
+        "statistics"
+      ],
+      "status": "draft",
+      "created": "2026-01-28",
+      "modified": "2026-02-15",
+      "source": "The Book of Why, Chapter 4",
+      "summary": "Explores the confounding problem and Simpson's paradox as central challenges in causal inference, showing how causal diagrams resolve ambiguities that purely statistical approaches cannot.",
+      "links": [
+        {
+          "target": "../../Concepts/Confounding.md",
+          "type": "contains"
+        },
+        {
+          "target": "../../Concepts/Simpsons Paradox.md",
+          "type": "contains"
+        }
+      ],
+      "chapter": "4",
+      "page-range": "135-170"
+    },
+    "body": "\n# Ch4 - Confounding and Deconfounding\n\nConfounding is perhaps the most important obstacle to drawing causal conclusions from observational data. A confounder is a variable that influences both the treatment and the outcome, creating a spurious association that can mislead researchers into seeing causal effects where none exist or missing real effects hidden beneath statistical noise.\n\nPearl uses Simpson's paradox as the central example of how confounding can produce deeply counterintuitive results. In Simpson's paradox, a trend that appears in several subgroups of data reverses when the groups are combined. The classic example involves a treatment that appears beneficial in every subgroup (men and women separately) but appears harmful when the data is aggregated. Without a causal model, there is no principled way to decide whether to aggregate or stratify \u2014 both are legitimate statistical operations, but they yield opposite conclusions.\n\nThe resolution requires thinking causally. A causal diagram specifies the relationships between treatment, outcome, and potential confounders. Given such a diagram, the back-door criterion provides an algorithmic test for whether a set of variables is sufficient to deconfound the relationship of interest. This transforms the question from a philosophical puzzle into a mechanical procedure: draw the diagram, apply the criterion, and either adjust for the right variables or conclude that the causal effect is not identifiable from the available data.\n",
+    "inline_links": []
+  },
+  "Concepts/Structural Causal Models.md": {
+    "path": "Concepts/Structural Causal Models.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000012",
+      "title": "Structural Causal Models",
+      "type": "concept",
+      "tags": [
+        "causality",
+        "scm",
+        "structural-equations",
+        "formalization"
+      ],
+      "status": "review",
+      "created": "2026-02-08",
+      "modified": "2026-03-01",
+      "source": "The Book of Why, Ch1 + Ch7 + Ch8",
+      "summary": "A unified mathematical framework combining structural equations with graphical models, providing the backbone for causal reasoning, interventions, and counterfactual analysis.",
+      "links": [
+        {
+          "target": "./Do-Calculus.md",
+          "type": "contains"
+        },
+        {
+          "target": "./Bayesian Networks.md",
+          "type": "extends"
+        }
+      ],
+      "aliases": [
+        "SCM",
+        "structural equation models",
+        "causal models"
+      ],
+      "maturity": "foundational",
+      "domain": "causal-ml"
+    },
+    "body": "\n# Structural Causal Models\n\nStructural Causal Models (SCMs) are the mathematical backbone of Pearl's causal inference framework. An SCM consists of three components: a set of exogenous (external) variables, a set of endogenous (internal) variables, and a set of structural equations that determine each endogenous variable as a function of other variables.\n\n## Structure and Semantics\n\nUnlike traditional statistical models, structural equations carry causal meaning. The equation Y = f(X, U) does not merely assert a statistical relationship \u2014 it claims that Y is determined by X and U through the mechanism f. This asymmetry is crucial: the equation tells you that changing X will change Y (through f), but changing Y will not change X.\n\n## Unifying Framework\n\nSCMs unify three levels of causal reasoning. At the associational level, the model implies a joint probability distribution that can be compared with observational data. At the interventional level, the do-operator is defined by modifying structural equations \u2014 \"do(X=x)\" means replacing the equation for X with the constant x, severing all incoming causal influences. At the counterfactual level, the model supports reasoning about alternative scenarios by fixing exogenous variables and modifying selected equations.\n\n## Relationship to Other Frameworks\n\nSCMs extend Bayesian networks by adding causal semantics to the directed graph and providing formal definitions for interventions and counterfactuals. They also subsume the Potential Outcomes Framework: every SCM defines a set of potential outcomes, though the reverse is not always true. This makes SCMs the most general framework for causal reasoning currently available.\n",
+    "inline_links": []
+  },
+  "Concepts/Seeing vs Doing.md": {
+    "path": "Concepts/Seeing vs Doing.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-00000000001b",
+      "title": "Seeing vs Doing",
+      "type": "concept",
+      "tags": [
+        "causality",
+        "do-operator",
+        "intervention",
+        "observation",
+        "foundations"
+      ],
+      "status": "review",
+      "created": "2026-02-05",
+      "modified": "2026-02-28",
+      "source": "The Book of Why, Introduction",
+      "summary": "The fundamental distinction between observational conditioning P(Y|X) and interventional conditioning P(Y|do(X)), which separates causal inference from traditional statistics.",
+      "links": [
+        {
+          "target": "./Do-Calculus.md",
+          "type": "leads-to"
+        },
+        {
+          "target": "./Randomized Controlled Trials.md",
+          "type": "related-to"
+        },
+        {
+          "target": "./Confounding.md",
+          "type": "related-to"
+        },
+        {
+          "target": "./The Ladder of Causation.md",
+          "type": "part-of"
+        }
+      ],
+      "maturity": "foundational",
+      "domain": "causal-ml",
+      "aliases": [
+        "observation vs intervention",
+        "seeing versus doing"
+      ]
+    },
+    "body": "\n# Seeing vs Doing\n\nThe distinction between *seeing* and *doing* is arguably the most important insight of the Causal Revolution. It separates causal inference from traditional statistics at a fundamental level.\n\n## Seeing: P(Y | X)\n\nPlain conditional probability. You observe the world passively and filter by what you see.\n\n\"Among all the people I observed taking the drug, how long did they live?\"\n\nThe problem: when you merely observe, you're seeing a world where people *chose* to take the drug. Their choice is not random \u2014 it's driven by other factors:\n- Maybe sicker people are more desperate and take the drug more\n- Maybe wealthier people have access to the drug and also have better healthcare\n\nThe data you observe is contaminated by all the reasons people ended up in the treatment group. This is the problem of [confounding](./Confounding.md).\n\n## Doing: P(Y | do(X))\n\nSomething fundamentally different. You *intervene* \u2014 you force the drug into someone's body regardless of who they are, how sick they are, or how wealthy they are. You've severed the connection between the drug and all the reasons someone would normally take it.\n\nThis is exactly what a [randomized controlled trial](./Randomized Controlled Trials.md) does: a coin flip decides who takes the drug, not the patient's condition or choice.\n\n## Why It Matters\n\nThe [do-calculus](./Do-Calculus.md) provides rules for converting `do(X)` expressions into ordinary conditional probabilities \u2014 effectively computing interventional quantities from observational data alone, when the causal structure permits it.\n\nThis is one of the crowning achievements of the Causal Revolution: predicting the effects of an intervention without actually enacting it, through noninvasive means.\n\n## On the Ladder of Causation\n\nSeeing occupies rung 1 (Association). Doing occupies rung 2 (Intervention). The distinction maps directly to [The Ladder of Causation](./The Ladder of Causation.md), Pearl's hierarchy of causal reasoning capabilities.\n",
+    "inline_links": [
+      {
+        "target": "Concepts/Confounding.md",
+        "label": "confounding",
+        "position": 827
+      },
+      {
+        "target": "Concepts/Randomized Controlled Trials.md",
+        "label": "randomized controlled trial",
+        "position": 1174
+      },
+      {
+        "target": "Concepts/Do-Calculus.md",
+        "label": "do-calculus",
+        "position": 1348
+      },
+      {
+        "target": "Concepts/The Ladder of Causation.md",
+        "label": "The Ladder of Causation",
+        "position": 1899
+      }
+    ]
+  },
+  "Experiments/Wrights Guinea Pig Genetics.md": {
+    "path": "Experiments/Wrights Guinea Pig Genetics.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000032",
+      "title": "Wright's Guinea Pig Genetics",
+      "type": "experiment",
+      "tags": [
+        "genetics",
+        "path-analysis",
+        "history",
+        "causality"
+      ],
+      "status": "draft",
+      "created": "2026-02-15",
+      "modified": "2026-02-28",
+      "source": "The Book of Why, Ch2",
+      "summary": "Sewall Wright's path analysis work on guinea pig coat color inheritance \u2014 the first systematic use of causal diagrams in science, predating Pearl's formalization by decades.",
+      "links": [
+        {
+          "target": "../People/Sewall Wright.md",
+          "type": "authored-by"
+        },
+        {
+          "target": "../Concepts/Causal Diagrams.md",
+          "type": "leads-to"
+        }
+      ],
+      "method": "Path analysis with directed diagrams representing causal relationships between genetic factors and phenotypic traits",
+      "dataset": "Coat color inheritance data from controlled breeding of guinea pigs at the USDA",
+      "result": "Demonstrated that directed diagrams could decompose complex genetic inheritance patterns into direct and indirect causal pathways, explaining observed correlations through underlying causal structure"
+    },
+    "body": "\n# Wright's Guinea Pig Genetics\n\nSewall Wright's work on guinea pig coat color inheritance (1920s) represents the first systematic use of directed diagrams to represent causal relationships in science.\n\n## Method\n\nWright developed \"path analysis\" \u2014 a method using directed diagrams (arrows between variables) to decompose correlations into direct and indirect causal pathways. Each arrow represented a hypothesized causal influence, and the diagram as a whole encoded a complete causal model.\n\n## The Experiment\n\nWorking at the USDA, Wright studied coat color inheritance in guinea pigs. He used directed diagrams to model how multiple genetic factors combined to produce observed coat color patterns, tracing causal pathways through intermediate variables.\n\n## Significance\n\nWright's path diagrams were, in essence, the first causal DAGs \u2014 decades before Pearl formalized the framework. The statistical establishment (particularly Karl Pearson's followers) rejected Wright's approach, viewing the arrows as unscientific speculation rather than formal causal claims.\n\n## Legacy\n\nWright's work is now recognized as a direct precursor to Pearl's causal diagrams. The line from Wright's path analysis to modern causal inference illustrates how a sound idea can be suppressed by disciplinary orthodoxy for generations.\n",
+    "inline_links": []
+  },
+  "People/Francis Galton.md": {
+    "path": "People/Francis Galton.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000021",
+      "title": "Francis Galton",
+      "type": "person",
+      "tags": [
+        "statistics",
+        "regression",
+        "correlation",
+        "history"
+      ],
+      "status": "draft",
+      "created": "2026-01-25",
+      "modified": "2026-02-15",
+      "source": "The Book of Why, Ch2",
+      "summary": "Pioneer of regression and correlation who laid the groundwork for modern statistics while studying heredity. His work revealed fundamental patterns but lacked the causal language to explain them.",
+      "links": [
+        {
+          "target": "./Karl Pearson.md",
+          "type": "precedes"
+        },
+        {
+          "target": "../Concepts/Causal Diagrams.md",
+          "type": "leads-to"
+        }
+      ],
+      "era": "1860s-1911",
+      "affiliation": "University College London",
+      "field": "Statistics, Eugenics"
+    },
+    "body": "\n# Francis Galton\n\nSir Francis Galton (1822-1911) was a Victorian polymath whose investigations into heredity led to the discovery of two foundational concepts in statistics: regression to the mean and correlation. His work shaped the trajectory of statistical science for over a century, though it also set the stage for the anti-causal orthodoxy that would follow.\n\n## Contributions to Statistics\n\nGalton's study of hereditary height revealed that tall parents tend to have children closer to the population average \u2014 a phenomenon he called \"regression toward mediocrity.\" This insight was revolutionary: it showed that extreme values in one generation do not persist unchanged into the next. He also developed the concept of correlation as a measure of association between two variables, providing the mathematical foundation for Karl Pearson's later work.\n\n## Limitations and Legacy\n\nGalton struggled with the direction of causation in his findings. His tools could quantify associations but could not distinguish cause from effect or account for confounding variables. This limitation was inherited by his intellectual successors, particularly Karl Pearson, who elevated the inability to reason causally into a philosophical principle. Galton's path diagrams and visual thinking, however, presaged the graphical approaches that would eventually enable formal causal reasoning.\n",
+    "inline_links": []
+  },
+  "The Book of Why/Ch10 - Big Data AI and the Big Questions/Ch10 - Big Data AI and the Big Questions.md": {
+    "path": "The Book of Why/Ch10 - Big Data AI and the Big Questions/Ch10 - Big Data AI and the Big Questions.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-00000000000a",
+      "title": "Ch10 - Big Data AI and the Big Questions",
+      "type": "book-note",
+      "tags": [
+        "causality",
+        "ai",
+        "machine-learning",
+        "big-data",
+        "future"
+      ],
+      "status": "draft",
+      "created": "2026-02-20",
+      "modified": "2026-03-01",
+      "source": "The Book of Why, Chapter 10",
+      "summary": "Examines the limitations of data-driven approaches to AI and argues that genuine artificial intelligence requires causal reasoning capabilities that go beyond pattern recognition in large datasets.",
+      "links": [
+        {
+          "target": "../../Questions/Can Machines Think Causally.md",
+          "type": "contains"
+        }
+      ],
+      "chapter": "10",
+      "page-range": "349-370"
+    },
+    "body": "\n# Ch10 - Big Data AI and the Big Questions\n\nPearl confronts the dominant paradigm of modern AI head-on. The prevailing belief in the tech industry is that sufficiently large datasets and powerful algorithms can solve any problem. Pearl argues that this is fundamentally mistaken: no amount of data can compensate for the lack of a causal model. Data-driven systems operate exclusively on rung one of the Ladder of Causation, confined to detecting associations without understanding why those associations exist.\n\nThe chapter examines specific limitations of current AI systems. Deep learning models can achieve superhuman performance on pattern recognition tasks, but they cannot answer interventional questions (\"What will happen if we change X?\") or counterfactual questions (\"Would the outcome have been different if we had done Y instead?\"). These limitations are not engineering problems that will be solved by more data or faster hardware \u2014 they are fundamental architectural constraints that require causal reasoning machinery.\n\nPearl envisions a future AI architecture that integrates causal models with data-driven learning. Such a system would maintain an explicit causal model of its domain, use data to estimate parameters and test assumptions, and employ the do-calculus and counterfactual reasoning to answer questions beyond the reach of current methods. This \"causal AI\" would be able to explain its decisions, adapt to new environments, and reason about the consequences of actions it has never taken \u2014 capabilities Pearl considers essential for genuine artificial intelligence.\n",
+    "inline_links": []
+  },
+  "Concepts/Simpsons Paradox.md": {
+    "path": "Concepts/Simpsons Paradox.md",
+    "frontmatter": {
+      "id": "a0000001-0000-0000-0000-000000000015",
+      "title": "Simpson's Paradox",
+      "type": "concept",
+      "tags": [
+        "causality",
+        "paradox",
+        "statistics",
+        "confounding"
+      ],
+      "status": "review",
+      "created": "2026-01-30",
+      "modified": "2026-03-01",
+      "source": "The Book of Why, Ch4",
+      "summary": "A statistical phenomenon where a trend that appears in several subgroups of data reverses when the groups are combined. Resolution requires causal reasoning \u2014 no purely statistical criterion can determine the correct action.",
+      "links": [
+        {
+          "target": "./Confounding.md",
+          "type": "exemplifies"
+        },
+        {
+          "target": "../The Book of Why/Ch4 - Confounding and Deconfounding/Ch4 - Confounding and Deconfounding.md",
+          "type": "sourced-from"
+        }
+      ],
+      "maturity": "established",
+      "domain": "statistics",
+      "aliases": [
+        "Simpson paradox",
+        "amalgamation paradox"
+      ]
+    },
+    "body": "\n# Simpson's Paradox\n\nSimpson's paradox occurs when a statistical trend observed in several subgroups of data reverses or disappears when the groups are combined. It is not merely a curiosity but a fundamental demonstration of why causal reasoning is necessary \u2014 no amount of statistical sophistication can resolve the paradox without a causal model.\n\n## The Classic Example\n\nConsider a treatment that improves outcomes in both men and women separately, but appears to worsen outcomes in the combined population. This can happen when the treatment is administered disproportionately to one group that already has worse outcomes. The aggregate data conflates the treatment effect with the group composition effect.\n\n## Why Statistics Alone Fails\n\nThe paradox reveals that the decision to aggregate or stratify data is not a statistical question \u2014 it is a causal one. Both the aggregated and stratified analyses are mathematically correct descriptions of the data. The question \"which analysis answers our causal question?\" can only be answered by understanding the causal structure: is the stratifying variable a confounder (adjust for it) or a mediator (do not adjust)?\n\n## Pearl's Resolution\n\nPearl showed that Simpson's paradox dissolves once you specify a causal diagram. The diagram makes explicit whether the stratifying variable lies on a back-door path (confounder) or a causal path (mediator), and the correct analysis follows mechanically from the diagram structure.\n",
+    "inline_links": []
+  }
+}

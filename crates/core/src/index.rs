@@ -1,4 +1,5 @@
 use rusqlite::{params, Connection};
+use serde::Serialize;
 use std::path::Path;
 
 use crate::error::{BrainMapError, Result};
@@ -8,7 +9,7 @@ pub struct Index {
     conn: Connection,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct SearchResult {
     pub path: String,
     pub title: String,
@@ -27,6 +28,8 @@ pub struct SearchFilters {
 impl Index {
     pub fn open(db_path: &Path) -> Result<Self> {
         let conn = Connection::open(db_path)?;
+        conn.busy_timeout(std::time::Duration::from_secs(5))?;
+        conn.pragma_update(None, "journal_mode", "WAL")?;
         let index = Self { conn };
         index.create_schema()?;
         Ok(index)
@@ -145,6 +148,14 @@ impl Index {
         Ok(())
     }
 
+    pub fn remove_edge(&self, source: &RelativePath, target: &RelativePath, rel: &str) -> Result<()> {
+        self.conn.execute(
+            "DELETE FROM edges WHERE source = ?1 AND target = ?2 AND rel = ?3",
+            params![source.as_str(), target.as_str(), rel],
+        )?;
+        Ok(())
+    }
+
     pub fn search(&self, query: &str, filters: &SearchFilters) -> Result<Vec<SearchResult>> {
         let mut sql = String::from(
             "SELECT f.path, f.title, f.type, snippet(notes_fts, 4, '<b>', '</b>', '...', 32) as snip,
@@ -218,17 +229,65 @@ impl Index {
     }
 
     pub fn rebuild(&self, notes: &[(&Note, i64)], edges: &[Edge]) -> Result<()> {
-        self.conn.execute_batch(
+        let tx = self.conn.unchecked_transaction()?;
+
+        tx.execute_batch(
             "DELETE FROM notes_fts;
              DELETE FROM notes_meta;
              DELETE FROM edges;",
         )?;
 
         for (note, mtime) in notes {
-            self.add_note(note, *mtime)?;
-        }
-        self.add_edges(edges)?;
+            let path = note.path.as_str();
+            let tags = note.frontmatter.tags.join(", ");
+            let content = strip_markdown(&note.body);
+            let status = note
+                .frontmatter
+                .status
+                .as_ref()
+                .map(|s| format!("{:?}", s).to_lowercase())
+                .unwrap_or_default();
 
+            tx.execute(
+                "INSERT INTO notes_fts (path, title, type, tags, content, summary)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![
+                    path,
+                    note.frontmatter.title,
+                    note.frontmatter.note_type,
+                    tags,
+                    content,
+                    note.frontmatter.summary.as_deref().unwrap_or(""),
+                ],
+            )?;
+
+            tx.execute(
+                "INSERT OR REPLACE INTO notes_meta (path, id, type, status, created, modified, file_mtime)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                params![
+                    path,
+                    note.frontmatter.id.to_string(),
+                    note.frontmatter.note_type,
+                    status,
+                    note.frontmatter.created.to_string(),
+                    note.frontmatter.modified.to_string(),
+                    mtime,
+                ],
+            )?;
+        }
+
+        for edge in edges {
+            let implicit = match edge.kind {
+                EdgeKind::Implicit => 1,
+                _ => 0,
+            };
+            tx.execute(
+                "INSERT OR IGNORE INTO edges (source, target, rel, implicit) VALUES (?1, ?2, ?3, ?4)",
+                params![edge.source.as_str(), edge.target.as_str(), edge.rel, implicit],
+            )?;
+        }
+
+        tx.commit()?;
         Ok(())
     }
 }

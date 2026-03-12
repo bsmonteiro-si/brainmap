@@ -174,7 +174,16 @@ Watches the workspace directory for changes.
 
 **Self-Change Detection:**
 
-The `notify` crate does not distinguish between self-triggered and external writes. To avoid re-processing changes the app itself made, the watcher maintains an "expected writes" `HashSet` containing file hashes for recently written files. When a watcher event fires, the watcher computes the file hash and checks it against the expected set. If it matches, the event is suppressed and the entry is removed from the set.
+The `notify` crate does not distinguish between self-triggered and external writes. To avoid re-processing changes the app itself made, `AppState` maintains an `expected_writes: HashSet<PathBuf>`. Before any Tauri command writes a file, the path is inserted into the set. When a watcher event fires, the watcher checks the path against the expected set. If it matches, the event is suppressed and the entry is removed.
+
+**Incremental API:**
+
+The core library provides incremental methods for the file watcher to use:
+- `reload_file(rel_path)` — re-parse a changed file, update graph + index, return `GraphDiff`
+- `add_file(rel_path)` — parse a new file, add to graph + index, return `GraphDiff`
+- `remove_file(rel_path)` — remove from graph + index, return `GraphDiff`
+
+`GraphDiff` contains `added_nodes`, `removed_nodes`, `added_edges`, `removed_edges` for the frontend to apply incrementally.
 
 **Platform Notes:**
 - **macOS**: Uses FSEvents, which is efficient and does not require per-directory watches.
@@ -198,8 +207,10 @@ High-level orchestration of a workspace.
 - Initialize new workspaces (`brainmap init`)
 - Load workspace: parse all files -> build graph -> build index
 - Validation (broken links, orphans, schema checks)
+- Node/edge CRUD (create, read, update, delete notes and links)
+- Incremental file operations: `reload_file`, `add_file`, `remove_file` → `GraphDiff`
 
-The Workspace Manager no longer directly coordinates file watcher events or handles federation resolution. These are extracted into dedicated modules below.
+The Workspace Manager is the single orchestration layer — all mutations go through it.
 
 ### 7. Federation Resolver (`core::federation`)
 
@@ -261,36 +272,46 @@ mcp/
 
 ### Desktop App (`app/`)
 
-Tauri app with React frontend.
+Tauri v2 app with React frontend. The Tauri crate is excluded from the main workspace and built independently.
 
 ```
 app/
 ├── src-tauri/
 │   ├── src/
 │   │   ├── main.rs       # Tauri entry point
-│   │   └── commands.rs   # Tauri commands (bridge core → frontend)
+│   │   ├── lib.rs         # Builder setup, plugin + command registration
+│   │   ├── commands.rs    # Thin #[tauri::command] wrappers
+│   │   ├── handlers.rs    # Plain testable handler functions
+│   │   ├── dto.rs         # IPC boundary types (yaml↔json conversion)
+│   │   └── state.rs       # AppState: Arc<Mutex<Option<Workspace>>>
 │   └── tauri.conf.json
 ├── src/                   # React frontend
 │   ├── App.tsx
-│   ├── components/
-│   │   ├── GraphView/     # Force-directed graph (Cytoscape.js)
-│   │   ├── Editor/        # CodeMirror markdown editor
-│   │   ├── Search/        # Search panel
-│   │   ├── Inspector/     # Node metadata panel
-│   │   ├── CommandPalette/
-│   │   ├── StatusBar/
-│   │   └── Layout/        # Panel management (drag, resize, split)
-│   ├── hooks/
-│   │   ├── useGraph.ts    # Graph data and operations
-│   │   ├── useSearch.ts
-│   │   └── useWorkspace.ts
-│   └── stores/
-│       ├── graphStore.ts  # Graph state (nodes, edges, selection)
-│       ├── uiStore.ts     # Panel layout, theme, preferences
-│       └── workspaceStore.ts
+│   ├── api/
+│   │   ├── types.ts       # TypeScript interfaces matching dto.rs
+│   │   ├── bridge.ts      # Runtime detection → TauriBridge or MockBridge
+│   │   ├── tauri.ts       # Real invoke() wrappers
+│   │   └── mock/          # In-memory mock from seed JSON (for Vite dev)
+│   ├── stores/
+│   │   ├── workspaceStore.ts  # Workspace info, stats, note/edge types
+│   │   ├── graphStore.ts      # Graph topology, selection, expansion, events
+│   │   ├── editorStore.ts     # Active note, dirty tracking, conflict handling
+│   │   └── uiStore.ts         # Theme, graph mode, command palette
+│   └── components/
+│       ├── GraphView/     # Cytoscape.js graph (cose layout)
+│       ├── Editor/        # CodeMirror 6 markdown editor + frontmatter form
+│       ├── Search/        # Debounced search with type filter
+│       ├── Inspector/     # Node metadata + links
+│       ├── CommandPalette/
+│       ├── StatusBar/
+│       └── Layout/        # AppLayout, WorkspacePicker
 ├── package.json
 └── vite.config.ts
 ```
+
+**API Bridge pattern**: All React code imports from `bridge.ts`, never from `@tauri-apps/api` directly. The bridge returns a `TauriBridge` (real Tauri invoke) when `window.__TAURI__` exists, or a `MockBridge` (in-memory state from seed JSON) for Vite dev server testing in Chrome.
+
+**Tauri command testability**: Each `#[tauri::command]` is a thin wrapper delegating to a plain function in `handlers.rs`, which can be unit-tested with a temp workspace without Tauri.
 
 ## Data Flow
 
@@ -384,20 +405,20 @@ To minimize perceived startup time for large workspaces:
 
 This makes startup feel instant even for workspaces with hundreds of files. The cached index is also loaded first so search works immediately while the background diff runs.
 
-## Pre-Computed Layout
+## Graph Layout
 
-To avoid the 300-tick force simulation warm-up stutter on the JavaScript side:
+For v1, layout is computed client-side using Cytoscape.js's built-in `cose` (Compound Spring Embedder) force-directed layout. This avoids the complexity of pre-computing positions in Rust for a small graph (~34 nodes in the seed dataset).
 
-- Use the **`fdg`** Rust crate to run force-directed layout computation in Rust during workspace loading.
-- Send pre-computed `(x, y)` positions to the frontend alongside the graph topology.
-- The frontend renders nodes at their pre-computed positions immediately. Cytoscape.js handles only incremental layout adjustments (e.g., when a new node is added).
-- If JS-side incremental layout adjustments are needed, run the force simulation in a **Web Worker** to keep the main thread responsive.
+- Layout runs with `randomize: false` for deterministic results.
+- User-dragged positions can be persisted to `.brainmap/ui-state.json` (planned for Step 12).
+- If performance becomes an issue at scale (500+ nodes), the `fdg` Rust crate can pre-compute positions server-side.
 
 ## Tauri Command Contract
 
 The Tauri command surface area is the API contract between frontend and backend. To prevent the bridge from becoming an untyped mess of `serde_json::Value`:
 
-- Use **`specta`** or **`ts-rs`** to auto-generate TypeScript types from Rust structs.
+- DTO types in `dto.rs` convert core types (with `serde_yaml::Value`) to IPC-safe types (with `serde_json::Value`).
+- Hand-written TypeScript interfaces in `api/types.ts` match the Rust DTOs (simpler and more reliable than code generation for v1).
 - All Tauri commands accept and return strongly typed structs, not raw JSON.
 
 **Command surface area categories:**

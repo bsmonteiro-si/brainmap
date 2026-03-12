@@ -1,5 +1,5 @@
 # Rust
-/target
+target/
 Cargo.lock
 
 # Node / Frontend
@@ -20,6 +20,9 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Claude review artifacts
+.claude/reviews/
 
 # Environment
 .env
