@@ -65,6 +65,34 @@ describe("openCreateNoteDialog / closeCreateNoteDialog", () => {
   });
 });
 
+describe("openCreateFolderDialog / closeCreateFolderDialog", () => {
+  beforeEach(() => {
+    useUIStore.setState({ createFolderDialogOpen: false, createFolderInitialPath: null });
+  });
+
+  it("opens dialog with null initial path when called without arguments", () => {
+    useUIStore.getState().openCreateFolderDialog();
+    const { createFolderDialogOpen, createFolderInitialPath } = useUIStore.getState();
+    expect(createFolderDialogOpen).toBe(true);
+    expect(createFolderInitialPath).toBeNull();
+  });
+
+  it("opens dialog and stores the provided initial path", () => {
+    useUIStore.getState().openCreateFolderDialog("Concepts/");
+    const { createFolderDialogOpen, createFolderInitialPath } = useUIStore.getState();
+    expect(createFolderDialogOpen).toBe(true);
+    expect(createFolderInitialPath).toBe("Concepts/");
+  });
+
+  it("closeCreateFolderDialog resets both flags", () => {
+    useUIStore.getState().openCreateFolderDialog("Concepts/");
+    useUIStore.getState().closeCreateFolderDialog();
+    const { createFolderDialogOpen, createFolderInitialPath } = useUIStore.getState();
+    expect(createFolderDialogOpen).toBe(false);
+    expect(createFolderInitialPath).toBeNull();
+  });
+});
+
 describe("zoom actions", () => {
   beforeEach(() => {
     localStorage.clear();
