@@ -149,7 +149,7 @@ describe("Callout rendering", () => {
     expect(body?.textContent).toContain("AI generated response here");
   });
 
-  it("renders [!source] with custom title", () => {
+  it("renders [!source] with type label and custom title", () => {
     const { container } = render(
       <MarkdownPreview
         content={"> [!source] Pearl, J. (2000). Causality\n> Defines structural causal models"}
@@ -158,8 +158,10 @@ describe("Callout rendering", () => {
     );
     const callout = container.querySelector(".callout");
     expect(callout).toBeTruthy();
-    const header = container.querySelector(".callout-header");
-    expect(header?.textContent).toContain("Pearl, J. (2000). Causality");
+    const typeLabel = container.querySelector(".callout-type-label");
+    expect(typeLabel?.textContent).toBe("Source");
+    const title = container.querySelector(".callout-title");
+    expect(title?.textContent).toBe("Pearl, J. (2000). Causality");
   });
 
   it("falls back to plain blockquote for regular quotes", () => {
@@ -209,7 +211,58 @@ describe("Callout rendering", () => {
     );
     const callout = container.querySelector(".callout");
     expect(callout).toBeTruthy();
-    const header = container.querySelector(".callout-header");
-    expect(header?.textContent).toContain("Is this a good question?");
+    const typeLabel = container.querySelector(".callout-type-label");
+    expect(typeLabel?.textContent).toBe("Question");
+    const title = container.querySelector(".callout-title");
+    expect(title?.textContent).toBe("Is this a good question?");
+  });
+
+  it("merges blockquotes separated by blank lines into one callout", () => {
+    const content = [
+      "> [!ai-answer] My Title",
+      "> First paragraph",
+      "",
+      "> Second paragraph after blank line",
+    ].join("\n");
+    const { container } = render(
+      <MarkdownPreview content={content} notePath="test.md" />,
+    );
+    // Should be ONE callout, not a callout + a plain blockquote
+    const callouts = container.querySelectorAll(".callout");
+    expect(callouts).toHaveLength(1);
+    const body = container.querySelector(".callout-body");
+    expect(body?.textContent).toContain("First paragraph");
+    expect(body?.textContent).toContain("Second paragraph after blank line");
+    // No stray blockquotes
+    expect(container.querySelector("blockquote")).toBeNull();
+  });
+
+  it("does not merge blockquotes when second starts a new callout", () => {
+    const content = [
+      "> [!ai-answer] First",
+      "> Body one",
+      "",
+      "> [!source] Second",
+      "> Body two",
+    ].join("\n");
+    const { container } = render(
+      <MarkdownPreview content={content} notePath="test.md" />,
+    );
+    const callouts = container.querySelectorAll(".callout");
+    expect(callouts).toHaveLength(2);
+  });
+
+  it("does not merge regular blockquote into callout", () => {
+    const content = [
+      "> Just a regular quote",
+      "",
+      "> [!question] A question",
+      "> Body here",
+    ].join("\n");
+    const { container } = render(
+      <MarkdownPreview content={content} notePath="test.md" />,
+    );
+    expect(container.querySelector("blockquote")).toBeTruthy();
+    expect(container.querySelectorAll(".callout")).toHaveLength(1);
   });
 });

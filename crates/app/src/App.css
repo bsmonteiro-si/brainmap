@@ -1336,11 +1336,15 @@ body {
 
 /* ── Callout Blocks ── */
 .md-preview .callout {
-  border-left: 3px solid var(--accent);
-  margin: 0 0 1em;
+  border-left: 3px solid var(--callout-color, var(--accent));
+  border-right: 1px solid color-mix(in srgb, var(--callout-color) 15%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--callout-color) 15%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--callout-color) 15%, transparent);
+  margin: 0.75em 0 1em;
   padding: 0;
   border-radius: 0 6px 6px 0;
   overflow: hidden;
+  background: color-mix(in srgb, var(--callout-color) 5%, transparent);
 }
 .md-preview .callout-header {
   display: flex;
@@ -1349,17 +1353,29 @@ body {
   padding: 6px 12px;
   font-weight: 600;
   font-size: 0.85em;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
   background: color-mix(in srgb, currentColor 8%, transparent);
 }
+.md-preview .callout-type-label {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.md-preview .callout-title {
+  font-weight: 400;
+  color: var(--text-primary);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.md-preview .callout-type-label + .callout-title::before {
+  content: "—";
+  margin: 0 4px;
+  opacity: 0.4;
+}
 .md-preview .callout-body {
-  padding: 8px 12px 8px 16px;
+  padding: 8px 12px 10px 16px;
   color: var(--text-secondary);
 }
 .md-preview .callout-body p { margin: 0; }
 .md-preview .callout-body p + p { margin-top: 0.5em; }
-.md-preview .callout { background: color-mix(in srgb, var(--callout-color) 5%, transparent); }
 
 /* Callout picker popover */
 .callout-picker-wrapper {

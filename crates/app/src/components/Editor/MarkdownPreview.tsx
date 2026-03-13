@@ -5,13 +5,14 @@ import { resolveNotePath, isLocalMdLink } from "../../utils/resolveNotePath";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { CALLOUT_TYPES, CALLOUT_FALLBACK, CALLOUT_RE } from "./calloutTypes";
+import { remarkCalloutMerge } from "./remarkCalloutMerge";
 
 interface Props {
   content: string;
   notePath: string;
 }
 
-const remarkPlugins = [remarkGfm];
+const remarkPlugins = [remarkGfm, remarkCalloutMerge];
 
 interface CalloutInfo {
   type: string;
@@ -133,17 +134,18 @@ export function MarkdownPreview({ content, notePath }: Props) {
         const { type, title, restChildren } = calloutInfo;
         const typeDef = CALLOUT_TYPES[type];
         const color = typeDef?.color ?? CALLOUT_FALLBACK.color;
-        const label = title || typeDef?.label || type;
+        const typeLabel = typeDef?.label || type;
         const IconComponent = typeDef?.Icon;
 
         return (
           <div
             className="callout"
-            style={{ "--callout-color": color, borderLeftColor: color } as React.CSSProperties}
+            style={{ "--callout-color": color } as React.CSSProperties}
           >
             <div className="callout-header" style={{ color }}>
               {IconComponent && <IconComponent size={16} />}
-              <span className="callout-label">{label}</span>
+              <span className="callout-type-label">{typeLabel}</span>
+              {title && <span className="callout-title">{title}</span>}
             </div>
             {restChildren.length > 0 && (
               <div className="callout-body">{restChildren}</div>
