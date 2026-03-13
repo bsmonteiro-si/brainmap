@@ -272,7 +272,19 @@ export function GraphView() {
       }
     });
 
-    cy.on("mouseout", "node", () => clearHoverState());
+    cy.on("mouseout", "node", () => {
+      clearHoverState();
+      // Re-apply click-based neighborhood highlight if a node is selected
+      const selPath = selectedNodePathRef.current;
+      if (selPath) {
+        const selNode = cy.getElementById(selPath);
+        if (selNode.length > 0) {
+          const neighborhood = selNode.closedNeighborhood();
+          cy.elements().addClass("hover-dim");
+          neighborhood.removeClass("hover-dim").addClass("hover-bright");
+        }
+      }
+    });
 
     return () => {
       if (entranceTimerRef.current) clearTimeout(entranceTimerRef.current);
@@ -394,7 +406,8 @@ export function GraphView() {
       prevInvertedNodeIdRef.current = null;
     }
 
-    cy.elements().removeClass("highlighted");
+    cy.elements().removeClass("highlighted hover-dim hover-bright");
+    cy.nodes().style({ "shadow-blur": null as never, "shadow-opacity": null as never });
     cy.$("node:selected").unselect();
 
     if (selectedNodePath) {
@@ -410,6 +423,11 @@ export function GraphView() {
           "background-image": node.data("iconSvgWhite"),
         });
         prevInvertedNodeIdRef.current = selectedNodePath;
+
+        // Dim non-neighbors (same visual as hover)
+        const neighborhood = node.closedNeighborhood();
+        cy.elements().addClass("hover-dim");
+        neighborhood.removeClass("hover-dim").addClass("hover-bright");
       }
     }
 
