@@ -3,7 +3,7 @@ import type { NoteDetail, PlainFileDetail } from "../api/types";
 import { getAPI } from "../api/bridge";
 import { useGraphStore } from "./graphStore";
 import { useNavigationStore } from "./navigationStore";
-import { useTabStore } from "./tabStore";
+import { useTabStore, isUntitledTab } from "./tabStore";
 import { log } from "../utils/logger";
 
 export type EditableFrontmatter = Pick<NoteDetail, 'title' | 'note_type' | 'tags' | 'status' | 'source' | 'summary' | 'extra'>;
@@ -15,6 +15,7 @@ const FM_GROUP_MS = 300;
 interface EditorState {
   activeNote: NoteDetail | null;
   activePlainFile: PlainFileDetail | null;
+  isUntitledTab: boolean;
   isLoading: boolean;
   isDirty: boolean;
   conflictState: "none" | "external-change";
@@ -31,6 +32,8 @@ interface EditorState {
 
   openNote: (path: string) => Promise<void>;
   openPlainFile: (path: string) => Promise<void>;
+  openUntitledTab: () => Promise<void>;
+  activateUntitledTab: (id: string) => Promise<void>;
   refreshActiveNote: () => Promise<void>;
   updateContent: (body: string) => void;
   updateFrontmatter: (changes: Partial<EditableFrontmatter>) => void;
@@ -71,6 +74,7 @@ const CLEAN_EDITOR_STATE = {
   editedFrontmatter: null,
   activePlainFile: null,
   activeNote: null,
+  isUntitledTab: false,
   fmUndoStack: [] as FmSnapshot[],
   fmRedoStack: [] as FmSnapshot[],
   _lastFmField: null,
@@ -83,6 +87,7 @@ const CLEAN_EDITOR_STATE = {
 export const useEditorStore = create<EditorState>((set, get) => ({
   activeNote: null,
   activePlainFile: null,
+  isUntitledTab: false,
   isLoading: false,
   isDirty: false,
   conflictState: "none",
@@ -110,9 +115,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     // 1. Snapshot current tab state before anything changes
     snapshotToActiveTab();
 
-    // 2. Auto-save if dirty
+    // 2. Auto-save if dirty (skip for untitled tabs — they have no backing file)
+    const currentTabId = tabStore.activeTabId;
     const { isDirty, savingInProgress, editedFrontmatter } = get();
-    if (isDirty) {
+    if (isDirty && !(currentTabId && isUntitledTab(currentTabId))) {
       const titleInvalid = editedFrontmatter?.title !== undefined &&
         editedFrontmatter.title.trim() === "";
       if (!savingInProgress && !titleInvalid) {
@@ -132,6 +138,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         set({
           activeNote: note,
           activePlainFile: null,
+          isUntitledTab: false,
           isLoading: false,
           editedBody: existingTab.editedBody,
           editedFrontmatter: existingTab.editedFrontmatter,
@@ -179,9 +186,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     // 1. Snapshot current tab state
     snapshotToActiveTab();
 
-    // 2. Auto-save if dirty
+    // 2. Auto-save if dirty (skip for untitled tabs)
+    const currentTabId = tabStore.activeTabId;
     const { isDirty, savingInProgress } = get();
-    if (isDirty && !savingInProgress) {
+    if (isDirty && !savingInProgress && !(currentTabId && isUntitledTab(currentTabId))) {
       await get().saveNote();
     }
 
@@ -196,6 +204,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         set({
           activePlainFile: file,
           activeNote: null,
+          isUntitledTab: false,
           isLoading: false,
           editedBody: existingTab.editedBody,
           editedFrontmatter: null,
@@ -230,6 +239,71 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       log.error("stores::editor", "failed to open plain file", { path, error: String(e) });
       set({ isLoading: false });
     }
+  },
+
+  openUntitledTab: async () => {
+    const { isLoading } = get();
+    if (isLoading) return;
+
+    // 1. Snapshot current tab state
+    snapshotToActiveTab();
+
+    // 2. Auto-save if dirty (skip for untitled tabs)
+    const tabStore = useTabStore.getState();
+    const currentTabId = tabStore.activeTabId;
+    const { isDirty, savingInProgress } = get();
+    if (isDirty && !savingInProgress && !(currentTabId && isUntitledTab(currentTabId))) {
+      await get().saveNote();
+    }
+
+    // 3. Create untitled tab
+    const id = tabStore.createUntitledTab();
+
+    // 4. Set editor state — no activeNote/activePlainFile, just a blank editor
+    set({
+      ...CLEAN_EDITOR_STATE,
+      isUntitledTab: true,
+      isLoading: false,
+      savingInProgress: false,
+      viewMode: "edit",
+    });
+
+    // Do NOT push to navigationStore — untitled tabs are ephemeral
+  },
+
+  activateUntitledTab: async (id: string) => {
+    const { isLoading } = get();
+    if (isLoading) return;
+
+    const tabStore = useTabStore.getState();
+    if (tabStore.activeTabId === id) return;
+
+    const tab = tabStore.getTab(id);
+    if (!tab || tab.kind !== "untitled") return;
+
+    // 1. Snapshot current tab state
+    snapshotToActiveTab();
+
+    // 2. Auto-save if dirty (skip for untitled tabs)
+    const currentTabId = tabStore.activeTabId;
+    const { isDirty, savingInProgress } = get();
+    if (isDirty && !savingInProgress && !(currentTabId && isUntitledTab(currentTabId))) {
+      await get().saveNote();
+    }
+
+    // 3. Activate and restore
+    tabStore.activateTab(id);
+    set({
+      ...CLEAN_EDITOR_STATE,
+      isUntitledTab: true,
+      editedBody: tab.editedBody,
+      isDirty: tab.isDirty,
+      viewMode: tab.viewMode,
+      scrollTop: tab.scrollTop,
+      cursorPos: tab.cursorPos,
+      isLoading: false,
+      savingInProgress: false,
+    });
   },
 
   refreshActiveNote: async () => {
@@ -490,6 +564,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       activeNote: null,
       activePlainFile: null,
+      isUntitledTab: false,
       isLoading: false,
       isDirty: false,
       conflictState: "none",

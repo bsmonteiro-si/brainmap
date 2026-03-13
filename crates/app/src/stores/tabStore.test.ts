@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useTabStore } from "./tabStore";
+import { useTabStore, isUntitledTab } from "./tabStore";
 
 beforeEach(() => {
-  useTabStore.setState({ tabs: [], activeTabId: null });
+  useTabStore.setState({ tabs: [], activeTabId: null, _untitledCounter: 0 });
 });
 
 describe("openTab", () => {
@@ -197,5 +197,72 @@ describe("reset", () => {
     useTabStore.getState().reset();
     expect(useTabStore.getState().tabs).toHaveLength(0);
     expect(useTabStore.getState().activeTabId).toBeNull();
+  });
+
+  it("resets untitled counter", () => {
+    useTabStore.getState().createUntitledTab();
+    useTabStore.getState().createUntitledTab();
+    useTabStore.getState().reset();
+    expect(useTabStore.getState()._untitledCounter).toBe(0);
+    const id = useTabStore.getState().createUntitledTab();
+    expect(id).toBe("__untitled__/1");
+  });
+});
+
+describe("isUntitledTab", () => {
+  it("returns true for untitled tab IDs", () => {
+    expect(isUntitledTab("__untitled__/1")).toBe(true);
+    expect(isUntitledTab("__untitled__/99")).toBe(true);
+  });
+
+  it("returns false for regular file paths", () => {
+    expect(isUntitledTab("notes/foo.md")).toBe(false);
+    expect(isUntitledTab("")).toBe(false);
+    expect(isUntitledTab("untitled")).toBe(false);
+  });
+});
+
+describe("createUntitledTab", () => {
+  it("creates a tab with correct ID and title", () => {
+    const id = useTabStore.getState().createUntitledTab();
+    expect(id).toBe("__untitled__/1");
+    const tab = useTabStore.getState().getTab(id);
+    expect(tab).toBeDefined();
+    expect(tab!.title).toBe("Untitled-1");
+    expect(tab!.kind).toBe("untitled");
+    expect(tab!.noteType).toBeNull();
+    expect(tab!.isDirty).toBe(false);
+  });
+
+  it("increments counter on each call", () => {
+    const id1 = useTabStore.getState().createUntitledTab();
+    const id2 = useTabStore.getState().createUntitledTab();
+    const id3 = useTabStore.getState().createUntitledTab();
+    expect(id1).toBe("__untitled__/1");
+    expect(id2).toBe("__untitled__/2");
+    expect(id3).toBe("__untitled__/3");
+    expect(useTabStore.getState()._untitledCounter).toBe(3);
+  });
+
+  it("inserts after active tab", () => {
+    useTabStore.getState().openTab("a.md", "note", "A", null);
+    useTabStore.getState().openTab("b.md", "note", "B", null);
+    useTabStore.getState().activateTab("a.md");
+    useTabStore.getState().createUntitledTab();
+    const ids = useTabStore.getState().tabs.map((t) => t.id);
+    expect(ids).toEqual(["a.md", "__untitled__/1", "b.md"]);
+  });
+
+  it("activates the new untitled tab", () => {
+    useTabStore.getState().openTab("a.md", "note", "A", null);
+    const id = useTabStore.getState().createUntitledTab();
+    expect(useTabStore.getState().activeTabId).toBe(id);
+  });
+
+  it("counter persists after closing untitled tabs", () => {
+    const id1 = useTabStore.getState().createUntitledTab();
+    useTabStore.getState().closeTab(id1);
+    const id2 = useTabStore.getState().createUntitledTab();
+    expect(id2).toBe("__untitled__/2");
   });
 });

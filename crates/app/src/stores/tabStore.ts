@@ -3,12 +3,19 @@ import type { EditableFrontmatter } from "./editorStore";
 
 type FmSnapshot = Partial<EditableFrontmatter> | null;
 
+const UNTITLED_PREFIX = "__untitled__/";
+
+/** Check whether a tab ID represents an unsaved untitled tab. */
+export function isUntitledTab(id: string): boolean {
+  return id.startsWith(UNTITLED_PREFIX);
+}
+
 export interface TabState {
-  id: string; // file path — one tab per file
+  id: string; // file path — one tab per file (or synthetic ID for untitled tabs)
   path: string;
-  kind: "note" | "plain-file";
+  kind: "note" | "plain-file" | "untitled";
   title: string;
-  noteType: string | null; // null for plain files
+  noteType: string | null; // null for plain files and untitled tabs
   // Per-tab editor state (swapped in/out of editorStore)
   editedBody: string | null;
   editedFrontmatter: FmSnapshot;
@@ -24,8 +31,10 @@ export interface TabState {
 interface TabStoreState {
   tabs: TabState[];
   activeTabId: string | null;
+  _untitledCounter: number;
 
   openTab: (path: string, kind: "note" | "plain-file", title: string, noteType: string | null) => void;
+  createUntitledTab: () => string;
   closeTab: (id: string) => void;
   closeActiveTab: () => void;
   closeOtherTabs: (id: string) => void;
@@ -36,7 +45,7 @@ interface TabStoreState {
   reset: () => void;
 }
 
-function createFreshTab(path: string, kind: "note" | "plain-file", title: string, noteType: string | null): TabState {
+function createFreshTab(path: string, kind: "note" | "plain-file" | "untitled", title: string, noteType: string | null): TabState {
   return {
     id: path,
     path,
@@ -58,6 +67,7 @@ function createFreshTab(path: string, kind: "note" | "plain-file", title: string
 export const useTabStore = create<TabStoreState>((set, get) => ({
   tabs: [],
   activeTabId: null,
+  _untitledCounter: 0,
 
   openTab: (path, kind, title, noteType) => {
     const { tabs, activeTabId } = get();
@@ -74,6 +84,20 @@ export const useTabStore = create<TabStoreState>((set, get) => ({
     const next = [...tabs];
     next.splice(insertAt, 0, newTab);
     set({ tabs: next, activeTabId: path });
+  },
+
+  createUntitledTab: () => {
+    const { tabs, activeTabId, _untitledCounter } = get();
+    const counter = _untitledCounter + 1;
+    const id = `${UNTITLED_PREFIX}${counter}`;
+    const title = `Untitled-${counter}`;
+    const newTab = createFreshTab(id, "untitled", title, null);
+    const activeIndex = tabs.findIndex((t) => t.id === activeTabId);
+    const insertAt = activeIndex >= 0 ? activeIndex + 1 : tabs.length;
+    const next = [...tabs];
+    next.splice(insertAt, 0, newTab);
+    set({ tabs: next, activeTabId: id, _untitledCounter: counter });
+    return id;
   },
 
   closeTab: (id) => {
@@ -130,6 +154,6 @@ export const useTabStore = create<TabStoreState>((set, get) => ({
   },
 
   reset: () => {
-    set({ tabs: [], activeTabId: null });
+    set({ tabs: [], activeTabId: null, _untitledCounter: 0 });
   },
 }));

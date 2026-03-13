@@ -65,6 +65,8 @@ interface CreateNoteDialogOpts {
   initialTitle?: string;
   mode?: CreateNoteMode;
   linkSource?: CreateAndLinkSource;
+  saveAsBody?: string;
+  saveAsTabId?: string;
 }
 
 interface UIState {
@@ -77,6 +79,10 @@ interface UIState {
   createNoteInitialTitle: string | null;
   createNoteMode: CreateNoteMode;
   createAndLinkSource: CreateAndLinkSource | null;
+  createNoteSaveAsBody: string | null;
+  createNoteSaveAsTabId: string | null;
+  unsavedChangesDialogOpen: boolean;
+  unsavedChangesTabId: string | null;
   createFolderDialogOpen: boolean;
   createFolderInitialPath: string | null;
   settingsOpen: boolean;
@@ -107,6 +113,8 @@ interface UIState {
   closeCommandPalette: () => void;
   openCreateNoteDialog: (pathOrOpts?: string | CreateNoteDialogOpts) => void;
   closeCreateNoteDialog: () => void;
+  openUnsavedChangesDialog: (tabId: string) => void;
+  closeUnsavedChangesDialog: () => void;
   openCreateFolderDialog: (initialPath?: string) => void;
   closeCreateFolderDialog: () => void;
   openSettings: () => void;
@@ -181,6 +189,10 @@ export const useUIStore = create<UIState>((set, get) => ({
   createNoteInitialTitle: null,
   createNoteMode: "default",
   createAndLinkSource: null,
+  createNoteSaveAsBody: null,
+  createNoteSaveAsTabId: null,
+  unsavedChangesDialogOpen: false,
+  unsavedChangesTabId: null,
   createFolderDialogOpen: false,
   createFolderInitialPath: null,
   settingsOpen: false,
@@ -221,7 +233,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   closeCommandPalette: () => set({ commandPaletteOpen: false }),
   openCreateNoteDialog: (pathOrOpts?: string | CreateNoteDialogOpts) => {
     if (typeof pathOrOpts === "string" || pathOrOpts === undefined) {
-      set({ createNoteDialogOpen: true, createNoteInitialPath: pathOrOpts ?? null, createNoteInitialTitle: null, createNoteMode: "default", createAndLinkSource: null });
+      set({ createNoteDialogOpen: true, createNoteInitialPath: pathOrOpts ?? null, createNoteInitialTitle: null, createNoteMode: "default", createAndLinkSource: null, createNoteSaveAsBody: null, createNoteSaveAsTabId: null });
     } else {
       set({
         createNoteDialogOpen: true,
@@ -229,10 +241,14 @@ export const useUIStore = create<UIState>((set, get) => ({
         createNoteInitialTitle: pathOrOpts.initialTitle ?? null,
         createNoteMode: pathOrOpts.mode ?? "default",
         createAndLinkSource: pathOrOpts.linkSource ?? null,
+        createNoteSaveAsBody: pathOrOpts.saveAsBody ?? null,
+        createNoteSaveAsTabId: pathOrOpts.saveAsTabId ?? null,
       });
     }
   },
-  closeCreateNoteDialog: () => set({ createNoteDialogOpen: false, createNoteInitialPath: null, createNoteInitialTitle: null, createNoteMode: "default", createAndLinkSource: null }),
+  closeCreateNoteDialog: () => set({ createNoteDialogOpen: false, createNoteInitialPath: null, createNoteInitialTitle: null, createNoteMode: "default", createAndLinkSource: null, createNoteSaveAsBody: null, createNoteSaveAsTabId: null }),
+  openUnsavedChangesDialog: (tabId: string) => set({ unsavedChangesDialogOpen: true, unsavedChangesTabId: tabId }),
+  closeUnsavedChangesDialog: () => set({ unsavedChangesDialogOpen: false, unsavedChangesTabId: null }),
   openCreateFolderDialog: (initialPath?: string) => set({ createFolderDialogOpen: true, createFolderInitialPath: initialPath ?? null }),
   closeCreateFolderDialog: () => set({ createFolderDialogOpen: false, createFolderInitialPath: null }),
   openSettings: () => set({ settingsOpen: true }),

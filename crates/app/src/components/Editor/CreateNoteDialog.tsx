@@ -3,6 +3,8 @@ import { useUIStore } from "../../stores/uiStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
+import { useTabStore } from "../../stores/tabStore";
+import { closeTabAndNavigateNext } from "../../stores/tabActions";
 import { getAPI } from "../../api/bridge";
 import { useUndoStore } from "../../stores/undoStore";
 import { log } from "../../utils/logger";
@@ -20,9 +22,12 @@ export function CreateNoteDialog() {
   const initialTitle = useUIStore((s) => s.createNoteInitialTitle);
   const createNoteMode = useUIStore((s) => s.createNoteMode);
   const linkSource = useUIStore((s) => s.createAndLinkSource);
+  const saveAsBody = useUIStore((s) => s.createNoteSaveAsBody);
+  const saveAsTabId = useUIStore((s) => s.createNoteSaveAsTabId);
   const noteTypes = useWorkspaceStore((s) => s.noteTypes);
 
   const isCreateAndLink = createNoteMode === "create-and-link" && linkSource !== null;
+  const isSaveAs = saveAsBody != null && saveAsTabId != null;
 
   const [path, setPath] = useState(initialPath ?? "");
   // Auto-populate title from initialTitle (create-and-link) or from path
@@ -38,7 +43,7 @@ export function CreateNoteDialog() {
   const [pathDirty, setPathDirty] = useState(false);
   const [noteType, setNoteType] = useState(noteTypes[0] ?? "concept");
   const [tags, setTags] = useState("");
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(saveAsBody ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,7 +113,11 @@ export function CreateNoteDialog() {
         }
       }
 
-      if (isCreateAndLink && linkSource) {
+      if (isSaveAs && saveAsTabId) {
+        // Save-as mode: close the untitled tab, then open the real note
+        useTabStore.getState().closeTab(saveAsTabId);
+        await useEditorStore.getState().openNote(createdPath);
+      } else if (isCreateAndLink && linkSource) {
         // Create the link from source note to the newly created note
         try {
           await api.createLink(linkSource.notePath, createdPath, linkSource.rel);
@@ -139,7 +148,7 @@ export function CreateNoteDialog() {
       setError(e instanceof Error ? e.message : String(e));
       setIsSubmitting(false);
     }
-  }, [isValid, isSubmitting, path, title, noteType, tags, body, close, isCreateAndLink, linkSource]);
+  }, [isValid, isSubmitting, path, title, noteType, tags, body, close, isCreateAndLink, linkSource, isSaveAs, saveAsTabId]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -276,7 +285,7 @@ export function CreateNoteDialog() {
   return (
     <div style={overlayStyle} onClick={handleOverlayClick}>
       <div style={boxStyle} onKeyDown={handleKeyDown}>
-        <h2 style={headingStyle}>{isCreateAndLink ? "Create & Link" : "Create Note"}</h2>
+        <h2 style={headingStyle}>{isSaveAs ? "Save As" : isCreateAndLink ? "Create & Link" : "Create Note"}</h2>
 
         <div style={fieldGroupStyle}>
           <label style={labelStyle} htmlFor="cn-path">Path *</label>
@@ -335,17 +344,19 @@ export function CreateNoteDialog() {
           />
         </div>
 
-        <div style={fieldGroupStyle}>
-          <label style={labelStyle} htmlFor="cn-body">Body (optional)</label>
-          <textarea
-            id="cn-body"
-            style={textareaStyle}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Initial note content..."
-            disabled={isSubmitting}
-          />
-        </div>
+        {!isSaveAs && (
+          <div style={fieldGroupStyle}>
+            <label style={labelStyle} htmlFor="cn-body">Body (optional)</label>
+            <textarea
+              id="cn-body"
+              style={textareaStyle}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Initial note content..."
+              disabled={isSubmitting}
+            />
+          </div>
+        )}
 
         {error && <div style={globalErrorStyle}>{error}</div>}
 
@@ -362,7 +373,7 @@ export function CreateNoteDialog() {
             onClick={handleSubmit}
             disabled={!isValid || isSubmitting}
           >
-            {isSubmitting ? "Creating..." : isCreateAndLink ? "Create & Link" : "Create"}
+            {isSubmitting ? "Saving..." : isSaveAs ? "Save" : isCreateAndLink ? "Create & Link" : "Create"}
           </button>
         </div>
       </div>

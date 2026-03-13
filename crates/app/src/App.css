@@ -277,6 +277,28 @@ body {
   background: var(--bg-tertiary);
 }
 
+.tab-new-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 1px 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 0.6;
+}
+.tab-new-btn:hover {
+  opacity: 1;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
 /* ── Editor ──────────────────────────────────────────────────── */
 .editor-panel {
   display: flex;

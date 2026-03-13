@@ -6,8 +6,9 @@ import { useUIStore } from "./stores/uiStore";
 import { useUndoStore } from "./stores/undoStore";
 import { useNavigationStore } from "./stores/navigationStore";
 import { useAutoSave } from "./hooks/useAutoSave";
-import { useTabStore } from "./stores/tabStore";
+import { useTabStore, isUntitledTab } from "./stores/tabStore";
 import { closeTabAndNavigateNext } from "./stores/tabActions";
+import { promptUnsavedChanges } from "./stores/unsavedChangesPrompt";
 import { getAPI } from "./api/bridge";
 import { SegmentPicker } from "./components/Layout/SegmentPicker";
 import { AppLayout } from "./components/Layout/AppLayout";
@@ -16,6 +17,7 @@ import { CreateNoteDialog } from "./components/Editor/CreateNoteDialog";
 import { CreateFolderDialog } from "./components/Layout/CreateFolderDialog";
 import { SettingsModal } from "./components/Settings/SettingsModal";
 import { UndoToast } from "./components/Layout/UndoToast";
+import { UnsavedChangesDialog } from "./components/Layout/UnsavedChangesDialog";
 
 import "./App.css";
 
@@ -27,6 +29,7 @@ function App() {
   const createNoteDialogOpen = useUIStore((s) => s.createNoteDialogOpen);
   const createFolderDialogOpen = useUIStore((s) => s.createFolderDialogOpen);
   const settingsOpen = useUIStore((s) => s.settingsOpen);
+  const unsavedChangesDialogOpen = useUIStore((s) => s.unsavedChangesDialogOpen);
   const effectiveTheme = useUIStore((s) => s.effectiveTheme);
   const uiFontFamily = useUIStore((s) => s.uiFontFamily);
   const uiFontSize = useUIStore((s) => s.uiFontSize);
@@ -87,15 +90,40 @@ function App() {
       if (isMod && e.key === "w") {
         e.preventDefault();
         const closingId = useTabStore.getState().activeTabId;
-        if (closingId) {
-          const editor = useEditorStore.getState();
-          if (editor.isDirty) {
-            editor.saveNote().then(() => {
+        if (!closingId) return;
+
+        // Untitled tab — prompt if has content
+        if (isUntitledTab(closingId)) {
+          // Capture body before async to avoid stale reads
+          const body = useEditorStore.getState().editedBody ?? "";
+          if (body.length > 0) {
+            promptUnsavedChanges(closingId).then((action) => {
+              if (action === "cancel") return;
+              if (action === "save") {
+                // Re-read in case content changed during dialog
+                const currentBody = useEditorStore.getState().editedBody ?? "";
+                useUIStore.getState().openCreateNoteDialog({
+                  saveAsBody: currentBody,
+                  saveAsTabId: closingId,
+                });
+                return;
+              }
               closeTabAndNavigateNext(closingId);
             });
           } else {
             closeTabAndNavigateNext(closingId);
           }
+          return;
+        }
+
+        // Regular tab
+        const editor = useEditorStore.getState();
+        if (editor.isDirty) {
+          editor.saveNote().then(() => {
+            closeTabAndNavigateNext(closingId);
+          });
+        } else {
+          closeTabAndNavigateNext(closingId);
         }
       }
       if (isMod && e.key === "p") {
@@ -104,11 +132,20 @@ function App() {
       }
       if (isMod && e.key === "n") {
         e.preventDefault();
-        useUIStore.getState().openCreateNoteDialog();
+        useEditorStore.getState().openUntitledTab();
       }
       if (isMod && e.key === "s") {
         e.preventDefault();
-        useEditorStore.getState().saveNote();
+        const tabId = useTabStore.getState().activeTabId;
+        if (tabId && isUntitledTab(tabId)) {
+          const body = useEditorStore.getState().editedBody ?? "";
+          useUIStore.getState().openCreateNoteDialog({
+            saveAsBody: body,
+            saveAsTabId: tabId,
+          });
+        } else {
+          useEditorStore.getState().saveNote();
+        }
       }
       if (isMod && e.key === "b") {
         // When the CodeMirror editor has focus, let CM handle Cmd+B for bold
@@ -168,7 +205,9 @@ function App() {
       }
       if (e.key === "Escape") {
         const ui = useUIStore.getState();
-        if (ui.settingsOpen) {
+        if (ui.unsavedChangesDialogOpen) {
+          // Do nothing — UnsavedChangesDialog handles its own Escape
+        } else if (ui.settingsOpen) {
           ui.closeSettings();
         } else if (ui.focusMode) {
           ui.toggleFocusMode();
@@ -184,6 +223,20 @@ function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
+
+  // Window close interception — warn about unsaved untitled tabs
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const dirtyUntitled = useTabStore.getState().tabs.filter(
+        (t) => t.kind === "untitled" && (t.editedBody ?? "").length > 0
+      );
+      if (dirtyUntitled.length > 0) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
   // Apply theme
   useEffect(() => {
@@ -227,6 +280,7 @@ function App() {
       {createNoteDialogOpen && <CreateNoteDialog />}
       {createFolderDialogOpen && <CreateFolderDialog />}
       {settingsOpen && <SettingsModal />}
+      {unsavedChangesDialogOpen && <UnsavedChangesDialog />}
       <UndoToast />
     </div>
   );

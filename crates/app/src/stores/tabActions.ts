@@ -16,7 +16,10 @@ export function closeTabAndNavigateNext(id: string) {
     if (activeTabId) {
       const nextTab = useTabStore.getState().getTab(activeTabId);
       if (nextTab) {
-        if (nextTab.kind === "note") {
+        if (nextTab.kind === "untitled") {
+          useGraphStore.getState().selectNode(null);
+          useEditorStore.getState().activateUntitledTab(activeTabId);
+        } else if (nextTab.kind === "note") {
           useGraphStore.getState().selectNode(activeTabId);
           useEditorStore.getState().openNote(activeTabId);
         } else {

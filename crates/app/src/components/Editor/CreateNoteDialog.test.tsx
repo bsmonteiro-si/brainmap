@@ -38,6 +38,18 @@ vi.mock("../../stores/editorStore", () => ({
   },
 }));
 
+vi.mock("../../stores/tabStore", () => ({
+  useTabStore: {
+    getState: () => ({
+      closeTab: vi.fn(),
+    }),
+  },
+}));
+
+vi.mock("../../stores/tabActions", () => ({
+  closeTabAndNavigateNext: vi.fn(),
+}));
+
 vi.mock("../../stores/workspaceStore", () => ({
   useWorkspaceStore: (selector: (s: Record<string, unknown>) => unknown) =>
     selector({
@@ -51,6 +63,8 @@ let uiStoreState = {
   createNoteInitialTitle: null as string | null,
   createNoteMode: "default" as "default" | "create-and-link",
   createAndLinkSource: null as { notePath: string; rel: string } | null,
+  createNoteSaveAsBody: null as string | null,
+  createNoteSaveAsTabId: null as string | null,
 };
 const mockClose = vi.fn();
 

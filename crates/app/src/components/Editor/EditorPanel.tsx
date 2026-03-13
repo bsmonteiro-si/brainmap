@@ -15,6 +15,7 @@ export function EditorPanel() {
   const editorViewRef = useRef<EditorView | null>(null);
   const activeNote = useEditorStore((s) => s.activeNote);
   const activePlainFile = useEditorStore((s) => s.activePlainFile);
+  const isUntitled = useEditorStore((s) => s.isUntitledTab);
   const isLoading = useEditorStore((s) => s.isLoading);
   const conflictState = useEditorStore((s) => s.conflictState);
   const resolveConflict = useEditorStore((s) => s.resolveConflict);
@@ -28,6 +29,7 @@ export function EditorPanel() {
   const scrollTop = useEditorStore((s) => s.scrollTop);
   const cursorPos = useEditorStore((s) => s.cursorPos);
   const tabs = useTabStore((s) => s.tabs);
+  const activeTabId = useTabStore((s) => s.activeTabId);
 
   const onEditorChange = useCallback((body: string) => {
     useEditorStore.getState().updateContent(body);
@@ -38,7 +40,7 @@ export function EditorPanel() {
     editorViewRef.current = view;
   }, []);
 
-  const activePath = activeNote?.path ?? activePlainFile?.path;
+  const activePath = activeNote?.path ?? activePlainFile?.path ?? (isUntitled ? activeTabId : undefined);
 
   // When activePath changes (tab switch), capture scroll/cursor from the old view
   useEffect(() => {
@@ -141,6 +143,64 @@ export function EditorPanel() {
             </div>
             <div className={`editor-view-layer${viewMode === "preview" ? " editor-view-layer--active" : ""}`}>
               <MarkdownPreview content={body} notePath={activePlainFile.path} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Untitled tab view — simplified editor with no metadata or related notes
+  if (isUntitled && !activeNote && !activePlainFile && activeTabId) {
+    const tab = useTabStore.getState().getTab(activeTabId);
+    const untitledTitle = tab?.title ?? "Untitled";
+    const body = editedBody ?? "";
+
+    return (
+      <div className="editor-panel-container">
+        <TabBar />
+        <div className="editor-panel">
+          <div className="editor-hero">
+            <div className="editor-hero-top">
+              <div className="editor-view-toggle">
+                <button
+                  className={`editor-view-btn${viewMode === "edit" ? " editor-view-btn--active" : ""}`}
+                  onClick={() => setViewMode("edit")}
+                  type="button"
+                >Edit</button>
+                <button
+                  className={`editor-view-btn${viewMode === "preview" ? " editor-view-btn--active" : ""}`}
+                  onClick={() => setViewMode("preview")}
+                  type="button"
+                >Preview</button>
+              </div>
+              <button
+                className="editor-focus-btn"
+                onClick={toggleFocusMode}
+                title={focusMode ? "Exit focus mode" : "Focus mode"}
+              >
+                {focusMode ? "\u2921" : "\u2922"}
+              </button>
+            </div>
+            <h1 className="editor-hero-title">
+              {untitledTitle}
+              {isDirty && <span className="editor-dirty-dot" title="Unsaved changes" />}
+            </h1>
+          </div>
+          {viewMode === "edit" && <EditorToolbar editorView={editorViewRef.current} />}
+          <div className="editor-body">
+            <div className={`editor-view-layer${viewMode === "edit" ? " editor-view-layer--active" : ""}`}>
+              <MarkdownEditor
+                notePath={activeTabId}
+                content={body}
+                onChange={onEditorChange}
+                onViewReady={handleViewReady}
+                restoreScrollTop={scrollTop}
+                restoreCursorPos={cursorPos}
+              />
+            </div>
+            <div className={`editor-view-layer${viewMode === "preview" ? " editor-view-layer--active" : ""}`}>
+              <MarkdownPreview content={body} notePath={activeTabId} />
             </div>
           </div>
         </div>
