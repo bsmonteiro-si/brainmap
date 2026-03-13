@@ -28,6 +28,7 @@ const NOTE_TYPE_ICONS: Record<string, LucideIcon> = {
   experiment: TestTube,
   person: User,
   project: FolderKanban,
+  folder: Folder,
 };
 
 const FALLBACK_ICON: LucideIcon = File;

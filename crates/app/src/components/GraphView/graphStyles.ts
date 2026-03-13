@@ -1,4 +1,4 @@
-// Canonical color palette for the 10 note types.
+// Canonical color palette for the 11 note types (including virtual folder nodes).
 // Used by graph nodes, file tree icons (fileTreeIcons.tsx), and hull overlays.
 export const NOTE_TYPE_COLORS: Record<string, string> = {
   concept: "#4a9eff",
@@ -11,6 +11,7 @@ export const NOTE_TYPE_COLORS: Record<string, string> = {
   experiment: "#e67e22",
   person: "#e91e63",
   project: "#00bcd4",
+  folder: "#8e8e93",
 };
 
 export function getNodeColor(noteType: string): string {
@@ -29,6 +30,7 @@ const NOTE_TYPE_SHAPES: Record<string, string> = {
   experiment: "hexagon",
   person: "octagon",
   project: "tag",
+  folder: "barrel",
 };
 
 export function getNodeShape(noteType: string): string {

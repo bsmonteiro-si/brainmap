@@ -308,9 +308,28 @@ pub fn handle_list_links(ws: &Workspace, params: ListLinksParams) -> Result<Vec<
 }
 
 /// Get a lightweight summary for a single node (used for tooltips).
+/// Falls back to graph-level NodeData for folder nodes (which have no backing Note).
 pub fn handle_get_node_summary(ws: &Workspace, path: &str) -> Result<NodeSummaryDto, String> {
-    let note = ws.read_note(path).map_err(|e: BrainMapError| e.to_string())?;
-    Ok(NodeSummaryDto::from(note))
+    match ws.read_note(path) {
+        Ok(note) => Ok(NodeSummaryDto::from(note)),
+        Err(_) => {
+            // Check if it's a folder node in the graph.
+            let rp = brainmap_core::model::RelativePath::new(path);
+            if let Some(nd) = ws.graph.get_node(&rp) {
+                if nd.is_folder() {
+                    return Ok(NodeSummaryDto {
+                        path: nd.path.as_str().to_string(),
+                        title: nd.title.clone(),
+                        note_type: "folder".to_string(),
+                        tags: nd.tags.clone(),
+                        status: None,
+                        summary: None,
+                    });
+                }
+            }
+            Err(format!("node not found: {}", path))
+        }
+    }
 }
 
 /// Get workspace stats.

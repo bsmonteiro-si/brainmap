@@ -9,11 +9,11 @@ use chrono::Local;
 
 use crate::config::{load_config, save_config, WorkspaceConfig};
 use crate::error::{BrainMapError, Result};
-use crate::graph::{compute_implicit_edges, Graph, Subgraph};
+use crate::graph::{compute_folder_hierarchy, Graph, Subgraph};
 use crate::index::Index;
 use crate::model::{
-    Direction, Edge, EdgeKind, Frontmatter, GraphDiff, NodeData, Note, NoteId, RelativePath,
-    Status, TypedLink,
+    humanize_folder_name, Direction, Edge, EdgeKind, Frontmatter, GraphDiff, NodeData, Note,
+    NoteId, RelativePath, Status, TypedLink,
 };
 use crate::parser;
 
@@ -191,8 +191,11 @@ impl Workspace {
             })
             .collect();
 
-        let implicit = compute_implicit_edges(&node_data, &all_edges);
-        all_edges.extend(implicit);
+        let (folder_nodes, hierarchy_edges) = compute_folder_hierarchy(&node_data);
+        for fd in &folder_nodes {
+            graph.add_node(fd.path.clone(), fd.clone());
+        }
+        all_edges.extend(hierarchy_edges);
 
         for edge in &all_edges {
             graph.add_edge(edge.clone());
@@ -253,7 +256,9 @@ impl Workspace {
                     });
                     continue;
                 }
-                if !self.notes.contains_key(&target) {
+                if !self.notes.contains_key(&target)
+                    && self.graph.get_node(&target).is_none()
+                {
                     issues.push(ValidationIssue {
                         severity: Severity::Error,
                         message: format!(
@@ -360,6 +365,8 @@ impl Workspace {
             },
         );
 
+        self.ensure_folder_nodes(&path);
+
         info!(path = rel_path, title = title, note_type = note_type, "note created");
         self.notes.insert(path.clone(), note);
         Ok(path)
@@ -459,9 +466,15 @@ impl Workspace {
             std::fs::remove_file(&file_path)?;
         }
 
+        let parent_dir = path.parent();
+
         self.notes.remove(&path);
         self.graph.remove_node(&path);
         self.index.remove_note(&path)?;
+
+        if let Some(dir) = parent_dir {
+            self.prune_empty_folder_nodes(&dir);
+        }
 
         info!(path = rel_path, force = force, "note deleted");
         Ok(())
@@ -480,7 +493,7 @@ impl Workspace {
         if !self.notes.contains_key(&source) {
             return Err(BrainMapError::FileNotFound(source_path.to_string()));
         }
-        if !self.notes.contains_key(&target) {
+        if !self.notes.contains_key(&target) && self.graph.get_node(&target).is_none() {
             return Err(BrainMapError::BrokenLinkTarget {
                 from: source_path.to_string(),
                 to: target_path.to_string(),
@@ -752,11 +765,19 @@ impl Workspace {
 
         let mtime = file_mtime(&file_path);
         self.index.add_note(&note, mtime)?;
+
+        // Ensure folder nodes exist for this note's ancestors.
+        let (folder_nodes, folder_edges) = self.ensure_folder_nodes(&path);
+
         self.notes.insert(path, note);
+
+        let mut added_nodes = vec![node_data];
+        added_nodes.extend(folder_nodes);
+        new_edges.extend(folder_edges);
 
         debug!(path = rel_path, "file added");
         Ok(GraphDiff {
-            added_nodes: vec![node_data],
+            added_nodes,
             removed_nodes: vec![],
             added_edges: new_edges,
             removed_edges: vec![],
@@ -779,16 +800,27 @@ impl Workspace {
             .cloned()
             .collect();
 
+        let parent_dir = path.parent();
+
         self.notes.remove(&path);
         self.graph.remove_node(&path);
         self.index.remove_note(&path)?;
 
+        // Prune empty folder nodes up the tree.
+        let mut removed_nodes = vec![path];
+        let mut all_removed_edges = removed_edges;
+        if let Some(dir) = parent_dir {
+            let (pruned_nodes, pruned_edges) = self.prune_empty_folder_nodes(&dir);
+            removed_nodes.extend(pruned_nodes);
+            all_removed_edges.extend(pruned_edges);
+        }
+
         debug!(path = rel_path, "file removed");
         Ok(GraphDiff {
             added_nodes: vec![],
-            removed_nodes: vec![path],
+            removed_nodes,
             added_edges: vec![],
-            removed_edges,
+            removed_edges: all_removed_edges,
         })
     }
 
@@ -878,9 +910,12 @@ impl Workspace {
         self.index.add_note(&note, mtime)?;
         self.notes.insert(new_rp.clone(), note);
 
-        // Re-add outgoing edges with updated source
+        // Re-add outgoing edges with updated source (skip implicit contains — handled by folder nodes)
         let mut new_edges = Vec::new();
         for edge in old_outgoing {
+            if edge.kind == EdgeKind::Implicit {
+                continue;
+            }
             let new_edge = Edge {
                 source: new_rp.clone(),
                 target: edge.target,
@@ -891,8 +926,11 @@ impl Workspace {
             new_edges.push(new_edge);
         }
 
-        // Re-add incoming edges with updated target
+        // Re-add incoming edges with updated target (skip implicit contains — handled by folder nodes)
         for edge in old_incoming {
+            if edge.kind == EdgeKind::Implicit {
+                continue;
+            }
             if referencing.contains(&edge.source) {
                 continue; // handled below
             }
@@ -922,6 +960,12 @@ impl Workspace {
                     new_edges.push(new_edge);
                 }
             }
+        }
+
+        // Ensure folder nodes for the new location, prune old location.
+        self.ensure_folder_nodes(&new_rp);
+        if let Some(old_dir) = old_rp.parent() {
+            self.prune_empty_folder_nodes(&old_dir);
         }
 
         // Sync rewired edges to index
@@ -963,10 +1007,10 @@ impl Workspace {
         let src = RelativePath::new(source);
         let tgt = RelativePath::new(target);
 
-        if !self.notes.contains_key(&src) {
+        if !self.notes.contains_key(&src) && self.graph.get_node(&src).is_none() {
             return Err(BrainMapError::FileNotFound(source.to_string()));
         }
-        if !self.notes.contains_key(&tgt) {
+        if !self.notes.contains_key(&tgt) && self.graph.get_node(&tgt).is_none() {
             return Err(BrainMapError::FileNotFound(target.to_string()));
         }
 
@@ -980,7 +1024,7 @@ impl Workspace {
         rel_filter: Option<&str>,
     ) -> Result<Subgraph> {
         let center_rp = RelativePath::new(center);
-        if !self.notes.contains_key(&center_rp) {
+        if !self.notes.contains_key(&center_rp) && self.graph.get_node(&center_rp).is_none() {
             return Err(BrainMapError::FileNotFound(center.to_string()));
         }
 
@@ -988,6 +1032,115 @@ impl Workspace {
         Ok(self
             .graph
             .subgraph(&center_rp, depth, filter.as_ref().map(|v| v.as_slice())))
+    }
+
+    /// Return all graph nodes (notes + folder nodes).
+    pub fn list_all_graph_nodes(&self) -> Vec<&NodeData> {
+        self.graph.all_nodes().map(|(_, nd)| nd).collect()
+    }
+
+    /// Ensure folder nodes exist for all ancestor directories of a note path.
+    /// Returns the newly created folder nodes and `contains` edges.
+    fn ensure_folder_nodes(&mut self, note_path: &RelativePath) -> (Vec<NodeData>, Vec<Edge>) {
+        let mut added_nodes = Vec::new();
+        let mut added_edges = Vec::new();
+
+        // Walk up from note's parent directory, creating missing folder nodes.
+        let mut current = note_path.parent();
+        let mut child_path = note_path.clone();
+        while let Some(dir) = current {
+            // Create folder→child contains edge if not already present.
+            let already_exists = self
+                .graph
+                .edges_for(&dir, &Direction::Outgoing)
+                .iter()
+                .any(|e| e.target == child_path && e.rel == "contains");
+            if !already_exists {
+                let edge = Edge {
+                    source: dir.clone(),
+                    target: child_path.clone(),
+                    rel: "contains".to_string(),
+                    kind: EdgeKind::Implicit,
+                };
+                self.graph.add_edge(edge.clone());
+                added_edges.push(edge);
+            }
+
+            if self.graph.get_node(&dir).is_some() {
+                // Folder node already exists; ancestors are also present.
+                break;
+            }
+
+            let basename = std::path::Path::new(dir.as_str())
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| dir.as_str().to_string());
+            let folder_node = NodeData {
+                title: humanize_folder_name(&basename),
+                note_type: "folder".to_string(),
+                tags: vec![],
+                path: dir.clone(),
+            };
+            self.graph.add_node(dir.clone(), folder_node.clone());
+            added_nodes.push(folder_node);
+
+            child_path = dir.clone();
+            current = dir.parent();
+        }
+
+        (added_nodes, added_edges)
+    }
+
+    /// Remove folder nodes that have no children (no outgoing `contains` edges).
+    /// Walks up from the given directory, pruning empty folders.
+    /// Returns removed folder node paths and edges.
+    fn prune_empty_folder_nodes(
+        &mut self,
+        dir: &RelativePath,
+    ) -> (Vec<RelativePath>, Vec<Edge>) {
+        let mut removed_nodes = Vec::new();
+        let mut removed_edges = Vec::new();
+
+        let mut current = Some(dir.clone());
+        while let Some(dir_path) = current {
+            let node = self.graph.get_node(&dir_path);
+            if node.is_none() || !node.unwrap().is_folder() {
+                break;
+            }
+
+            let outgoing: Vec<Edge> = self
+                .graph
+                .edges_for(&dir_path, &Direction::Outgoing)
+                .into_iter()
+                .filter(|e| e.rel == "contains")
+                .cloned()
+                .collect();
+
+            if !outgoing.is_empty() {
+                // Folder still has children — stop pruning.
+                break;
+            }
+
+            // Remove all edges involving this folder node.
+            let all_edges: Vec<Edge> = self
+                .graph
+                .edges_for(&dir_path, &Direction::Both)
+                .into_iter()
+                .cloned()
+                .collect();
+            for edge in &all_edges {
+                self.graph
+                    .remove_edge(&edge.source, &edge.target, &edge.rel);
+            }
+            removed_edges.extend(all_edges);
+
+            self.graph.remove_node(&dir_path);
+            removed_nodes.push(dir_path.clone());
+
+            current = dir_path.parent();
+        }
+
+        (removed_nodes, removed_edges)
     }
 }
 
@@ -1168,5 +1321,66 @@ Body.
         // Should open from child, not walk up to parent
         assert_eq!(ws.root, child);
         assert!(child.join(".brainmap").is_dir());
+    }
+
+    #[test]
+    fn test_create_note_creates_folder_nodes() {
+        let dir = TempDir::new().unwrap();
+        let mut ws = Workspace::open_or_init(dir.path()).unwrap();
+
+        ws.create_note(
+            "Sub/note.md",
+            "Test Note",
+            "concept",
+            vec![],
+            None,
+            None,
+            None,
+            HashMap::new(),
+            "body".to_string(),
+        )
+        .unwrap();
+
+        let folder = ws.graph.get_node(&RelativePath::new("Sub"));
+        assert!(folder.is_some(), "folder node should exist after create_note");
+        assert!(folder.unwrap().is_folder());
+
+        // Verify contains edge
+        let edges: Vec<_> = ws
+            .graph
+            .edges_for(&RelativePath::new("Sub"), &Direction::Outgoing)
+            .into_iter()
+            .filter(|e| e.rel == "contains")
+            .collect();
+        assert_eq!(edges.len(), 1);
+        assert_eq!(edges[0].target.as_str(), "Sub/note.md");
+    }
+
+    #[test]
+    fn test_delete_note_prunes_empty_folder_nodes() {
+        let dir = TempDir::new().unwrap();
+        let mut ws = Workspace::open_or_init(dir.path()).unwrap();
+
+        ws.create_note(
+            "Folder/only-note.md",
+            "Only Note",
+            "concept",
+            vec![],
+            None,
+            None,
+            None,
+            HashMap::new(),
+            "body".to_string(),
+        )
+        .unwrap();
+
+        assert!(ws.graph.get_node(&RelativePath::new("Folder")).is_some());
+
+        ws.delete_note("Folder/only-note.md", true).unwrap();
+
+        assert!(
+            ws.graph.get_node(&RelativePath::new("Folder")).is_none(),
+            "empty folder node should be pruned after deleting the last note"
+        );
     }
 }

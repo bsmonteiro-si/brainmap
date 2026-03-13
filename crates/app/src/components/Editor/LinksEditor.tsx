@@ -34,12 +34,13 @@ export function LinksEditor({ notePath, links }: Props) {
   const [newTarget, setNewTarget] = useState("");
   const [newRel, setNewRel] = useState(LINK_TYPES[0]);
 
-  // Build datalist options: all nodes except self
+  // Build datalist options: all nodes except self (includes folder nodes)
   const nodeOptions = useMemo(() => {
     const opts: { path: string; title: string }[] = [];
     nodes.forEach((node, path) => {
       if (path !== notePath) {
-        opts.push({ path, title: node.title });
+        const label = node.note_type === "folder" ? `${node.title} (folder)` : node.title;
+        opts.push({ path, title: label });
       }
     });
     opts.sort((a, b) => a.title.localeCompare(b.title));

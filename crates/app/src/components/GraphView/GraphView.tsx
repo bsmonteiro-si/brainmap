@@ -178,8 +178,14 @@ export function GraphView() {
 
     cy.on("tap", "node", (evt) => {
       const nodePath = evt.target.id();
-      selectNodeRef.current(nodePath);
-      useEditorStore.getState().openNote(nodePath);
+      const nodeData = useGraphStore.getState().nodes.get(nodePath);
+      if (nodeData?.note_type === "folder") {
+        // Folder nodes trigger graph focus instead of opening the editor.
+        useUIStore.getState().setGraphFocus(nodePath, "folder");
+      } else {
+        selectNodeRef.current(nodePath);
+        useEditorStore.getState().openNote(nodePath);
+      }
     });
 
     cy.on("dbltap", "node", (evt) => {

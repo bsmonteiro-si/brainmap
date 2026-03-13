@@ -1,9 +1,10 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+use std::path::Path;
 
 use serde::Serialize;
 use tracing::{debug, trace};
 
-use crate::model::{Direction, Edge, EdgeKind, NodeData, RelativePath};
+use crate::model::{humanize_folder_name, Direction, Edge, EdgeKind, NodeData, RelativePath};
 
 const MAX_DEPTH: usize = 10;
 
@@ -286,29 +287,67 @@ impl Default for Graph {
     }
 }
 
-pub fn compute_implicit_edges(
+/// Build folder nodes and containment edges from the directory structure of notes.
+///
+/// For every directory that contains at least one note (directly or transitively),
+/// a virtual folder `NodeData` is created with `note_type: "folder"`. Implicit
+/// `contains` edges connect each folder to its direct children (notes and subfolders).
+/// The workspace root directory is excluded — it is not a folder node.
+///
+/// Returns `(folder_nodes, contains_edges)`.
+pub fn compute_folder_hierarchy(
     notes: &HashMap<RelativePath, NodeData>,
-    explicit_edges: &[Edge],
-) -> Vec<Edge> {
-    let note_paths: HashSet<&RelativePath> = notes.keys().collect();
-    let mut implicit = Vec::new();
-    let explicit_contains: HashSet<(&str, &str)> = explicit_edges
-        .iter()
-        .filter(|e| e.rel == "contains")
-        .map(|e| (e.source.as_str(), e.target.as_str()))
-        .collect();
-
-    for child_path in notes.keys() {
-        let ancestor = find_nearest_ancestor_node(child_path, &note_paths);
-
-        if let Some(parent_path) = ancestor {
-            if parent_path == child_path {
-                continue;
+) -> (Vec<NodeData>, Vec<Edge>) {
+    // Collect all unique directory paths from note paths (excluding root).
+    let mut dir_paths: BTreeSet<String> = BTreeSet::new();
+    for note_path in notes.keys() {
+        let mut current = note_path.parent();
+        while let Some(dir) = current {
+            if !dir_paths.insert(dir.as_str().to_string()) {
+                break; // already tracked this dir and its ancestors
             }
-            if !explicit_contains.contains(&(parent_path.as_str(), child_path.as_str())) {
-                implicit.push(Edge {
-                    source: parent_path.clone(),
-                    target: child_path.clone(),
+            current = dir.parent();
+        }
+    }
+
+    // Create folder NodeData for each directory.
+    let mut folder_nodes = Vec::with_capacity(dir_paths.len());
+    for dir in &dir_paths {
+        let basename = Path::new(dir)
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| dir.clone());
+        folder_nodes.push(NodeData {
+            title: humanize_folder_name(&basename),
+            note_type: "folder".to_string(),
+            tags: vec![],
+            path: RelativePath::new(dir),
+        });
+    }
+
+    let mut edges = Vec::new();
+
+    // Folder → child note edges (direct parent only).
+    for note_path in notes.keys() {
+        if let Some(parent) = note_path.parent() {
+            edges.push(Edge {
+                source: parent,
+                target: note_path.clone(),
+                rel: "contains".to_string(),
+                kind: EdgeKind::Implicit,
+            });
+        }
+    }
+
+    // Folder → child folder edges (direct parent only).
+    for dir in &dir_paths {
+        let dir_rp = RelativePath::new(dir);
+        if let Some(parent) = dir_rp.parent() {
+            // Parent must also be a known dir (it will be, since we walked all ancestors).
+            if dir_paths.contains(parent.as_str()) {
+                edges.push(Edge {
+                    source: parent,
+                    target: dir_rp,
                     rel: "contains".to_string(),
                     kind: EdgeKind::Implicit,
                 });
@@ -316,38 +355,7 @@ pub fn compute_implicit_edges(
         }
     }
 
-    implicit
-}
-
-fn find_nearest_ancestor_node<'a>(
-    path: &RelativePath,
-    note_paths: &HashSet<&'a RelativePath>,
-) -> Option<&'a RelativePath> {
-    let mut current = path.parent();
-    while let Some(dir) = current {
-        let candidate_file = format!("{}.md", dir.as_str());
-        let candidate = RelativePath::new(&candidate_file);
-        if candidate != *path {
-            if let Some(found) = note_paths.iter().find(|p| ***p == candidate) {
-                return Some(*found);
-            }
-        }
-
-        let dir_name = dir
-            .as_str()
-            .rsplit('/')
-            .next()
-            .unwrap_or(dir.as_str());
-        let index_file = RelativePath::new(&format!("{}/{}.md", dir.as_str(), dir_name));
-        if index_file != *path {
-            if let Some(found) = note_paths.iter().find(|p| ***p == index_file) {
-                return Some(*found);
-            }
-        }
-
-        current = dir.parent();
-    }
-    None
+    (folder_nodes, edges)
 }
 
 #[cfg(test)]
@@ -447,7 +455,29 @@ mod tests {
     }
 
     #[test]
-    fn test_implicit_edges() {
+    fn test_folder_hierarchy_single_level() {
+        let mut notes = HashMap::new();
+        let (p1, d1) = make_node("Concepts/SCM.md", "concept");
+        let (p2, d2) = make_node("Concepts/RCT.md", "concept");
+        notes.insert(p1, d1);
+        notes.insert(p2, d2);
+
+        let (folders, edges) = compute_folder_hierarchy(&notes);
+        assert_eq!(folders.len(), 1);
+        assert_eq!(folders[0].path.as_str(), "Concepts");
+        assert_eq!(folders[0].note_type, "folder");
+        assert_eq!(folders[0].title, "Concepts");
+        // 2 edges: Concepts→SCM.md, Concepts→RCT.md
+        assert_eq!(edges.len(), 2);
+        for e in &edges {
+            assert_eq!(e.source.as_str(), "Concepts");
+            assert_eq!(e.rel, "contains");
+            assert_eq!(e.kind, EdgeKind::Implicit);
+        }
+    }
+
+    #[test]
+    fn test_folder_hierarchy_nested() {
         let mut notes = HashMap::new();
         let (book_path, book_data) =
             make_node("The Book of Why/The Book of Why.md", "index");
@@ -456,10 +486,60 @@ mod tests {
         notes.insert(book_path, book_data);
         notes.insert(ch1_path, ch1_data);
 
-        let implicit = compute_implicit_edges(&notes, &[]);
-        assert_eq!(implicit.len(), 1);
-        assert_eq!(implicit[0].source.as_str(), "The Book of Why/The Book of Why.md");
-        assert_eq!(implicit[0].target.as_str(), "The Book of Why/Chapter 1/Chapter 1.md");
-        assert_eq!(implicit[0].rel, "contains");
+        let (folders, edges) = compute_folder_hierarchy(&notes);
+        // 2 folder nodes: "The Book of Why" and "The Book of Why/Chapter 1"
+        assert_eq!(folders.len(), 2);
+        let folder_paths: HashSet<&str> = folders.iter().map(|f| f.path.as_str()).collect();
+        assert!(folder_paths.contains("The Book of Why"));
+        assert!(folder_paths.contains("The Book of Why/Chapter 1"));
+
+        // 3 edges: parent_folder→child_folder, parent_folder→index_note, child_folder→ch1_note
+        assert_eq!(edges.len(), 3);
+        let edge_set: HashSet<(&str, &str)> =
+            edges.iter().map(|e| (e.source.as_str(), e.target.as_str())).collect();
+        assert!(edge_set.contains(&("The Book of Why", "The Book of Why/The Book of Why.md")));
+        assert!(edge_set.contains(&("The Book of Why", "The Book of Why/Chapter 1")));
+        assert!(edge_set.contains(&("The Book of Why/Chapter 1", "The Book of Why/Chapter 1/Chapter 1.md")));
+    }
+
+    #[test]
+    fn test_folder_hierarchy_flat_no_folders() {
+        let mut notes = HashMap::new();
+        let (p1, d1) = make_node("note1.md", "concept");
+        let (p2, d2) = make_node("note2.md", "concept");
+        notes.insert(p1, d1);
+        notes.insert(p2, d2);
+
+        let (folders, edges) = compute_folder_hierarchy(&notes);
+        assert_eq!(folders.len(), 0);
+        assert_eq!(edges.len(), 0);
+    }
+
+    #[test]
+    fn test_folder_hierarchy_root_excluded() {
+        // Notes in subdirectories should NOT get a root folder node
+        let mut notes = HashMap::new();
+        let (p1, d1) = make_node("A/note.md", "concept");
+        let (p2, d2) = make_node("B/note.md", "concept");
+        notes.insert(p1, d1);
+        notes.insert(p2, d2);
+
+        let (folders, _edges) = compute_folder_hierarchy(&notes);
+        // Only folders A and B, no root
+        assert_eq!(folders.len(), 2);
+        let folder_paths: HashSet<&str> = folders.iter().map(|f| f.path.as_str()).collect();
+        assert!(folder_paths.contains("A"));
+        assert!(folder_paths.contains("B"));
+        assert!(!folder_paths.iter().any(|p| p.is_empty()));
+    }
+
+    #[test]
+    fn test_folder_node_is_folder() {
+        let mut notes = HashMap::new();
+        let (p1, d1) = make_node("Dir/note.md", "concept");
+        notes.insert(p1, d1);
+
+        let (folders, _) = compute_folder_hierarchy(&notes);
+        assert!(folders[0].is_folder());
     }
 }

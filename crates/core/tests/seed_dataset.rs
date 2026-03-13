@@ -69,18 +69,37 @@ fn test_seed_validation_catches_broken_link() {
 }
 
 #[test]
-fn test_seed_validation_catches_orphan() {
+fn test_seed_no_orphan_notes_with_folder_hierarchy() {
+    // With folder nodes, all notes in subdirectories are children of their parent folder.
+    // No orphan notes should exist in the seed dataset (all notes are in subdirectories).
     let ws = SEED_WORKSPACE.lock().unwrap_or_else(|e| e.into_inner());
     let issues = ws.validate();
 
-    let orphans: Vec<_> = issues
+    let orphan_notes: Vec<_> = issues
         .iter()
-        .filter(|i| i.message.contains("orphan") && i.message.contains("Granger"))
+        .filter(|i| i.message.contains("orphan") && i.message.ends_with(".md"))
         .collect();
 
     assert!(
-        !orphans.is_empty(),
-        "expected Granger Causality to be detected as orphan"
+        orphan_notes.is_empty(),
+        "expected no orphan notes with folder hierarchy, but found: {:?}",
+        orphan_notes.iter().map(|i| &i.message).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn test_seed_folder_nodes_exist() {
+    let ws = SEED_WORKSPACE.lock().unwrap_or_else(|e| e.into_inner());
+    let stats = ws.stats();
+    assert!(
+        stats.nodes_by_type.contains_key("folder"),
+        "expected folder nodes in the graph"
+    );
+    let folder_count = stats.nodes_by_type["folder"];
+    assert!(
+        folder_count >= 5,
+        "expected at least 5 folder nodes, got {}",
+        folder_count
     );
 }
 

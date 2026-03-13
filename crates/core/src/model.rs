@@ -188,6 +188,32 @@ pub struct NodeData {
     pub path: RelativePath,
 }
 
+impl NodeData {
+    pub fn is_folder(&self) -> bool {
+        self.note_type == "folder"
+    }
+}
+
+/// Convert a directory basename into a human-readable title.
+/// Replaces hyphens/underscores with spaces and title-cases each word.
+pub fn humanize_folder_name(dir_name: &str) -> String {
+    dir_name
+        .replace(['-', '_'], " ")
+        .split_whitespace()
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(c) => {
+                    let upper: String = c.to_uppercase().collect();
+                    upper + chars.as_str()
+                }
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct GraphDiff {
     pub added_nodes: Vec<NodeData>,
@@ -230,5 +256,33 @@ mod tests {
     fn test_parent() {
         let p = RelativePath::new("a/b/c.md");
         assert_eq!(p.parent().unwrap().as_str(), "a/b");
+    }
+
+    #[test]
+    fn test_node_data_is_folder() {
+        let folder = NodeData {
+            title: "Concepts".into(),
+            note_type: "folder".into(),
+            tags: vec![],
+            path: RelativePath::new("Concepts"),
+        };
+        assert!(folder.is_folder());
+
+        let note = NodeData {
+            title: "Note".into(),
+            note_type: "concept".into(),
+            tags: vec![],
+            path: RelativePath::new("Concepts/Note.md"),
+        };
+        assert!(!note.is_folder());
+    }
+
+    #[test]
+    fn test_humanize_folder_name() {
+        assert_eq!(humanize_folder_name("my-folder"), "My Folder");
+        assert_eq!(humanize_folder_name("some_dir"), "Some Dir");
+        assert_eq!(humanize_folder_name("Concepts"), "Concepts");
+        assert_eq!(humanize_folder_name("The Book of Why"), "The Book Of Why");
+        assert_eq!(humanize_folder_name("ch1-intro"), "Ch1 Intro");
     }
 }

@@ -64,6 +64,8 @@ export function buildTree(nodes: Map<string, NodeDto>, emptyFolders?: Set<string
   }
 
   for (const [path, nodeData] of nodes) {
+    // Skip virtual folder nodes — the tree already constructs folders from path segments.
+    if (nodeData.note_type === "folder") continue;
     const parts = path.replace(/\.md$/, "").split("/");
 
     if (parts.length === 1) {

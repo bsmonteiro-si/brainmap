@@ -33,9 +33,11 @@ export function filterGraphByFocus(
       focalPath: focusPath,
     };
   } else {
-    // folder focus: include all notes in the folder + their direct neighbors
+    // folder focus: include the folder node itself + all notes in the folder + their direct neighbors
     const prefix = focusPath + "/";
-    const folderNodes = [...nodes.values()].filter((n) => n.path.startsWith(prefix));
+    const folderNodes = [...nodes.values()].filter(
+      (n) => n.path === focusPath || n.path.startsWith(prefix)
+    );
     const folderPaths = new Set(folderNodes.map((n) => n.path));
 
     // Find all edges connected to any folder note (inbound OR outbound)

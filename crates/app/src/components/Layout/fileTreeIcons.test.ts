@@ -13,8 +13,8 @@ describe("getIconForType", () => {
     }
   });
 
-  it("covers all 10 note types", () => {
-    expect(ALL_TYPES).toHaveLength(10);
+  it("covers all 11 note types", () => {
+    expect(ALL_TYPES).toHaveLength(11);
     for (const type of ALL_TYPES) {
       expect(getIconForType(type)).toBeDefined();
     }

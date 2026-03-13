@@ -25,9 +25,10 @@ describe("getNodeShape", () => {
     experiment: "hexagon",
     person: "octagon",
     project: "tag",
+    folder: "barrel",
   };
 
-  it("returns correct shape for all 10 note types", () => {
+  it("returns correct shape for all 11 note types", () => {
     for (const [type, shape] of Object.entries(expectedShapes)) {
       expect(getNodeShape(type)).toBe(shape);
     }
