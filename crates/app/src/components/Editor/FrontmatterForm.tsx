@@ -24,6 +24,7 @@ interface Props {
 
 export function FrontmatterForm({ note }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [extraExpanded, setExtraExpanded] = useState(false);
   const fm = useEditorStore((s) => s.editedFrontmatter);
   const updateFrontmatter = useEditorStore((s) => s.updateFrontmatter);
 
@@ -104,21 +105,22 @@ export function FrontmatterForm({ note }: Props) {
               onChange={(e) => updateFrontmatter({ summary: e.target.value || null })}
             />
           </label>
-          <label>
-            <span>Created</span>
-            <input type="text" value={note.created} readOnly />
-          </label>
-          <label>
-            <span>Modified</span>
-            <input type="text" value={note.modified} readOnly />
-          </label>
           <div className="frontmatter-extra-header">Links</div>
           <LinksEditor notePath={note.path} links={note.links} />
-          <div className="frontmatter-extra-header">Extra Fields</div>
-          <ExtraFieldsEditor
-            extra={extra}
-            onChange={(e) => updateFrontmatter({ extra: e })}
-          />
+          <button
+            className="frontmatter-extra-toggle"
+            onClick={() => setExtraExpanded((e) => !e)}
+            aria-expanded={extraExpanded}
+          >
+            <span>{extraExpanded ? "▾" : "▸"}</span>
+            Extra Fields
+          </button>
+          {extraExpanded && (
+            <ExtraFieldsEditor
+              extra={extra}
+              onChange={(e) => updateFrontmatter({ extra: e })}
+            />
+          )}
         </div>
       )}
     </div>

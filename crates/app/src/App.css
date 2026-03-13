@@ -424,6 +424,23 @@ body {
   margin-top: 4px;
 }
 
+.frontmatter-extra-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 4px;
+  font-size: var(--ui-font-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.frontmatter-extra-toggle:hover {
+  color: var(--text-primary);
+}
+
 /* Tag Input */
 .tag-input-wrapper {
   flex: 1;
@@ -568,6 +585,15 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.link-target-navigable {
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.link-target-navigable:hover {
+  opacity: 0.8;
 }
 
 .link-remove {

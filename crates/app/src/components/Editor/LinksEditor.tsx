@@ -142,7 +142,21 @@ export function LinksEditor({ notePath, links }: Props) {
         return (
           <div key={`${link.target}:${link.rel}`} className="link-row">
             <span className="link-rel">{link.rel}</span>
-            <span className="link-target" title={link.target}>
+            <span
+              className="link-target link-target-navigable"
+              title={`${link.target} (Cmd+Click to open)`}
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey) {
+                  e.preventDefault();
+                  if (targetNode?.note_type === "folder") {
+                    useUIStore.getState().setGraphFocus(link.target, "folder");
+                  } else {
+                    useGraphStore.getState().selectNode(link.target);
+                    useEditorStore.getState().openNote(link.target);
+                  }
+                }
+              }}
+            >
               {title}
             </span>
             <button
