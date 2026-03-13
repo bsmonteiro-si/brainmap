@@ -3,6 +3,7 @@ import type { NoteDetail, PlainFileDetail } from "../api/types";
 import { getAPI } from "../api/bridge";
 import { useGraphStore } from "./graphStore";
 import { useUIStore } from "./uiStore";
+import { useNavigationStore } from "./navigationStore";
 import { log } from "../utils/logger";
 
 export type EditableFrontmatter = Pick<NoteDetail, 'title' | 'note_type' | 'tags' | 'status' | 'source' | 'summary' | 'extra'>;
@@ -61,6 +62,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const api = await getAPI();
       const note = await api.readNote(path);
       set({ activeNote: note, isLoading: false });
+      useNavigationStore.getState().push(path);
     } catch (e) {
       log.error("stores::editor", "failed to open note", { path, error: String(e) });
       set({ isLoading: false });

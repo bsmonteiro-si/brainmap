@@ -6,6 +6,7 @@ import { useGraphStore } from "./graphStore";
 import { useEditorStore } from "./editorStore";
 import { useSegmentStore } from "./segmentStore";
 import { useUndoStore } from "./undoStore";
+import { useNavigationStore } from "./navigationStore";
 import { log } from "../utils/logger";
 
 interface WorkspaceState {
@@ -59,6 +60,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     useUIStore.getState().resetWorkspaceState();
     useSegmentStore.getState().setActiveSegmentId(null);
     useUndoStore.getState().clear();
+    useNavigationStore.getState().reset();
     set({ info: null, stats: null, error: null });
   },
 

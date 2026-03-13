@@ -4,6 +4,7 @@ import { useGraphStore } from "./stores/graphStore";
 import { useEditorStore } from "./stores/editorStore";
 import { useUIStore } from "./stores/uiStore";
 import { useUndoStore } from "./stores/undoStore";
+import { useNavigationStore } from "./stores/navigationStore";
 import { useAutoSave } from "./hooks/useAutoSave";
 import { getAPI } from "./api/bridge";
 import { SegmentPicker } from "./components/Layout/SegmentPicker";
@@ -15,6 +16,13 @@ import { SettingsModal } from "./components/Settings/SettingsModal";
 import { UndoToast } from "./components/Layout/UndoToast";
 
 import "./App.css";
+
+const FORM_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
+
+/** Returns true if the target is a native form field that handles its own undo/redo. */
+function isFormField(target: HTMLElement | null): boolean {
+  return target !== null && FORM_TAGS.has(target.tagName);
+}
 
 function App() {
   const info = useWorkspaceStore((s) => s.info);
@@ -102,21 +110,31 @@ function App() {
         e.preventDefault();
         useUIStore.getState().resetZoom();
       }
-      // Cmd+Z: Undo file operations (skip when CodeMirror has focus)
+      // Cmd+Z: Undo file operations (skip when CodeMirror or form field has focus)
       if (isMod && e.key === "z" && !e.shiftKey) {
         const target = e.target as HTMLElement | null;
-        if (!target?.closest(".cm-editor")) {
+        if (!target?.closest(".cm-editor") && !isFormField(target)) {
           e.preventDefault();
           useUndoStore.getState().undo();
         }
       }
-      // Cmd+Y or Cmd+Shift+Z: Redo file operations (skip when CodeMirror has focus)
+      // Cmd+Y or Cmd+Shift+Z: Redo file operations (skip when CodeMirror or form field has focus)
       if (isMod && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
         const target = e.target as HTMLElement | null;
-        if (!target?.closest(".cm-editor")) {
+        if (!target?.closest(".cm-editor") && !isFormField(target)) {
           e.preventDefault();
           useUndoStore.getState().redo();
         }
+      }
+      // Cmd+[: Go back in navigation history
+      if (isMod && e.key === "[") {
+        e.preventDefault();
+        useNavigationStore.getState().goBack();
+      }
+      // Cmd+]: Go forward in navigation history
+      if (isMod && e.key === "]") {
+        e.preventDefault();
+        useNavigationStore.getState().goForward();
       }
       if (e.key === "Escape") {
         const ui = useUIStore.getState();
