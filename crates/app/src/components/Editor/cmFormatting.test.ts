@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { EditorState, EditorSelection } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { toggleWrap, toggleLinePrefix, toggleOrderedList, setHeading, insertLink, insertAtCursor } from "./cmFormatting";
+import { toggleWrap, toggleLinePrefix, toggleOrderedList, setHeading, insertLink, insertAtCursor, insertCallout } from "./cmFormatting";
 
 function makeView(doc: string, from: number, to?: number): EditorView {
   const state = EditorState.create({
@@ -197,5 +197,38 @@ describe("insertAtCursor", () => {
     const view = makeView("hello world", 6, 11); // "world" selected
     insertAtCursor(view, "there");
     expect(text(view)).toBe("hello there");
+  });
+});
+
+describe("insertCallout", () => {
+  it("inserts callout template at cursor on empty line", () => {
+    const view = makeView("", 0);
+    insertCallout(view, "ai-answer");
+    expect(text(view)).toBe("> [!ai-answer]\n> ");
+    expect(sel(view)).toEqual({ from: 17, to: 17 }); // cursor after "> "
+  });
+
+  it("wraps selected text in callout body", () => {
+    const view = makeView("some important text", 0, 19);
+    insertCallout(view, "key-insight");
+    expect(text(view)).toBe("> [!key-insight]\n> some important text");
+  });
+
+  it("wraps multi-line selection", () => {
+    const view = makeView("line one\nline two\nline three", 0, 27);
+    insertCallout(view, "source");
+    expect(text(view)).toBe("> [!source]\n> line one\n> line two\n> line three");
+  });
+
+  it("captures trailing text as callout body when cursor is mid-line", () => {
+    const view = makeView("some text here", 9); // after "some text"
+    insertCallout(view, "question");
+    expect(text(view)).toBe("some text\n> [!question]\n> here");
+  });
+
+  it("does not insert extra newline at start of line", () => {
+    const view = makeView("line one\n", 9); // start of empty second line
+    insertCallout(view, "ai-answer");
+    expect(text(view)).toBe("line one\n> [!ai-answer]\n> ");
   });
 });

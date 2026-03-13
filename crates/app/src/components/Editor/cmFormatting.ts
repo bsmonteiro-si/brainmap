@@ -234,6 +234,46 @@ export function insertLink(view: EditorView): boolean {
 }
 
 /**
+ * Insert a callout block. If text is selected, wraps each line as callout body.
+ * If cursor is mid-line, captures the rest of the line as callout body.
+ */
+export function insertCallout(view: EditorView, type: string): boolean {
+  const { state } = view;
+  const changes: { from: number; to: number; insert: string }[] = [];
+  const selections: SelectionRange[] = [];
+
+  for (const range of state.selection.ranges) {
+    const line = state.doc.lineAt(range.from);
+    const midLine = range.from !== line.from && line.text.length > 0;
+    const nl = midLine ? "\n" : "";
+    const header = `> [!${type}]`;
+
+    if (range.empty) {
+      // When mid-line, capture the rest of the line as callout body
+      const trailing = midLine ? state.sliceDoc(range.from, line.to).trimStart() : "";
+      const to = midLine ? line.to : range.from;
+      const body = trailing ? `> ${trailing}` : "> ";
+      const insert = `${nl}${header}\n${body}`;
+      changes.push({ from: range.from, to, insert });
+      selections.push(EditorSelection.cursor(range.from + insert.length));
+    } else {
+      const selectedText = state.sliceDoc(range.from, range.to);
+      const body = selectedText
+        .split("\n")
+        .map((l) => `> ${l}`)
+        .join("\n");
+      const insert = `${nl}${header}\n${body}`;
+      changes.push({ from: range.from, to: range.to, insert });
+      selections.push(EditorSelection.cursor(range.from + insert.length));
+    }
+  }
+
+  view.dispatch({ changes, selection: EditorSelection.create(selections) });
+  view.focus();
+  return true;
+}
+
+/**
  * Insert text at cursor position.
  */
 export function insertAtCursor(view: EditorView, text: string): boolean {

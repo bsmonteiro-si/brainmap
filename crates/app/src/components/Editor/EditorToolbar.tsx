@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from "react";
 import type { EditorView } from "@codemirror/view";
 import {
   toggleWrap,
@@ -6,7 +7,9 @@ import {
   setHeading,
   insertLink,
   insertAtCursor,
+  insertCallout,
 } from "./cmFormatting";
+import { CALLOUT_TYPE_ENTRIES } from "./calloutTypes";
 
 interface Props {
   editorView: EditorView | null;
@@ -37,6 +40,27 @@ const BUTTONS: (ToolbarButton | "sep")[] = [
 ];
 
 export function EditorToolbar({ editorView }: Props) {
+  const [calloutOpen, setCalloutOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!calloutOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(e.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target as Node)
+      ) {
+        setCalloutOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [calloutOpen]);
+
   return (
     <div className="editor-toolbar">
       {BUTTONS.map((btn, i) => {
@@ -50,7 +74,6 @@ export function EditorToolbar({ editorView }: Props) {
             title={btn.title}
             disabled={!editorView}
             onMouseDown={(e) => {
-              // Prevent stealing focus from editor
               e.preventDefault();
               if (editorView) btn.action(editorView);
             }}
@@ -60,6 +83,43 @@ export function EditorToolbar({ editorView }: Props) {
           </button>
         );
       })}
+      <span className="editor-toolbar-sep" />
+      <div className="callout-picker-wrapper">
+        <button
+          ref={triggerRef}
+          className="editor-toolbar-btn"
+          title="Insert Callout"
+          disabled={!editorView}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setCalloutOpen((v) => !v);
+          }}
+          type="button"
+        >
+          ☰
+        </button>
+        {calloutOpen && (
+          <div ref={popoverRef} className="callout-picker-popover">
+            {CALLOUT_TYPE_ENTRIES.map(([type, { label, Icon, color }]) => (
+              <button
+                key={type}
+                className="callout-picker-item"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  if (editorView) {
+                    insertCallout(editorView, type);
+                    setCalloutOpen(false);
+                  }
+                }}
+                type="button"
+              >
+                <Icon size={14} color={color} />
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
