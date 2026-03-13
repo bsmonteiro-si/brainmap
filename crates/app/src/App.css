@@ -238,7 +238,7 @@ body {
 
 /* ── Editor Hero ─────────────────────────────────────────────── */
 .editor-hero {
-  padding: 12px 20px 16px;
+  padding: 12px clamp(16px, 3%, 40px) 16px;
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
@@ -319,7 +319,7 @@ body {
 .section-toggle {
   width: 100%;
   text-align: left;
-  padding: 6px 12px;
+  padding: 6px clamp(16px, 3%, 40px);
   background: none;
   border: none;
   color: var(--text-secondary);
@@ -348,7 +348,7 @@ body {
 }
 
 .frontmatter-fields {
-  padding: 4px 12px 12px;
+  padding: 4px clamp(16px, 3%, 40px) 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -706,7 +706,7 @@ body {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 4px 8px;
+  padding: 4px clamp(16px, 3%, 40px);
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-secondary);
   flex-shrink: 0;
@@ -770,6 +770,10 @@ body {
 
 .editor-body .cm-editor {
   height: 100%;
+}
+.editor-body .cm-editor .cm-content {
+  padding-left: clamp(12px, 3%, 36px);
+  padding-right: clamp(12px, 3%, 36px);
 }
 
 /* Cmd+hover link navigation cursor in CodeMirror */
@@ -1290,7 +1294,7 @@ body {
 
 /* ── Markdown Preview ─────────────────────────────────────────── */
 .md-preview {
-  padding: 16px clamp(20px, 8%, 100px);
+  padding: 16px clamp(16px, 3%, 40px);
   font-family: var(--editor-font-family);
   font-size: var(--editor-font-size);
   color: var(--text-primary);
@@ -1495,7 +1499,7 @@ body {
 .related-notes-toggle {
   width: 100%;
   text-align: left;
-  padding: 6px 12px;
+  padding: 6px clamp(16px, 3%, 40px);
   font-size: var(--ui-font-sm);
   font-weight: 600;
   color: var(--text-secondary);
@@ -1558,7 +1562,7 @@ body {
   padding: 4px 0;
 }
 .related-notes-group {
-  padding: 0 8px 4px;
+  padding: 0 clamp(16px, 3%, 40px) 4px;
 }
 .related-notes-group-label {
   font-size: var(--ui-font-xs);
