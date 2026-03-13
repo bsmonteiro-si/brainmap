@@ -14,30 +14,9 @@ describe("getNodeColor", () => {
 });
 
 describe("getNodeShape", () => {
-  const expectedShapes: Record<string, string> = {
-    concept: "ellipse",
-    "book-note": "roundrectangle",
-    question: "diamond",
-    reference: "rectangle",
-    index: "star",
-    argument: "triangle",
-    evidence: "pentagon",
-    experiment: "hexagon",
-    person: "octagon",
-    project: "tag",
-    folder: "barrel",
-  };
-
-  it("returns correct shape for all 11 note types", () => {
-    for (const [type, shape] of Object.entries(expectedShapes)) {
-      expect(getNodeShape(type)).toBe(shape);
-    }
-  });
-
-  it("covers all types in NOTE_TYPE_COLORS", () => {
+  it("returns ellipse for all note types (icons provide distinction)", () => {
     for (const type of Object.keys(NOTE_TYPE_COLORS)) {
-      expect(getNodeShape(type)).not.toBe("ellipse-fallback");
-      expect(expectedShapes[type]).toBeDefined();
+      expect(getNodeShape(type)).toBe("ellipse");
     }
   });
 

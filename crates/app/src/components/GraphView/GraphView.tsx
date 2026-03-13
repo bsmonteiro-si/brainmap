@@ -10,6 +10,9 @@ import { useUIStore } from "../../stores/uiStore";
 import { getAPI } from "../../api/bridge";
 import type { NodeSummary } from "../../api/types";
 import { graphStylesheet, getNodeColor, getNodeShape } from "./graphStyles";
+import { getNodeIconSvg, getNodeIconSvgWhite } from "./graphIcons";
+
+const BASE_NODE_SIZE = 18;
 import { filterGraphByFocus } from "./graphFocusFilter";
 import { computeHulls, drawCachedHulls, type CachedHull } from "./graphHulls";
 import { startParticleAnimation } from "./graphParticles";
@@ -96,6 +99,7 @@ export function GraphView() {
   const showEdgeLabelsRef = useRef(showEdgeLabels);
   const graphLayoutRef = useRef(graphLayout);
   const selectedNodePathRef = useRef(selectedNodePath);
+  const prevInvertedNodeIdRef = useRef<string | null>(null);
   const minimapContainerRef = useRef<HTMLDivElement>(null);
   const minimapCyRef = useRef<Core | null>(null);
   const minimapCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -290,7 +294,9 @@ export function GraphView() {
         color: getNodeColor(n.note_type),
         noteType: n.note_type,
         shape: getNodeShape(n.note_type),
-        size: 8,
+        iconSvg: getNodeIconSvg(n.note_type, getNodeColor(n.note_type)),
+        iconSvgWhite: getNodeIconSvgWhite(n.note_type),
+        size: BASE_NODE_SIZE,
       },
     }));
 
@@ -323,7 +329,7 @@ export function GraphView() {
 
     // Store size as data so stylesheet selectors (node:selected, node.highlighted) can override
     cy.nodes().forEach((n) => {
-      n.data("size", Math.max(8, 8 + n.indegree(false) * 2));
+      n.data("size", Math.max(BASE_NODE_SIZE, BASE_NODE_SIZE + n.indegree(false) * 2));
     });
 
     // Apply edge gradient colors imperatively (data() mappers don't work inside gradient arrays)
@@ -372,13 +378,21 @@ export function GraphView() {
     }
   }, [filteredNodes, filteredEdges, hiddenEdgeTypes, focalPath]);
 
-  // Highlight selected node
+  // Highlight selected node — invert icon (white icon on colored circle)
   useEffect(() => {
-    // Keep ref in sync inside the effect that depends on selectedNodePath
     selectedNodePathRef.current = selectedNodePath;
 
     const cy = cyRef.current;
     if (!cy) return;
+
+    // Restore previously inverted node to stylesheet defaults
+    if (prevInvertedNodeIdRef.current) {
+      const prev = cy.getElementById(prevInvertedNodeIdRef.current);
+      if (prev.length > 0) {
+        prev.removeStyle("background-color background-image");
+      }
+      prevInvertedNodeIdRef.current = null;
+    }
 
     cy.elements().removeClass("highlighted");
     cy.$("node:selected").unselect();
@@ -389,10 +403,16 @@ export function GraphView() {
         node.select();
         node.connectedEdges().addClass("highlighted");
         node.neighborhood("node").addClass("highlighted");
+
+        // Invert: white icon on type-colored circle
+        node.style({
+          "background-color": node.data("color"),
+          "background-image": node.data("iconSvgWhite"),
+        });
+        prevInvertedNodeIdRef.current = selectedNodePath;
       }
     }
 
-    // Reapply label visibility to clear accumulated labeled classes from prior selection
     applyEdgeLabelVisibility(cy, showEdgeLabelsRef.current, selectedNodePath);
   }, [selectedNodePath]);
 

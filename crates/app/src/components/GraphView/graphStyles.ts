@@ -18,19 +18,19 @@ export function getNodeColor(noteType: string): string {
   return NOTE_TYPE_COLORS[noteType] ?? "#95a5a6";
 }
 
-// Shape mapping for each note type — all native Cytoscape shapes.
+// Shape mapping — uniform ellipse for all types (icons provide visual distinction).
 const NOTE_TYPE_SHAPES: Record<string, string> = {
   concept: "ellipse",
-  "book-note": "roundrectangle",
-  question: "diamond",
-  reference: "rectangle",
-  index: "star",
-  argument: "triangle",
-  evidence: "pentagon",
-  experiment: "hexagon",
-  person: "octagon",
-  project: "tag",
-  folder: "barrel",
+  "book-note": "ellipse",
+  question: "ellipse",
+  reference: "ellipse",
+  index: "ellipse",
+  argument: "ellipse",
+  evidence: "ellipse",
+  experiment: "ellipse",
+  person: "ellipse",
+  project: "ellipse",
+  folder: "ellipse",
 };
 
 export function getNodeShape(noteType: string): string {
@@ -45,7 +45,12 @@ export const graphStylesheet: any[] = [
       width: "data(size)",
       height: "data(size)",
       shape: "data(shape)",
-      "background-color": "data(color)",
+      "background-color": "transparent",
+      "background-image": "data(iconSvg)",
+      "background-fit": "contain",
+      "background-width": "100%",
+      "background-height": "100%",
+      "background-clip": "none",
       "border-width": 0,
       label: "data(label)",
       "font-size": "11px",
@@ -74,20 +79,17 @@ export const graphStylesheet: any[] = [
   {
     selector: "node:selected",
     style: {
-      width: 16,
-      height: 16,
-      "border-width": 2,
-      "border-color": "#ffffff",
-      "border-opacity": 0.9,
-      "shadow-blur": 18,
+      width: 28,
+      height: 28,
+      "shadow-blur": 20,
       "shadow-opacity": 1.0,
     },
   },
   {
     selector: "node.highlighted",
     style: {
-      width: 12,
-      height: 12,
+      width: 22,
+      height: 22,
       "shadow-blur": 12,
       "shadow-opacity": 0.85,
     },
@@ -132,12 +134,9 @@ export const graphStylesheet: any[] = [
     // than data() selectors, so this overrides the dynamic data(size) value.
     selector: "node.graph-focus-node",
     style: {
-      width: 20,
-      height: 20,
-      "border-width": 2.5,
-      "border-color": "#ffffff",
-      "border-opacity": 1.0,
-      "shadow-blur": 24,
+      width: 32,
+      height: 32,
+      "shadow-blur": 26,
       "shadow-opacity": 1.0,
     },
   },
