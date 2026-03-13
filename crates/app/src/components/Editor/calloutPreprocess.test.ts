@@ -101,6 +101,30 @@ describe("preprocessCallouts", () => {
     );
   });
 
+  it("does not close on } inside a fenced block within a callout", () => {
+    const input = [
+      "[!ai-answer] {",
+      "Here is code:",
+      "```",
+      "function foo() {",
+      "}",
+      "```",
+      "More text.",
+      "}",
+    ].join("\n");
+    expect(preprocessCallouts(input)).toBe(
+      [
+        "> [!ai-answer]",
+        "> Here is code:",
+        "> ```",
+        "> function foo() {",
+        "> }",
+        "> ```",
+        "> More text.",
+      ].join("\n")
+    );
+  });
+
   it("gracefully handles unclosed brace (no closing })", () => {
     const input = "[!ai-answer] {\nSome text without closing brace.";
     const result = preprocessCallouts(input);

@@ -9,6 +9,7 @@ import { tags } from "@lezer/highlight";
 import { useUIStore } from "../../stores/uiStore";
 import { linkNavigation } from "./cmLinkNavigation";
 import { formattingKeymap } from "./cmFormatting";
+import { calloutDecorations } from "./cmCalloutDecorations";
 
 const ACCENT = "#4a9eff";
 const ACCENT_DARK = "#5aaeFF";
@@ -88,6 +89,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady }: Pro
       EditorView.lineWrapping,
       syntaxHighlighting(buildMarkdownHighlight(isDark)),
       linkNavigation(notePath),
+      calloutDecorations(),
     ];
 
     if (isDark) {

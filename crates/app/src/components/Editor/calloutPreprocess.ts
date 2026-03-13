@@ -32,22 +32,29 @@ export function preprocessCallouts(md: string): string {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Track fenced code blocks
-    if (!inCallout) {
-      const fenceMatch = line.match(FENCE_OPEN);
-      if (fenceMatch) {
-        if (!inFence) {
-          inFence = true;
-          fenceMarker = fenceMatch[1][0]; // ` or ~
-        } else if (line.trimEnd().startsWith(fenceMarker) && line.trim() === fenceMarker.repeat(line.trim().length)) {
-          inFence = false;
-          fenceMarker = "";
-        }
+    // Track fenced code blocks everywhere (including inside callout bodies)
+    const fenceMatch = line.match(FENCE_OPEN);
+    if (fenceMatch) {
+      if (!inFence) {
+        inFence = true;
+        fenceMarker = fenceMatch[1][0]; // ` or ~
+      } else if (line.trimEnd().startsWith(fenceMarker) && line.trim() === fenceMarker.repeat(line.trim().length)) {
+        inFence = false;
+        fenceMarker = "";
       }
     }
 
     if (inFence) {
-      out.push(line);
+      if (inCallout) {
+        // Inside a callout body fence — emit header if needed, prefix with >
+        if (calloutHeader) {
+          out.push(calloutHeader);
+          calloutHeader = "";
+        }
+        out.push(`> ${line}`);
+      } else {
+        out.push(line);
+      }
       continue;
     }
 
