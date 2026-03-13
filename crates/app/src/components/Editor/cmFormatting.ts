@@ -234,8 +234,8 @@ export function insertLink(view: EditorView): boolean {
 }
 
 /**
- * Insert a callout block. If text is selected, wraps each line as callout body.
- * If cursor is mid-line, captures the rest of the line as callout body.
+ * Insert a callout block using brace syntax. If text is selected, wraps it
+ * as callout body. If cursor is mid-line, captures trailing text as body.
  */
 export function insertCallout(view: EditorView, type: string): boolean {
   const { state } = view;
@@ -246,25 +246,22 @@ export function insertCallout(view: EditorView, type: string): boolean {
     const line = state.doc.lineAt(range.from);
     const midLine = range.from !== line.from && line.text.length > 0;
     const nl = midLine ? "\n" : "";
-    const header = `> [!${type}]`;
 
     if (range.empty) {
-      // When mid-line, capture the rest of the line as callout body
       const trailing = midLine ? state.sliceDoc(range.from, line.to).trimStart() : "";
       const to = midLine ? line.to : range.from;
-      const body = trailing ? `> ${trailing}` : "> ";
-      const insert = `${nl}${header}\n${body}`;
+      const body = trailing || "";
+      const insert = `${nl}[!${type}] {\n${body}\n}`;
+      // Place cursor on body line
+      const cursorPos = range.from + nl.length + `[!${type}] {\n`.length + body.length;
       changes.push({ from: range.from, to, insert });
-      selections.push(EditorSelection.cursor(range.from + insert.length));
+      selections.push(EditorSelection.cursor(cursorPos));
     } else {
       const selectedText = state.sliceDoc(range.from, range.to);
-      const body = selectedText
-        .split("\n")
-        .map((l) => `> ${l}`)
-        .join("\n");
-      const insert = `${nl}${header}\n${body}`;
+      const insert = `${nl}[!${type}] {\n${selectedText}\n}`;
+      const cursorPos = range.from + insert.length - 2; // before \n}
       changes.push({ from: range.from, to: range.to, insert });
-      selections.push(EditorSelection.cursor(range.from + insert.length));
+      selections.push(EditorSelection.cursor(cursorPos));
     }
   }
 

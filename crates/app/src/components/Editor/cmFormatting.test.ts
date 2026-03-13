@@ -201,34 +201,36 @@ describe("insertAtCursor", () => {
 });
 
 describe("insertCallout", () => {
-  it("inserts callout template at cursor on empty line", () => {
+  it("inserts brace callout template at cursor on empty line", () => {
     const view = makeView("", 0);
     insertCallout(view, "ai-answer");
-    expect(text(view)).toBe("> [!ai-answer]\n> ");
-    expect(sel(view)).toEqual({ from: 17, to: 17 }); // cursor after "> "
+    expect(text(view)).toBe("[!ai-answer] {\n\n}");
+    // Cursor on the empty body line
+    expect(sel(view)).toEqual({ from: 15, to: 15 });
   });
 
-  it("wraps selected text in callout body", () => {
+  it("wraps selected text in brace callout", () => {
     const view = makeView("some important text", 0, 19);
     insertCallout(view, "key-insight");
-    expect(text(view)).toBe("> [!key-insight]\n> some important text");
+    expect(text(view)).toBe("[!key-insight] {\nsome important text\n}");
   });
 
-  it("wraps multi-line selection", () => {
-    const view = makeView("line one\nline two\nline three", 0, 27);
+  it("wraps multi-line selection in brace callout", () => {
+    const doc = "line one\nline two\nline three";
+    const view = makeView(doc, 0, doc.length);
     insertCallout(view, "source");
-    expect(text(view)).toBe("> [!source]\n> line one\n> line two\n> line three");
+    expect(text(view)).toBe("[!source] {\nline one\nline two\nline three\n}");
   });
 
   it("captures trailing text as callout body when cursor is mid-line", () => {
-    const view = makeView("some text here", 9); // after "some text"
+    const view = makeView("some text here", 9);
     insertCallout(view, "question");
-    expect(text(view)).toBe("some text\n> [!question]\n> here");
+    expect(text(view)).toBe("some text\n[!question] {\nhere\n}");
   });
 
   it("does not insert extra newline at start of line", () => {
-    const view = makeView("line one\n", 9); // start of empty second line
+    const view = makeView("line one\n", 9);
     insertCallout(view, "ai-answer");
-    expect(text(view)).toBe("line one\n> [!ai-answer]\n> ");
+    expect(text(view)).toBe("line one\n[!ai-answer] {\n\n}");
   });
 });

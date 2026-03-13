@@ -265,4 +265,26 @@ describe("Callout rendering", () => {
     expect(container.querySelector("blockquote")).toBeTruthy();
     expect(container.querySelectorAll(".callout")).toHaveLength(1);
   });
+
+  it("renders brace syntax callout as a card", () => {
+    const content = [
+      "[!ai-answer] My Title {",
+      "First paragraph.",
+      "",
+      "Second paragraph.",
+      "}",
+    ].join("\n");
+    const { container } = render(
+      <MarkdownPreview content={content} notePath="test.md" />,
+    );
+    const callout = container.querySelector(".callout");
+    expect(callout).toBeTruthy();
+    const typeLabel = container.querySelector(".callout-type-label");
+    expect(typeLabel?.textContent).toBe("AI Answer");
+    const title = container.querySelector(".callout-title");
+    expect(title?.textContent).toBe("My Title");
+    const body = container.querySelector(".callout-body");
+    expect(body?.textContent).toContain("First paragraph.");
+    expect(body?.textContent).toContain("Second paragraph.");
+  });
 });

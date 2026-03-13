@@ -6,6 +6,7 @@ import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { CALLOUT_TYPES, CALLOUT_FALLBACK, CALLOUT_RE } from "./calloutTypes";
 import { remarkCalloutMerge } from "./remarkCalloutMerge";
+import { preprocessCallouts } from "./calloutPreprocess";
 
 interface Props {
   content: string;
@@ -160,7 +161,7 @@ export function MarkdownPreview({ content, notePath }: Props) {
   return (
     <div className="md-preview">
       <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
-        {content}
+        {preprocessCallouts(content)}
       </ReactMarkdown>
     </div>
   );
