@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import { useEditorStore } from "../stores/editorStore";
-import { useUIStore } from "../stores/uiStore";
 
 const AUTO_SAVE_DELAY = 1500;
 
@@ -31,19 +30,12 @@ export function useAutoSave() {
     let prevPath = useEditorStore.getState().activeNote?.path ?? useEditorStore.getState().activePlainFile?.path ?? null;
 
     const unsubEditor = useEditorStore.subscribe((state) => {
-      const autoSave = useUIStore.getState().autoSave;
       const currentPath = state.activeNote?.path ?? state.activePlainFile?.path ?? null;
 
       // Note switch: clear any pending debounce for the old note
       if (currentPath !== prevPath) {
         clearTimer();
         prevPath = currentPath;
-        prevDirty = state.isDirty;
-        return;
-      }
-
-      if (!autoSave) {
-        clearTimer();
         prevDirty = state.isDirty;
         return;
       }
@@ -64,7 +56,6 @@ export function useAutoSave() {
 
     // Window blur: save immediately when user leaves the app
     const handleBlur = () => {
-      if (!useUIStore.getState().autoSave) return;
       clearTimer();
       trySave();
     };

@@ -54,9 +54,11 @@ interface Props {
   content: string;
   onChange: (content: string) => void;
   onViewReady?: (view: EditorView | null) => void;
+  restoreScrollTop?: number;
+  restoreCursorPos?: number;
 }
 
-export function MarkdownEditor({ notePath, content, onChange, onViewReady }: Props) {
+export function MarkdownEditor({ notePath, content, onChange, onViewReady, restoreScrollTop, restoreCursorPos }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
@@ -112,6 +114,16 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady }: Pro
     // Patch scale detection so CM accounts for CSS zoom on documentElement
     if (uiZoom !== 1) {
       patchCMScaleDetection(view.dom, uiZoomRef);
+    }
+
+    // Restore scroll position and cursor from tab state
+    if (restoreCursorPos && restoreCursorPos > 0 && restoreCursorPos <= view.state.doc.length) {
+      view.dispatch({ selection: { anchor: restoreCursorPos } });
+    }
+    if (restoreScrollTop && restoreScrollTop > 0) {
+      requestAnimationFrame(() => {
+        view.scrollDOM.scrollTop = restoreScrollTop;
+      });
     }
 
     return () => {

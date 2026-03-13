@@ -54,8 +54,6 @@ export function SettingsModal() {
   const setUIFontSize = useUIStore((s) => s.setUIFontSize);
   const setEditorFontFamily = useUIStore((s) => s.setEditorFontFamily);
   const setEditorFontSize = useUIStore((s) => s.setEditorFontSize);
-  const autoSave = useUIStore((s) => s.autoSave);
-  const setAutoSave = useUIStore((s) => s.setAutoSave);
   const resetFontPrefs = useUIStore((s) => s.resetFontPrefs);
 
   return (
@@ -81,19 +79,6 @@ export function SettingsModal() {
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
                 </select>
-              </div>
-            </div>
-            <div className="settings-row">
-              <span className="settings-label">Auto-save</span>
-              <div className="settings-control">
-                <label className="settings-toggle">
-                  <input
-                    type="checkbox"
-                    checked={autoSave}
-                    onChange={(e) => setAutoSave(e.target.checked)}
-                  />
-                  <span>Save notes automatically after editing</span>
-                </label>
               </div>
             </div>
           </div>

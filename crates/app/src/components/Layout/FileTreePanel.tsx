@@ -5,6 +5,7 @@ import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { useUIStore } from "../../stores/uiStore";
 import { useUndoStore } from "../../stores/undoStore";
+import { useTabStore } from "../../stores/tabStore";
 import { getAPI } from "../../api/bridge";
 import type { NodeDto } from "../../api/types";
 import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
@@ -513,13 +514,36 @@ export function FileTreePanel() {
     const api = await getAPI();
     const activeNotePath = useEditorStore.getState().activeNote?.path;
 
-    // 1. Close editor if active note is in delete scope (before API call)
-    if (activeNotePath) {
-      const inScope = deleteTarget.isFolder
+    // 1. Close tabs for deleted notes/folders (before API call)
+    const tabStore = useTabStore.getState();
+    if (deleteTarget.isFolder) {
+      const prefix = deleteTarget.fullPath + "/";
+      const tabsToClose = tabStore.tabs
+        .filter((t) => t.path.startsWith(prefix))
+        .map((t) => t.id);
+      for (const id of tabsToClose) {
+        tabStore.closeTab(id);
+      }
+    } else {
+      tabStore.closeTab(deleteTarget.fullPath);
+    }
+    // If active tab was closed, open the next tab or clear editor
+    const { activeTabId } = useTabStore.getState();
+    if (!activeTabId) {
+      useEditorStore.getState().clear();
+      useGraphStore.getState().selectNode(null);
+    } else if (activeNotePath && (
+      deleteTarget.isFolder
         ? activeNotePath.startsWith(deleteTarget.fullPath + "/")
-        : activeNotePath === deleteTarget.fullPath;
-      if (inScope) {
-        useEditorStore.getState().clear();
+        : activeNotePath === deleteTarget.fullPath
+    )) {
+      // Active note was deleted, but another tab is now active
+      const nextTab = useTabStore.getState().getTab(activeTabId);
+      if (nextTab?.kind === "note") {
+        useEditorStore.getState().openNote(activeTabId);
+        useGraphStore.getState().selectNode(activeTabId);
+      } else if (nextTab) {
+        useEditorStore.getState().openPlainFile(activeTabId);
         useGraphStore.getState().selectNode(null);
       }
     }

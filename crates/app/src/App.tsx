@@ -6,6 +6,8 @@ import { useUIStore } from "./stores/uiStore";
 import { useUndoStore } from "./stores/undoStore";
 import { useNavigationStore } from "./stores/navigationStore";
 import { useAutoSave } from "./hooks/useAutoSave";
+import { useTabStore } from "./stores/tabStore";
+import { closeTabAndNavigateNext } from "./stores/tabActions";
 import { getAPI } from "./api/bridge";
 import { SegmentPicker } from "./components/Layout/SegmentPicker";
 import { AppLayout } from "./components/Layout/AppLayout";
@@ -40,14 +42,29 @@ function App() {
     getAPI().then((api) => {
       unsubscribe = api.onEvent((event) => {
         applyEvent(event);
-        // If the event affects the currently open note in the editor
+        // If the event affects a note
         if (
           (event.type === "node-updated" || event.type === "topology-changed") &&
           "path" in event
         ) {
           const editorState = useEditorStore.getState();
-          if (editorState.activeNote?.path === event.path) {
+          const tabStore = useTabStore.getState();
+          const eventPath = (event as { path: string }).path;
+
+          if (editorState.activeNote?.path === eventPath) {
+            // Active tab — use existing conflict detection
             editorState.markExternalChange();
+          } else {
+            // Background tab — update tab state if it exists
+            const bgTab = tabStore.getTab(eventPath);
+            if (bgTab) {
+              if (bgTab.isDirty) {
+                tabStore.updateTabState(eventPath, { conflictState: "external-change" });
+              } else {
+                // Clean background tab — silently re-read would happen on tab switch
+                // Mark as needing refresh (the note content will be re-fetched when activated)
+              }
+            }
           }
         }
       });
@@ -67,6 +84,20 @@ function App() {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey;
+      if (isMod && e.key === "w") {
+        e.preventDefault();
+        const closingId = useTabStore.getState().activeTabId;
+        if (closingId) {
+          const editor = useEditorStore.getState();
+          if (editor.isDirty) {
+            editor.saveNote().then(() => {
+              closeTabAndNavigateNext(closingId);
+            });
+          } else {
+            closeTabAndNavigateNext(closingId);
+          }
+        }
+      }
       if (isMod && e.key === "p") {
         e.preventDefault();
         useUIStore.getState().openCommandPalette();

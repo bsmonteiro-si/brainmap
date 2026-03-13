@@ -2,8 +2,8 @@ import { create } from "zustand";
 import type { NoteDetail, PlainFileDetail } from "../api/types";
 import { getAPI } from "../api/bridge";
 import { useGraphStore } from "./graphStore";
-import { useUIStore } from "./uiStore";
 import { useNavigationStore } from "./navigationStore";
+import { useTabStore } from "./tabStore";
 import { log } from "../utils/logger";
 
 export type EditableFrontmatter = Pick<NoteDetail, 'title' | 'note_type' | 'tags' | 'status' | 'source' | 'summary' | 'extra'>;
@@ -25,6 +25,9 @@ interface EditorState {
   fmRedoStack: FmSnapshot[];
   _lastFmField: string | null;
   _lastFmTime: number;
+  viewMode: "edit" | "preview";
+  scrollTop: number;
+  cursorPos: number;
 
   openNote: (path: string) => Promise<void>;
   openPlainFile: (path: string) => Promise<void>;
@@ -36,8 +39,46 @@ interface EditorState {
   saveNote: () => Promise<void>;
   markExternalChange: () => void;
   resolveConflict: (action: "keep-mine" | "accept-theirs") => Promise<void>;
+  setViewMode: (mode: "edit" | "preview") => void;
+  setScrollCursor: (scrollTop: number, cursorPos: number) => void;
   clear: () => void;
 }
+
+/** Snapshot current editor state into the active tab in tabStore. */
+function snapshotToActiveTab() {
+  const tabStore = useTabStore.getState();
+  const { activeTabId } = tabStore;
+  if (!activeTabId) return;
+
+  const editor = useEditorStore.getState();
+  tabStore.updateTabState(activeTabId, {
+    editedBody: editor.editedBody,
+    editedFrontmatter: editor.editedFrontmatter,
+    isDirty: editor.isDirty,
+    conflictState: editor.conflictState,
+    fmUndoStack: editor.fmUndoStack,
+    fmRedoStack: editor.fmRedoStack,
+    viewMode: editor.viewMode,
+    scrollTop: editor.scrollTop,
+    cursorPos: editor.cursorPos,
+  });
+}
+
+const CLEAN_EDITOR_STATE = {
+  isDirty: false,
+  conflictState: "none" as const,
+  editedBody: null,
+  editedFrontmatter: null,
+  activePlainFile: null,
+  activeNote: null,
+  fmUndoStack: [] as FmSnapshot[],
+  fmRedoStack: [] as FmSnapshot[],
+  _lastFmField: null,
+  _lastFmTime: 0,
+  viewMode: "edit" as const,
+  scrollTop: 0,
+  cursorPos: 0,
+};
 
 export const useEditorStore = create<EditorState>((set, get) => ({
   activeNote: null,
@@ -52,29 +93,72 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   fmRedoStack: [],
   _lastFmField: null,
   _lastFmTime: 0,
+  viewMode: "edit",
+  scrollTop: 0,
+  cursorPos: 0,
 
   openNote: async (path: string) => {
-    const { activeNote, isDirty } = get();
-    if (activeNote?.path === path) return;
+    const { activeNote, isLoading } = get();
+    const tabStore = useTabStore.getState();
 
+    // Already viewing this note in this tab — no-op
+    if (activeNote?.path === path && tabStore.activeTabId === path) return;
+
+    // Guard against concurrent tab switches
+    if (isLoading) return;
+
+    // 1. Snapshot current tab state before anything changes
+    snapshotToActiveTab();
+
+    // 2. Auto-save if dirty
+    const { isDirty, savingInProgress, editedFrontmatter } = get();
     if (isDirty) {
-      const autoSave = useUIStore.getState().autoSave;
-      if (autoSave) {
-        const { savingInProgress, editedFrontmatter } = get();
-        const titleInvalid = editedFrontmatter?.title !== undefined &&
-          editedFrontmatter.title.trim() === "";
-        if (!savingInProgress && !titleInvalid) {
-          await get().saveNote();
-        }
-      } else {
-        log.warn("stores::editor", "discarding unsaved changes", { path: activeNote?.path ?? get().activePlainFile?.path });
+      const titleInvalid = editedFrontmatter?.title !== undefined &&
+        editedFrontmatter.title.trim() === "";
+      if (!savingInProgress && !titleInvalid) {
+        await get().saveNote();
       }
     }
 
-    set({ isLoading: true, isDirty: false, conflictState: "none", editedBody: null, editedFrontmatter: null, activePlainFile: null, fmUndoStack: [], fmRedoStack: [], _lastFmField: null, _lastFmTime: 0 });
+    // 3. Check if tab already exists (restore from it)
+    const existingTab = tabStore.getTab(path);
+    if (existingTab) {
+      // Activate existing tab and restore its state
+      tabStore.activateTab(path);
+      set({ isLoading: true });
+      try {
+        const api = await getAPI();
+        const note = await api.readNote(path);
+        set({
+          activeNote: note,
+          activePlainFile: null,
+          isLoading: false,
+          editedBody: existingTab.editedBody,
+          editedFrontmatter: existingTab.editedFrontmatter,
+          isDirty: existingTab.isDirty,
+          conflictState: existingTab.conflictState,
+          fmUndoStack: existingTab.fmUndoStack,
+          fmRedoStack: existingTab.fmRedoStack,
+          _lastFmField: null,
+          _lastFmTime: 0,
+          viewMode: existingTab.viewMode,
+          scrollTop: existingTab.scrollTop,
+          cursorPos: existingTab.cursorPos,
+        });
+        useNavigationStore.getState().push(path);
+      } catch (e) {
+        log.error("stores::editor", "failed to open note", { path, error: String(e) });
+        set({ isLoading: false });
+      }
+      return;
+    }
+
+    // 4. New tab — fetch note and create tab
+    set({ ...CLEAN_EDITOR_STATE, isLoading: true, savingInProgress: false });
     try {
       const api = await getAPI();
       const note = await api.readNote(path);
+      tabStore.openTab(path, "note", note.title, note.note_type);
       set({ activeNote: note, isLoading: false });
       useNavigationStore.getState().push(path);
     } catch (e) {
@@ -84,26 +168,64 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   openPlainFile: async (path: string) => {
-    const { activePlainFile, isDirty } = get();
-    if (activePlainFile?.path === path) return;
+    const { activePlainFile, isLoading } = get();
+    const tabStore = useTabStore.getState();
 
-    if (isDirty) {
-      const autoSave = useUIStore.getState().autoSave;
-      if (autoSave) {
-        const { savingInProgress } = get();
-        if (!savingInProgress) {
-          await get().saveNote();
-        }
-      } else {
-        log.warn("stores::editor", "discarding unsaved changes", { path: get().activeNote?.path ?? activePlainFile?.path });
-      }
+    if (activePlainFile?.path === path && tabStore.activeTabId === path) return;
+
+    // Guard against concurrent tab switches
+    if (isLoading) return;
+
+    // 1. Snapshot current tab state
+    snapshotToActiveTab();
+
+    // 2. Auto-save if dirty
+    const { isDirty, savingInProgress } = get();
+    if (isDirty && !savingInProgress) {
+      await get().saveNote();
     }
 
-    set({ isLoading: true, isDirty: false, conflictState: "none", editedBody: null, editedFrontmatter: null, activeNote: null, fmUndoStack: [], fmRedoStack: [], _lastFmField: null, _lastFmTime: 0 });
+    // 3. Check for existing tab
+    const existingTab = tabStore.getTab(path);
+    if (existingTab) {
+      tabStore.activateTab(path);
+      set({ isLoading: true });
+      try {
+        const api = await getAPI();
+        const file = await api.readPlainFile(path);
+        set({
+          activePlainFile: file,
+          activeNote: null,
+          isLoading: false,
+          editedBody: existingTab.editedBody,
+          editedFrontmatter: null,
+          isDirty: existingTab.isDirty,
+          conflictState: existingTab.conflictState,
+          fmUndoStack: [],
+          fmRedoStack: [],
+          _lastFmField: null,
+          _lastFmTime: 0,
+          viewMode: existingTab.viewMode,
+          scrollTop: existingTab.scrollTop,
+          cursorPos: existingTab.cursorPos,
+        });
+        useNavigationStore.getState().push(path);
+      } catch (e) {
+        log.error("stores::editor", "failed to open plain file", { path, error: String(e) });
+        set({ isLoading: false });
+      }
+      return;
+    }
+
+    // 4. New tab
+    set({ ...CLEAN_EDITOR_STATE, isLoading: true, savingInProgress: false });
     try {
       const api = await getAPI();
       const file = await api.readPlainFile(path);
+      const fileName = path.split("/").pop() ?? path;
+      tabStore.openTab(path, "plain-file", fileName, null);
       set({ activePlainFile: file, isLoading: false });
+      useNavigationStore.getState().push(path);
     } catch (e) {
       log.error("stores::editor", "failed to open plain file", { path, error: String(e) });
       set({ isLoading: false });
@@ -133,6 +255,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   updateContent: (body: string) => {
     set({ editedBody: body, isDirty: true });
+    const tabId = useTabStore.getState().activeTabId;
+    if (tabId) useTabStore.getState().updateTabState(tabId, { isDirty: true, editedBody: body });
   },
 
   updateFrontmatter: (changes: Partial<EditableFrontmatter>) => {
@@ -142,7 +266,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const fieldKey = keys.length === 1 ? keys[0] : keys.sort().join(",");
     const now = Date.now();
 
-    // Group consecutive same-field edits within FM_GROUP_MS
     const shouldGroup = fieldKey === _lastFmField && (now - _lastFmTime) < FM_GROUP_MS;
 
     let newStack = fmUndoStack;
@@ -151,14 +274,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (newStack.length > MAX_FM_UNDO) newStack = newStack.slice(newStack.length - MAX_FM_UNDO);
     }
 
+    const newFm = { ...current, ...changes };
     set({
-      editedFrontmatter: { ...current, ...changes },
+      editedFrontmatter: newFm,
       isDirty: true,
       fmUndoStack: newStack,
       fmRedoStack: [],
       _lastFmField: fieldKey,
       _lastFmTime: now,
     });
+    const tabId = useTabStore.getState().activeTabId;
+    if (tabId) useTabStore.getState().updateTabState(tabId, { isDirty: true, editedFrontmatter: newFm });
   },
 
   undoFrontmatter: () => {
@@ -166,14 +292,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (fmUndoStack.length === 0) return;
     const prev = fmUndoStack[fmUndoStack.length - 1];
     const newUndoStack = fmUndoStack.slice(0, -1);
+    const newRedoStack = [...fmRedoStack, editedFrontmatter];
     const isDirty = prev !== null || editedBody !== null;
     set({
       editedFrontmatter: prev,
       fmUndoStack: newUndoStack,
-      fmRedoStack: [...fmRedoStack, editedFrontmatter],
+      fmRedoStack: newRedoStack,
       isDirty,
       _lastFmField: null,
       _lastFmTime: 0,
+    });
+    const tabId = useTabStore.getState().activeTabId;
+    if (tabId) useTabStore.getState().updateTabState(tabId, {
+      isDirty, editedFrontmatter: prev, fmUndoStack: newUndoStack, fmRedoStack: newRedoStack,
     });
   },
 
@@ -182,13 +313,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (fmRedoStack.length === 0) return;
     const next = fmRedoStack[fmRedoStack.length - 1];
     const newRedoStack = fmRedoStack.slice(0, -1);
+    const newUndoStack = [...fmUndoStack, editedFrontmatter];
+    const isDirty = next !== null || editedBody !== null;
     set({
       editedFrontmatter: next,
-      fmUndoStack: [...fmUndoStack, editedFrontmatter],
+      fmUndoStack: newUndoStack,
       fmRedoStack: newRedoStack,
-      isDirty: next !== null || editedBody !== null,
+      isDirty,
       _lastFmField: null,
       _lastFmTime: 0,
+    });
+    const tabId = useTabStore.getState().activeTabId;
+    if (tabId) useTabStore.getState().updateTabState(tabId, {
+      isDirty, editedFrontmatter: next, fmUndoStack: newUndoStack, fmRedoStack: newRedoStack,
     });
   },
 
@@ -207,13 +344,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
         const current = get();
         const newBody = current.editedBody === savingBody ? null : current.editedBody;
+        const newIsDirty = newBody !== null;
         set({
           activePlainFile: { ...activePlainFile, body: savingBody },
-          isDirty: newBody !== null,
+          isDirty: newIsDirty,
           editedBody: newBody,
           conflictState: "none",
           savingInProgress: false,
         });
+        const tabId = useTabStore.getState().activeTabId;
+        if (tabId) useTabStore.getState().updateTabState(tabId, { isDirty: newIsDirty });
       } catch (e) {
         log.error("stores::editor", "failed to save plain file", { path: activePlainFile.path, error: String(e) });
         set({ savingInProgress: false });
@@ -225,10 +365,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (!activeNote) return;
     if (editedBody === null && editedFrontmatter === null) return;
 
-    // Validate: don't save empty/whitespace-only title
     if (editedFrontmatter?.title !== undefined && editedFrontmatter.title.trim() === "") return;
 
-    // Snapshot what we're saving so we can detect concurrent edits
     const savingBody = editedBody;
     const savingFrontmatter = editedFrontmatter;
 
@@ -250,10 +388,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
       await api.updateNote(params as Parameters<typeof api.updateNote>[0]);
 
-      // Re-read note for authoritative state (especially server-set modified timestamp)
       const refreshed = await api.readNote(activeNote.path);
 
-      // Sync graph store if title/type changed
       if (savingFrontmatter?.title !== undefined || savingFrontmatter?.note_type !== undefined) {
         useGraphStore.getState().applyEvent({
           type: "node-updated",
@@ -262,19 +398,28 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         });
       }
 
-      // Only clear the fields we saved — preserve any concurrent edits
       const current = get();
       const newBody = current.editedBody === savingBody ? null : current.editedBody;
       const newFm = current.editedFrontmatter === savingFrontmatter ? null : current.editedFrontmatter;
+      const newIsDirty = newBody !== null || newFm !== null;
 
       set({
         activeNote: refreshed,
-        isDirty: newBody !== null || newFm !== null,
+        isDirty: newIsDirty,
         editedBody: newBody,
         editedFrontmatter: newFm,
         conflictState: "none",
         savingInProgress: false,
       });
+
+      const tabId = useTabStore.getState().activeTabId;
+      if (tabId) {
+        useTabStore.getState().updateTabState(tabId, {
+          isDirty: newIsDirty,
+          title: refreshed.title,
+          noteType: refreshed.note_type,
+        });
+      }
     } catch (e) {
       log.error("stores::editor", "failed to save note", { path: activeNote.path, error: String(e) });
       set({ savingInProgress: false });
@@ -283,7 +428,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   markExternalChange: async () => {
     const { isDirty, activeNote, activePlainFile, savingInProgress } = get();
-    // Suppress external change detection during our own save
     if (savingInProgress) return;
 
     if (isDirty) {
@@ -311,18 +455,35 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (action === "accept-theirs") {
       const { activeNote, activePlainFile } = get();
       set({ isDirty: false, editedBody: null, editedFrontmatter: null, conflictState: "none", fmUndoStack: [], fmRedoStack: [], _lastFmField: null, _lastFmTime: 0 });
-      const api = await getAPI();
-      if (activeNote) {
-        const note = await api.readNote(activeNote.path);
-        set({ activeNote: note });
-      } else if (activePlainFile) {
-        const file = await api.readPlainFile(activePlainFile.path);
-        set({ activePlainFile: file });
+      try {
+        const api = await getAPI();
+        if (activeNote) {
+          const note = await api.readNote(activeNote.path);
+          set({ activeNote: note });
+        } else if (activePlainFile) {
+          const file = await api.readPlainFile(activePlainFile.path);
+          set({ activePlainFile: file });
+        }
+      } catch (e) {
+        log.error("stores::editor", "failed to accept external changes", { error: String(e) });
+        // Re-mark as dirty since we couldn't load the external version
+        set({ isDirty: true, conflictState: "external-change" });
       }
     } else {
-      // keep-mine: dismiss the banner, keep editing
       set({ conflictState: "none" });
     }
+  },
+
+  setViewMode: (mode: "edit" | "preview") => {
+    set({ viewMode: mode });
+    const tabId = useTabStore.getState().activeTabId;
+    if (tabId) useTabStore.getState().updateTabState(tabId, { viewMode: mode });
+  },
+
+  setScrollCursor: (scrollTop: number, cursorPos: number) => {
+    set({ scrollTop, cursorPos });
+    const tabId = useTabStore.getState().activeTabId;
+    if (tabId) useTabStore.getState().updateTabState(tabId, { scrollTop, cursorPos });
   },
 
   clear: () => {
@@ -339,6 +500,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       fmRedoStack: [],
       _lastFmField: null,
       _lastFmTime: 0,
+      viewMode: "edit",
+      scrollTop: 0,
+      cursorPos: 0,
     });
   },
 }));

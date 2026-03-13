@@ -20,11 +20,17 @@ vi.mock("./graphStore", () => ({
   },
 }));
 
-// Mock uiStore for auto-save preference
-let mockAutoSave = true;
-vi.mock("./uiStore", () => ({
-  useUIStore: {
-    getState: () => ({ autoSave: mockAutoSave }),
+// Mock tabStore for tab management
+vi.mock("./tabStore", () => ({
+  useTabStore: {
+    getState: () => ({
+      activeTabId: null,
+      getTab: () => undefined,
+      openTab: vi.fn(),
+      activateTab: vi.fn(),
+      updateTabState: vi.fn(),
+      tabs: [],
+    }),
   },
 }));
 
@@ -45,7 +51,6 @@ const sampleNote = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockAutoSave = true;
   useEditorStore.setState({
     activeNote: null,
     isLoading: false,
@@ -58,6 +63,9 @@ beforeEach(() => {
     fmRedoStack: [],
     _lastFmField: null,
     _lastFmTime: 0,
+    viewMode: "edit",
+    scrollTop: 0,
+    cursorPos: 0,
   });
 });
 
@@ -219,8 +227,9 @@ describe("saveNote", () => {
 
 describe("openNote", () => {
   it("resets editedFrontmatter when switching notes", async () => {
-    mockAutoSave = false;
-    mockApi.readNote.mockResolvedValue({ ...sampleNote, path: "Other.md" });
+    mockApi.updateNote.mockResolvedValue(undefined);
+    mockApi.readNote.mockResolvedValueOnce({ ...sampleNote, modified: "2026-03-12" });
+    mockApi.readNote.mockResolvedValueOnce({ ...sampleNote, path: "Other.md" });
 
     useEditorStore.setState({
       activeNote: sampleNote,
@@ -234,7 +243,7 @@ describe("openNote", () => {
   });
 
   it("auto-saves before switching when autoSave is enabled", async () => {
-    mockAutoSave = true;
+
     mockApi.updateNote.mockResolvedValue(undefined);
     mockApi.readNote.mockResolvedValueOnce({ ...sampleNote, modified: "2026-03-12" });
     mockApi.readNote.mockResolvedValueOnce({ ...sampleNote, path: "Other.md", title: "Other" });
@@ -253,9 +262,10 @@ describe("openNote", () => {
     expect(useEditorStore.getState().activeNote?.path).toBe("Other.md");
   });
 
-  it("discards changes when autoSave is disabled", async () => {
-    mockAutoSave = false;
-    mockApi.readNote.mockResolvedValue({ ...sampleNote, path: "Other.md" });
+  it("always auto-saves dirty note before switching", async () => {
+    mockApi.updateNote.mockResolvedValue(undefined);
+    mockApi.readNote.mockResolvedValueOnce({ ...sampleNote, modified: "2026-03-12" });
+    mockApi.readNote.mockResolvedValueOnce({ ...sampleNote, path: "Other.md", title: "Other" });
 
     useEditorStore.setState({
       activeNote: sampleNote,
@@ -265,12 +275,14 @@ describe("openNote", () => {
 
     await useEditorStore.getState().openNote("Other.md");
 
-    expect(mockApi.updateNote).not.toHaveBeenCalled();
+    expect(mockApi.updateNote).toHaveBeenCalledWith(
+      expect.objectContaining({ path: "Concepts/Test.md", body: "changed body" })
+    );
     expect(useEditorStore.getState().activeNote?.path).toBe("Other.md");
   });
 
   it("skips auto-save on switch when title is empty", async () => {
-    mockAutoSave = true;
+
     mockApi.readNote.mockResolvedValue({ ...sampleNote, path: "Other.md" });
 
     useEditorStore.setState({
@@ -286,7 +298,7 @@ describe("openNote", () => {
   });
 
   it("auto-save failure during switch still allows navigation", async () => {
-    mockAutoSave = true;
+
     mockApi.updateNote.mockRejectedValue(new Error("disk full"));
     mockApi.readNote.mockResolvedValue({ ...sampleNote, path: "Other.md" });
 
@@ -405,18 +417,18 @@ describe("frontmatter undo/redo", () => {
     expect(useEditorStore.getState().fmRedoStack).toEqual([]);
   });
 
-  it("stacks clear on openNote", async () => {
-    mockAutoSave = false;
+  it("stacks clear on openNote for new tab", async () => {
     mockApi.readNote.mockResolvedValue({ ...sampleNote, path: "Other.md" });
 
     useEditorStore.setState({
       activeNote: sampleNote,
-      isDirty: true,
+      isDirty: false,
       fmUndoStack: [null, { title: "prev" }],
       fmRedoStack: [{ title: "next" }],
     });
 
     await useEditorStore.getState().openNote("Other.md");
+    // New tab starts with clean stacks
     expect(useEditorStore.getState().fmUndoStack).toEqual([]);
     expect(useEditorStore.getState().fmRedoStack).toEqual([]);
   });

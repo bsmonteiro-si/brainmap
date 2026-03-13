@@ -51,7 +51,6 @@ interface PersistedPrefs {
   editorFontFamily?: string;
   editorFontSize?: number;
   uiZoom?: number;
-  autoSave?: boolean;
 }
 
 type CreateNoteMode = "default" | "create-and-link";
@@ -100,7 +99,6 @@ interface UIState {
   editorFontFamily: string;
   editorFontSize: number;
   uiZoom: number;
-  autoSave: boolean;
   emptyFolders: Set<string>;
 
   setTheme: (theme: Theme) => void;
@@ -137,7 +135,6 @@ interface UIState {
   zoomIn: () => void;
   zoomOut: () => void;
   resetZoom: () => void;
-  setAutoSave: (v: boolean) => void;
   addEmptyFolder: (path: string) => void;
   removeEmptyFolder: (path: string) => void;
 }
@@ -206,13 +203,12 @@ export const useUIStore = create<UIState>((set, get) => ({
   editorFontFamily: storedPrefs.editorFontFamily ?? DEFAULT_EDITOR_FONT,
   editorFontSize: storedPrefs.editorFontSize ?? DEFAULT_EDITOR_SIZE,
   uiZoom: storedPrefs.uiZoom ?? DEFAULT_ZOOM,
-  autoSave: storedPrefs.autoSave ?? true,
   emptyFolders: new Set<string>(),
 
   setTheme: (theme: Theme) => {
     set({ theme, effectiveTheme: resolveTheme(theme) });
     const s = get();
-    savePrefs({ theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: s.uiZoom, autoSave: s.autoSave });
+    savePrefs({ theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: s.uiZoom });
   },
 
   toggleGraphMode: () => {
@@ -285,25 +281,25 @@ export const useUIStore = create<UIState>((set, get) => ({
   setUIFontFamily: (v: string) => {
     set({ uiFontFamily: v });
     const s = get();
-    savePrefs({ theme: s.theme, uiFontFamily: v, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: s.uiZoom, autoSave: s.autoSave });
+    savePrefs({ theme: s.theme, uiFontFamily: v, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: s.uiZoom });
   },
 
   setUIFontSize: (v: number) => {
     set({ uiFontSize: v });
     const s = get();
-    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: v, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: s.uiZoom, autoSave: s.autoSave });
+    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: v, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: s.uiZoom });
   },
 
   setEditorFontFamily: (v: string) => {
     set({ editorFontFamily: v });
     const s = get();
-    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: v, editorFontSize: s.editorFontSize, uiZoom: s.uiZoom, autoSave: s.autoSave });
+    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: v, editorFontSize: s.editorFontSize, uiZoom: s.uiZoom });
   },
 
   setEditorFontSize: (v: number) => {
     set({ editorFontSize: v });
     const s = get();
-    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: v, uiZoom: s.uiZoom, autoSave: s.autoSave });
+    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: v, uiZoom: s.uiZoom });
   },
 
   resetWorkspaceState: () => set({
@@ -314,35 +310,29 @@ export const useUIStore = create<UIState>((set, get) => ({
   }),
 
   resetFontPrefs: () => {
-    const { theme, uiZoom, autoSave } = get();
+    const { theme, uiZoom } = get();
     set({ uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE });
-    savePrefs({ theme, uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, uiZoom, autoSave });
+    savePrefs({ theme, uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, uiZoom });
   },
 
   zoomIn: () => {
     const next = Math.min(MAX_ZOOM, Math.round((get().uiZoom + 0.1) * 10) / 10);
     set({ uiZoom: next });
     const s = get();
-    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: next, autoSave: s.autoSave });
+    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: next });
   },
 
   zoomOut: () => {
     const next = Math.max(MIN_ZOOM, Math.round((get().uiZoom - 0.1) * 10) / 10);
     set({ uiZoom: next });
     const s = get();
-    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: next, autoSave: s.autoSave });
+    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: next });
   },
 
   resetZoom: () => {
     set({ uiZoom: DEFAULT_ZOOM });
     const s = get();
-    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: DEFAULT_ZOOM, autoSave: s.autoSave });
-  },
-
-  setAutoSave: (v: boolean) => {
-    set({ autoSave: v });
-    const s = get();
-    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: s.uiZoom, autoSave: v });
+    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: DEFAULT_ZOOM });
   },
 
   addEmptyFolder: (path: string) => {
