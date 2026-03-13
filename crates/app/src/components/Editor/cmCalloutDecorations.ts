@@ -1,11 +1,10 @@
 /**
  * CodeMirror 6 extension that decorates callout blocks in the editor.
  *
- * Four features:
+ * Three features:
  * A) Tinted background + colored left border on callout lines
- * B) Gutter icon on the callout header line
- * C) Inline header widget (cursor-aware: raw syntax when editing)
- * D) Fold markers for collapsing callout bodies
+ * B) Inline header widget (cursor-aware: raw syntax when editing)
+ * C) Fold markers for collapsing callout bodies
  */
 import {
   EditorView,
@@ -13,11 +12,9 @@ import {
   ViewUpdate,
   Decoration,
   WidgetType,
-  GutterMarker,
-  gutter,
   type DecorationSet,
 } from "@codemirror/view";
-import { RangeSetBuilder, RangeSet, type Text, type Extension } from "@codemirror/state";
+import { RangeSetBuilder, type Text, type Extension } from "@codemirror/state";
 import { foldService, codeFolding, foldKeymap } from "@codemirror/language";
 import { keymap } from "@codemirror/view";
 import { CALLOUT_TYPES, CALLOUT_FALLBACK } from "./calloutTypes";
@@ -211,7 +208,7 @@ export function scanCallouts(doc: Text): CalloutRange[] {
 }
 
 // ---------------------------------------------------------------------------
-// Feature C: Widgets
+// Feature B: Widgets
 // ---------------------------------------------------------------------------
 class CalloutHeaderWidget extends WidgetType {
   constructor(
@@ -259,33 +256,6 @@ class CalloutHeaderWidget extends WidgetType {
 
   ignoreEvent(): boolean {
     return false;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Feature B: Gutter marker
-// ---------------------------------------------------------------------------
-class CalloutGutterMarker extends GutterMarker {
-  constructor(
-    readonly type: string,
-    readonly color: string,
-  ) {
-    super();
-  }
-
-  eq(other: CalloutGutterMarker): boolean {
-    return this.type === other.type;
-  }
-
-  toDOM(): HTMLElement {
-    const iconUri = getCalloutIconUri(this.type, this.color);
-    const img = document.createElement("img");
-    img.src = iconUri;
-    img.width = 16;
-    img.height = 16;
-    img.style.opacity = "0.85";
-    img.style.verticalAlign = "middle";
-    return img;
   }
 }
 
@@ -403,24 +373,7 @@ const calloutViewPlugin = ViewPlugin.fromClass(CalloutDecorationPlugin, {
 });
 
 // ---------------------------------------------------------------------------
-// Feature B: Gutter
-// ---------------------------------------------------------------------------
-const calloutGutter = gutter({
-  class: "cm-callout-gutter",
-  markers(view) {
-    const plugin = view.plugin(calloutViewPlugin);
-    if (!plugin) return RangeSet.empty;
-    const builder = new RangeSetBuilder<GutterMarker>();
-    for (const r of plugin.ranges) {
-      const color = getCalloutColor(r.type);
-      builder.add(r.headerFrom, r.headerFrom, new CalloutGutterMarker(r.type, color));
-    }
-    return builder.finish();
-  },
-});
-
-// ---------------------------------------------------------------------------
-// Feature D: Fold service
+// Feature C: Fold service
 // ---------------------------------------------------------------------------
 const calloutFoldService = foldService.of((state, lineStart) => {
   const line = state.doc.lineAt(lineStart);
@@ -463,10 +416,6 @@ const calloutFoldService = foldService.of((state, lineStart) => {
 // Base theme
 // ---------------------------------------------------------------------------
 const baseTheme = EditorView.baseTheme({
-  ".cm-callout-gutter": {
-    width: "22px",
-    padding: "0 2px",
-  },
   ".cm-callout-widget-header": {
     display: "inline-flex",
     alignItems: "center",
@@ -499,7 +448,6 @@ const baseTheme = EditorView.baseTheme({
 export function calloutDecorations(): Extension {
   return [
     calloutViewPlugin,
-    calloutGutter,
     calloutFoldService,
     codeFolding(),
     keymap.of(foldKeymap),
