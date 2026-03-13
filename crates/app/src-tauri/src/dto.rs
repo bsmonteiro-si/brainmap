@@ -273,6 +273,7 @@ pub struct ExternalBacklinkDto {
 pub struct PlainFileDto {
     pub path: String,
     pub body: String,
+    pub binary: bool,
 }
 
 // ── Helpers ────────────────────────────────────────────────────────

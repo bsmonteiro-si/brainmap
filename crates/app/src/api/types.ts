@@ -50,6 +50,7 @@ export interface NoteDetail {
 export interface PlainFileDetail {
   path: string;
   body: string;
+  binary: boolean;
 }
 
 export interface NodeSummary {

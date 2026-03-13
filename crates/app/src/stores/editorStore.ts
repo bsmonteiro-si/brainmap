@@ -130,7 +130,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     // Plain file save path
     if (activePlainFile) {
-      if (editedBody === null) return;
+      if (activePlainFile.binary || editedBody === null) return;
       const savingBody = editedBody;
       try {
         set({ savingInProgress: true });

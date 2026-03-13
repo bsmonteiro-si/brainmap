@@ -40,6 +40,23 @@ export function EditorPanel() {
   // Plain file view
   if (activePlainFile && !activeNote) {
     const fileName = activePlainFile.path.split("/").pop() ?? activePlainFile.path;
+
+    if (activePlainFile.binary) {
+      return (
+        <div className="editor-panel">
+          <div className="editor-hero">
+            <h1 className="editor-hero-title">{fileName}</h1>
+            <div className="meta-row">
+              <span className="meta-source">{activePlainFile.path}</span>
+            </div>
+          </div>
+          <div className="editor-body" style={{ display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.5 }}>
+            Binary file — cannot be displayed
+          </div>
+        </div>
+      );
+    }
+
     const body = editedBody ?? activePlainFile.body;
 
     return (

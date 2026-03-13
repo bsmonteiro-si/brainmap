@@ -278,7 +278,7 @@ export class MockBridge implements BrainMapAPI {
   }
 
   async readPlainFile(path: string): Promise<PlainFileDetail> {
-    return { path, body: `(mock plain file: ${path})` };
+    return { path, body: `(mock plain file: ${path})`, binary: false };
   }
 
   async writePlainFile(_path: string, _body: string): Promise<void> {

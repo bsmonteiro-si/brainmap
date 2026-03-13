@@ -321,12 +321,20 @@ pub fn handle_get_stats(ws: &Workspace) -> StatsDto {
 /// Read a plain (non-BrainMap) file's raw content.
 pub fn handle_read_plain_file(ws: &Workspace, path: &str) -> Result<PlainFileDto, String> {
     let abs = validate_relative_path(&ws.root, path)?;
-    let body = std::fs::read_to_string(&abs)
+    let bytes = std::fs::read(&abs)
         .map_err(|e| format!("Failed to read file: {}", e))?;
-    Ok(PlainFileDto {
-        path: path.to_string(),
-        body,
-    })
+    match String::from_utf8(bytes) {
+        Ok(body) => Ok(PlainFileDto {
+            path: path.to_string(),
+            body,
+            binary: false,
+        }),
+        Err(_) => Ok(PlainFileDto {
+            path: path.to_string(),
+            body: String::new(),
+            binary: true,
+        }),
+    }
 }
 
 /// Write a plain (non-BrainMap) file's raw content.
@@ -362,7 +370,7 @@ pub(crate) fn validate_relative_path(root: &std::path::Path, path: &str) -> Resu
     Ok(normalized)
 }
 
-/// List all files in the workspace directory (recursive, excludes `.brainmap/`).
+/// List all files in the workspace directory (recursive, no filtering).
 /// Returns relative paths from the workspace root.
 pub fn handle_list_workspace_files(ws: &Workspace) -> Vec<String> {
     let mut files = Vec::new();
@@ -382,13 +390,6 @@ fn collect_files_recursive(
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        let name = entry.file_name();
-        let name_str = name.to_string_lossy();
-
-        // Skip hidden files/dirs (includes .brainmap)
-        if name_str.starts_with('.') {
-            continue;
-        }
 
         // Skip symlinks to avoid cycles and escaping workspace root
         if path.is_symlink() {
