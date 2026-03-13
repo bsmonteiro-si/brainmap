@@ -62,4 +62,12 @@ describe("TagInput", () => {
     fireEvent.keyDown(input, { key: "Enter" });
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it("focuses input after removing a tag via X button", () => {
+    const { container } = render(<TagInput tags={["a", "b", "c"]} onChange={() => {}} />);
+    const input = container.querySelector(".tag-input-field")!;
+    const removeButtons = container.querySelectorAll(".tag-pill-remove");
+    fireEvent.click(removeButtons[1]);
+    expect(document.activeElement).toBe(input);
+  });
 });

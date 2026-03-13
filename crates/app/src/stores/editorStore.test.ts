@@ -54,6 +54,10 @@ beforeEach(() => {
     editedBody: null,
     editedFrontmatter: null,
     savingInProgress: false,
+    fmUndoStack: [],
+    fmRedoStack: [],
+    _lastFmField: null,
+    _lastFmTime: 0,
   });
 });
 
@@ -327,5 +331,120 @@ describe("savingInProgress flag", () => {
 
     expect(useEditorStore.getState().conflictState).toBe("none");
     expect(mockApi.readNote).not.toHaveBeenCalled();
+  });
+});
+
+describe("frontmatter undo/redo", () => {
+  it("undoFrontmatter restores previous editedFrontmatter", () => {
+    useEditorStore.setState({ activeNote: sampleNote });
+    useEditorStore.getState().updateFrontmatter({ note_type: "reference" });
+    // Ensure different field so no grouping
+    useEditorStore.getState().updateFrontmatter({ status: "final" });
+
+    useEditorStore.getState().undoFrontmatter();
+    expect(useEditorStore.getState().editedFrontmatter).toEqual({ note_type: "reference" });
+  });
+
+  it("redoFrontmatter re-applies after undo", () => {
+    useEditorStore.setState({ activeNote: sampleNote });
+    useEditorStore.getState().updateFrontmatter({ note_type: "reference" });
+    useEditorStore.getState().updateFrontmatter({ status: "final" });
+
+    useEditorStore.getState().undoFrontmatter();
+    useEditorStore.getState().redoFrontmatter();
+    expect(useEditorStore.getState().editedFrontmatter).toEqual({ note_type: "reference", status: "final" });
+  });
+
+  it("consecutive same-field edits within 300ms group into one undo entry", () => {
+    useEditorStore.setState({ activeNote: sampleNote });
+    // Simulate rapid same-field edits (Date.now() returns same value within test)
+    useEditorStore.getState().updateFrontmatter({ title: "A" });
+    useEditorStore.getState().updateFrontmatter({ title: "AB" });
+    useEditorStore.getState().updateFrontmatter({ title: "ABC" });
+
+    // Single undo should revert all three to null (original state)
+    useEditorStore.getState().undoFrontmatter();
+    expect(useEditorStore.getState().editedFrontmatter).toBeNull();
+  });
+
+  it("different-field edits do not group", () => {
+    useEditorStore.setState({ activeNote: sampleNote });
+    useEditorStore.getState().updateFrontmatter({ title: "New" });
+    useEditorStore.getState().updateFrontmatter({ note_type: "reference" });
+
+    // Two separate undo operations needed
+    useEditorStore.getState().undoFrontmatter();
+    expect(useEditorStore.getState().editedFrontmatter).toEqual({ title: "New" });
+    useEditorStore.getState().undoFrontmatter();
+    expect(useEditorStore.getState().editedFrontmatter).toBeNull();
+  });
+
+  it("undo when stack is empty is no-op", () => {
+    useEditorStore.setState({ activeNote: sampleNote, editedFrontmatter: { title: "X" }, isDirty: true });
+    useEditorStore.getState().undoFrontmatter();
+    // Nothing changed
+    expect(useEditorStore.getState().editedFrontmatter).toEqual({ title: "X" });
+    expect(useEditorStore.getState().isDirty).toBe(true);
+  });
+
+  it("redo when stack is empty is no-op", () => {
+    useEditorStore.setState({ activeNote: sampleNote, editedFrontmatter: { title: "X" }, isDirty: true });
+    useEditorStore.getState().redoFrontmatter();
+    expect(useEditorStore.getState().editedFrontmatter).toEqual({ title: "X" });
+  });
+
+  it("new edit clears redo stack", () => {
+    useEditorStore.setState({ activeNote: sampleNote });
+    useEditorStore.getState().updateFrontmatter({ title: "A" });
+    useEditorStore.getState().updateFrontmatter({ note_type: "reference" });
+    useEditorStore.getState().undoFrontmatter();
+    expect(useEditorStore.getState().fmRedoStack.length).toBe(1);
+
+    // New edit should clear redo
+    useEditorStore.getState().updateFrontmatter({ status: "final" });
+    expect(useEditorStore.getState().fmRedoStack).toEqual([]);
+  });
+
+  it("stacks clear on openNote", async () => {
+    mockAutoSave = false;
+    mockApi.readNote.mockResolvedValue({ ...sampleNote, path: "Other.md" });
+
+    useEditorStore.setState({
+      activeNote: sampleNote,
+      isDirty: true,
+      fmUndoStack: [null, { title: "prev" }],
+      fmRedoStack: [{ title: "next" }],
+    });
+
+    await useEditorStore.getState().openNote("Other.md");
+    expect(useEditorStore.getState().fmUndoStack).toEqual([]);
+    expect(useEditorStore.getState().fmRedoStack).toEqual([]);
+  });
+
+  it("stacks clear on clear()", () => {
+    useEditorStore.setState({
+      activeNote: sampleNote,
+      fmUndoStack: [null],
+      fmRedoStack: [{ title: "x" }],
+    });
+
+    useEditorStore.getState().clear();
+    expect(useEditorStore.getState().fmUndoStack).toEqual([]);
+    expect(useEditorStore.getState().fmRedoStack).toEqual([]);
+  });
+
+  it("undo sets isDirty false when reverting to null with no body edits", () => {
+    useEditorStore.setState({ activeNote: sampleNote });
+    useEditorStore.getState().updateFrontmatter({ title: "New" });
+    useEditorStore.getState().undoFrontmatter();
+    expect(useEditorStore.getState().isDirty).toBe(false);
+  });
+
+  it("undo keeps isDirty true when body is still edited", () => {
+    useEditorStore.setState({ activeNote: sampleNote, editedBody: "changed", isDirty: true });
+    useEditorStore.getState().updateFrontmatter({ title: "New" });
+    useEditorStore.getState().undoFrontmatter();
+    expect(useEditorStore.getState().isDirty).toBe(true);
+    expect(useEditorStore.getState().editedFrontmatter).toBeNull();
   });
 });

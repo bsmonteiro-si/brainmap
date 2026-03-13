@@ -8,6 +8,10 @@ import { log } from "../utils/logger";
 
 export type EditableFrontmatter = Pick<NoteDetail, 'title' | 'note_type' | 'tags' | 'status' | 'source' | 'summary' | 'extra'>;
 
+type FmSnapshot = Partial<EditableFrontmatter> | null;
+const MAX_FM_UNDO = 50;
+const FM_GROUP_MS = 300;
+
 interface EditorState {
   activeNote: NoteDetail | null;
   activePlainFile: PlainFileDetail | null;
@@ -17,12 +21,18 @@ interface EditorState {
   editedBody: string | null;
   editedFrontmatter: Partial<EditableFrontmatter> | null;
   savingInProgress: boolean;
+  fmUndoStack: FmSnapshot[];
+  fmRedoStack: FmSnapshot[];
+  _lastFmField: string | null;
+  _lastFmTime: number;
 
   openNote: (path: string) => Promise<void>;
   openPlainFile: (path: string) => Promise<void>;
   refreshActiveNote: () => Promise<void>;
   updateContent: (body: string) => void;
   updateFrontmatter: (changes: Partial<EditableFrontmatter>) => void;
+  undoFrontmatter: () => void;
+  redoFrontmatter: () => void;
   saveNote: () => Promise<void>;
   markExternalChange: () => void;
   resolveConflict: (action: "keep-mine" | "accept-theirs") => Promise<void>;
@@ -38,6 +48,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   editedBody: null,
   editedFrontmatter: null,
   savingInProgress: false,
+  fmUndoStack: [],
+  fmRedoStack: [],
+  _lastFmField: null,
+  _lastFmTime: 0,
 
   openNote: async (path: string) => {
     const { activeNote, isDirty } = get();
@@ -57,7 +71,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
     }
 
-    set({ isLoading: true, isDirty: false, conflictState: "none", editedBody: null, editedFrontmatter: null, activePlainFile: null });
+    set({ isLoading: true, isDirty: false, conflictState: "none", editedBody: null, editedFrontmatter: null, activePlainFile: null, fmUndoStack: [], fmRedoStack: [], _lastFmField: null, _lastFmTime: 0 });
     try {
       const api = await getAPI();
       const note = await api.readNote(path);
@@ -85,7 +99,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
     }
 
-    set({ isLoading: true, isDirty: false, conflictState: "none", editedBody: null, editedFrontmatter: null, activeNote: null });
+    set({ isLoading: true, isDirty: false, conflictState: "none", editedBody: null, editedFrontmatter: null, activeNote: null, fmUndoStack: [], fmRedoStack: [], _lastFmField: null, _lastFmTime: 0 });
     try {
       const api = await getAPI();
       const file = await api.readPlainFile(path);
@@ -122,8 +136,60 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   updateFrontmatter: (changes: Partial<EditableFrontmatter>) => {
-    const current = get().editedFrontmatter ?? {};
-    set({ editedFrontmatter: { ...current, ...changes }, isDirty: true });
+    const { editedFrontmatter, fmUndoStack, _lastFmField, _lastFmTime } = get();
+    const current = editedFrontmatter ?? {};
+    const keys = Object.keys(changes);
+    const fieldKey = keys.length === 1 ? keys[0] : keys.sort().join(",");
+    const now = Date.now();
+
+    // Group consecutive same-field edits within FM_GROUP_MS
+    const shouldGroup = fieldKey === _lastFmField && (now - _lastFmTime) < FM_GROUP_MS;
+
+    let newStack = fmUndoStack;
+    if (!shouldGroup) {
+      newStack = [...fmUndoStack, editedFrontmatter];
+      if (newStack.length > MAX_FM_UNDO) newStack = newStack.slice(newStack.length - MAX_FM_UNDO);
+    }
+
+    set({
+      editedFrontmatter: { ...current, ...changes },
+      isDirty: true,
+      fmUndoStack: newStack,
+      fmRedoStack: [],
+      _lastFmField: fieldKey,
+      _lastFmTime: now,
+    });
+  },
+
+  undoFrontmatter: () => {
+    const { fmUndoStack, editedFrontmatter, fmRedoStack, editedBody } = get();
+    if (fmUndoStack.length === 0) return;
+    const prev = fmUndoStack[fmUndoStack.length - 1];
+    const newUndoStack = fmUndoStack.slice(0, -1);
+    const isDirty = prev !== null || editedBody !== null;
+    set({
+      editedFrontmatter: prev,
+      fmUndoStack: newUndoStack,
+      fmRedoStack: [...fmRedoStack, editedFrontmatter],
+      isDirty,
+      _lastFmField: null,
+      _lastFmTime: 0,
+    });
+  },
+
+  redoFrontmatter: () => {
+    const { fmRedoStack, editedFrontmatter, fmUndoStack, editedBody } = get();
+    if (fmRedoStack.length === 0) return;
+    const next = fmRedoStack[fmRedoStack.length - 1];
+    const newRedoStack = fmRedoStack.slice(0, -1);
+    set({
+      editedFrontmatter: next,
+      fmUndoStack: [...fmUndoStack, editedFrontmatter],
+      fmRedoStack: newRedoStack,
+      isDirty: next !== null || editedBody !== null,
+      _lastFmField: null,
+      _lastFmTime: 0,
+    });
   },
 
   saveNote: async () => {
@@ -244,7 +310,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   resolveConflict: async (action: "keep-mine" | "accept-theirs") => {
     if (action === "accept-theirs") {
       const { activeNote, activePlainFile } = get();
-      set({ isDirty: false, editedBody: null, editedFrontmatter: null, conflictState: "none" });
+      set({ isDirty: false, editedBody: null, editedFrontmatter: null, conflictState: "none", fmUndoStack: [], fmRedoStack: [], _lastFmField: null, _lastFmTime: 0 });
       const api = await getAPI();
       if (activeNote) {
         const note = await api.readNote(activeNote.path);
@@ -269,6 +335,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       editedBody: null,
       editedFrontmatter: null,
       savingInProgress: false,
+      fmUndoStack: [],
+      fmRedoStack: [],
+      _lastFmField: null,
+      _lastFmTime: 0,
     });
   },
 }));

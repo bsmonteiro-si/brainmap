@@ -410,10 +410,16 @@ body {
 }
 
 .frontmatter-tags-label {
-  align-items: flex-start !important;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--ui-font-sm);
+  color: var(--text-secondary);
 }
 
 .frontmatter-tags-label > span {
+  min-width: 60px;
+  font-weight: 600;
   margin-top: 6px;
 }
 

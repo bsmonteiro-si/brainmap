@@ -83,10 +83,10 @@ export function FrontmatterForm({ note }: Props) {
               ))}
             </select>
           </label>
-          <label className="frontmatter-tags-label">
+          <div className="frontmatter-tags-label">
             <span>Tags</span>
             <TagInput tags={tags} onChange={(t) => updateFrontmatter({ tags: t })} />
-          </label>
+          </div>
           <label>
             <span>Source</span>
             <input

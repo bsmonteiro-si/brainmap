@@ -17,13 +17,6 @@ import { UndoToast } from "./components/Layout/UndoToast";
 
 import "./App.css";
 
-const FORM_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
-
-/** Returns true if the target is a native form field that handles its own undo/redo. */
-function isFormField(target: HTMLElement | null): boolean {
-  return target !== null && FORM_TAGS.has(target.tagName);
-}
-
 function App() {
   const info = useWorkspaceStore((s) => s.info);
   const loadTopology = useGraphStore((s) => s.loadTopology);
@@ -110,18 +103,24 @@ function App() {
         e.preventDefault();
         useUIStore.getState().resetZoom();
       }
-      // Cmd+Z: Undo file operations (skip when CodeMirror or form field has focus)
+      // Cmd+Z: Undo (frontmatter fields → frontmatter undo, CodeMirror → CM undo, else → file-op undo)
       if (isMod && e.key === "z" && !e.shiftKey) {
         const target = e.target as HTMLElement | null;
-        if (!target?.closest(".cm-editor") && !isFormField(target)) {
+        if (target?.closest(".frontmatter-form")) {
+          e.preventDefault();
+          useEditorStore.getState().undoFrontmatter();
+        } else if (!target?.closest(".cm-editor")) {
           e.preventDefault();
           useUndoStore.getState().undo();
         }
       }
-      // Cmd+Y or Cmd+Shift+Z: Redo file operations (skip when CodeMirror or form field has focus)
+      // Cmd+Y or Cmd+Shift+Z: Redo (same routing as undo)
       if (isMod && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
         const target = e.target as HTMLElement | null;
-        if (!target?.closest(".cm-editor") && !isFormField(target)) {
+        if (target?.closest(".frontmatter-form")) {
+          e.preventDefault();
+          useEditorStore.getState().redoFrontmatter();
+        } else if (!target?.closest(".cm-editor")) {
           e.preventDefault();
           useUndoStore.getState().redo();
         }

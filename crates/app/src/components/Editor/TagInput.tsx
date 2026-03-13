@@ -18,6 +18,7 @@ export function TagInput({ tags, onChange }: Props) {
 
   const removeTag = (index: number) => {
     onChange(tags.filter((_, i) => i !== index));
+    inputRef.current?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
