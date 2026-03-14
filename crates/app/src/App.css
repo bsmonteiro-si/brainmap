@@ -1054,7 +1054,19 @@ body {
 .editor-body .cm-editor .cm-content {
   padding-left: clamp(12px, 3%, 36px);
   padding-right: clamp(12px, 3%, 36px);
-  line-height: 2.1;
+  line-height: 1.7;
+}
+
+/* Collapse the hidden closing-brace line of callout blocks */
+.cm-callout-closing-hidden {
+  font-size: 0;
+  line-height: 0;
+  height: 1px;
+  overflow: hidden;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: none !important;
 }
 
 /* Extra vertical spacing for list lines in CodeMirror edit/raw views */

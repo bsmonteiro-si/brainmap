@@ -316,18 +316,28 @@ function buildDecorations(
       );
     }
 
-    // Closing line — tinted background always; hide `}` text unless cursor is on it
+    // Closing line — collapse when hidden, tinted background when cursor is on it
     if (r.closed) {
-      builder.add(
-        r.closingLineFrom,
-        r.closingLineFrom,
-        Decoration.line({ attributes: { style: bodyBg } }),
-      );
-      if (cursorLine !== closingLineNum && r.closingLineFrom < r.closingLineTo) {
+      if (cursorLine !== closingLineNum) {
+        // Collapse the line visually (1px tall)
         builder.add(
           r.closingLineFrom,
-          r.closingLineTo,
-          Decoration.replace({}),
+          r.closingLineFrom,
+          Decoration.line({ class: "cm-callout-closing-hidden" }),
+        );
+        if (r.closingLineFrom < r.closingLineTo) {
+          builder.add(
+            r.closingLineFrom,
+            r.closingLineTo,
+            Decoration.replace({}),
+          );
+        }
+      } else {
+        // Cursor on closing line: show raw } with tinted background
+        builder.add(
+          r.closingLineFrom,
+          r.closingLineFrom,
+          Decoration.line({ attributes: { style: bodyBg } }),
         );
       }
     }
