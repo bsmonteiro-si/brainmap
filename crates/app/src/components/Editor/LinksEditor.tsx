@@ -141,6 +141,15 @@ export function LinksEditor({ notePath, links }: Props) {
         const title = targetNode?.title ?? link.target;
         return (
           <div key={`${link.target}:${link.rel}`} className="link-row">
+            <button
+              type="button"
+              className="link-remove"
+              disabled={busy}
+              onClick={() => handleRemove(link)}
+              aria-label={`Remove link ${link.rel} to ${title}`}
+            >
+              ×
+            </button>
             <span className="link-rel">{link.rel}</span>
             <span
               className="link-target link-target-navigable"
@@ -157,15 +166,6 @@ export function LinksEditor({ notePath, links }: Props) {
             >
               {title}
             </span>
-            <button
-              type="button"
-              className="link-remove"
-              disabled={busy}
-              onClick={() => handleRemove(link)}
-              aria-label={`Remove link ${link.rel} to ${title}`}
-            >
-              ×
-            </button>
           </div>
         );
       })}

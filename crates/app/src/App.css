@@ -677,13 +677,13 @@ body {
 .links-editor {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .link-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
 }
 
 .link-rel {
@@ -738,7 +738,7 @@ body {
 .link-add-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   margin-top: 2px;
 }
 
