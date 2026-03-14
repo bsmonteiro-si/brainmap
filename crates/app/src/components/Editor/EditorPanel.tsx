@@ -11,6 +11,8 @@ import { TabBar } from "./TabBar";
 import { getNodeColor } from "../GraphView/graphStyles";
 import type { EditorView } from "@codemirror/view";
 
+const NOOP = () => {};
+
 export function EditorPanel() {
   const editorViewRef = useRef<EditorView | null>(null);
   const activeNote = useEditorStore((s) => s.activeNote);
@@ -26,6 +28,7 @@ export function EditorPanel() {
   const viewMode = useEditorStore((s) => s.viewMode);
   const setViewMode = useEditorStore((s) => s.setViewMode);
   const editedBody = useEditorStore((s) => s.editedBody);
+  const rawContent = useEditorStore((s) => s.rawContent);
   const scrollTop = useEditorStore((s) => s.scrollTop);
   const cursorPos = useEditorStore((s) => s.cursorPos);
   const tabs = useTabStore((s) => s.tabs);
@@ -252,6 +255,11 @@ export function EditorPanel() {
                 onClick={() => setViewMode("preview")}
                 type="button"
               >Preview</button>
+              <button
+                className={`editor-view-btn${viewMode === "raw" ? " editor-view-btn--active" : ""}`}
+                onClick={() => setViewMode("raw")}
+                type="button"
+              >Raw</button>
             </div>
             <button
               className="editor-focus-btn"
@@ -264,14 +272,16 @@ export function EditorPanel() {
           <h1 className="editor-hero-title">
             {displayTitle}
             {isDirty && <span className="editor-dirty-dot" title="Unsaved changes" />}
-            <span
-              className="meta-type-pill"
-              style={{ backgroundColor: getNodeColor(displayType) }}
-            >
-              {displayType}
-            </span>
+            {viewMode !== "raw" && (
+              <span
+                className="meta-type-pill"
+                style={{ backgroundColor: getNodeColor(displayType) }}
+              >
+                {displayType}
+              </span>
+            )}
           </h1>
-          {(displayTags.length > 0 || displayStatus || displaySource) && (
+          {viewMode !== "raw" && (displayTags.length > 0 || displayStatus || displaySource) && (
             <div className="meta-row">
               {displayTags.map((t) => (
                 <span key={t} className="meta-tag-chip">{t}</span>
@@ -295,7 +305,7 @@ export function EditorPanel() {
             <button onClick={() => resolveConflict("accept-theirs")}>Accept Theirs</button>
           </div>
         )}
-        <FrontmatterForm note={activeNote} />
+        {viewMode !== "raw" && <FrontmatterForm note={activeNote} />}
         {viewMode === "edit" && <EditorToolbar editorView={editorViewRef.current} />}
         <div className="editor-body">
           <div className={`editor-view-layer${viewMode === "edit" ? " editor-view-layer--active" : ""}`}>
@@ -311,8 +321,21 @@ export function EditorPanel() {
           <div className={`editor-view-layer${viewMode === "preview" ? " editor-view-layer--active" : ""}`}>
             <MarkdownPreview content={editedBody ?? activeNote.body} notePath={activeNote.path} />
           </div>
+          <div className={`editor-view-layer${viewMode === "raw" ? " editor-view-layer--active" : ""}`}>
+            {rawContent !== null ? (
+              <MarkdownEditor
+                key="raw"
+                notePath={activeNote.path}
+                content={rawContent}
+                onChange={NOOP}
+                readOnly={true}
+              />
+            ) : viewMode === "raw" ? (
+              <div className="editor-placeholder">Loading raw content...</div>
+            ) : null}
+          </div>
         </div>
-        <RelatedNotesFooter />
+        {viewMode !== "raw" && <RelatedNotesFooter />}
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Panel, Group, Separator, usePanelRef } from "react-resizable-panels";
 import type { Layout } from "react-resizable-panels";
 import { useUIStore } from "../../stores/uiStore";
+import { getTabSizes } from "../../stores/uiStore";
 import { GraphView } from "../GraphView/GraphView";
 import { EditorPanel } from "../Editor/EditorPanel";
 import { SearchPanel } from "../Search/SearchPanel";
@@ -16,13 +17,14 @@ const PANEL_IDS = {
 
 export function AppLayout() {
   const contentPanelRef = usePanelRef();
-  const focusMode = useUIStore((s) => s.focusMode);
+  const editorPanelRef = usePanelRef();
   const activeLeftTab = useUIStore((s) => s.activeLeftTab);
   const leftPanelCollapsed = useUIStore((s) => s.leftPanelCollapsed);
-  const graphFocusPath = useUIStore((s) => s.graphFocusPath);
-  const clearGraphFocus = useUIStore((s) => s.clearGraphFocus);
   const savePanelSizes = useUIStore((s) => s.savePanelSizes);
   const panelSizes = useUIStore((s) => s.panelSizes);
+  const isFirstMount = useRef(true);
+
+  const tabSizes = getTabSizes(panelSizes, activeLeftTab);
 
   // Sync leftPanelCollapsed → panel collapse/expand
   useEffect(() => {
@@ -33,9 +35,24 @@ export function AppLayout() {
     }
   }, [leftPanelCollapsed, contentPanelRef]);
 
+  // When activeLeftTab changes, imperatively resize panels to the stored sizes
+  // for that tab. Skip the first mount (defaultSize handles that).
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    if (!leftPanelCollapsed) {
+      const sizes = getTabSizes(useUIStore.getState().panelSizes, activeLeftTab);
+      contentPanelRef.current?.resize(`${sizes.content}%`);
+      editorPanelRef.current?.resize(`${sizes.editor}%`);
+    }
+  }, [activeLeftTab, leftPanelCollapsed, contentPanelRef, editorPanelRef]);
+
   const handleLayout = useCallback(
     (layout: Layout) => {
-      savePanelSizes({ content: layout[0], editor: layout[1] });
+      const tab = useUIStore.getState().activeLeftTab;
+      savePanelSizes(tab, { content: layout[0], editor: layout[1] });
     },
     [savePanelSizes]
   );
@@ -51,7 +68,7 @@ export function AppLayout() {
         >
           <Panel
             panelRef={contentPanelRef}
-            defaultSize={`${panelSizes.content ?? 30}%`}
+            defaultSize={`${tabSizes.content}%`}
             minSize="10%"
             collapsible
             id={PANEL_IDS.content}
@@ -75,7 +92,12 @@ export function AppLayout() {
             </div>
           </Panel>
           <Separator className="resize-handle-h" />
-          <Panel defaultSize={`${panelSizes.editor ?? 70}%`} minSize="15%" id={PANEL_IDS.editor}>
+          <Panel
+            panelRef={editorPanelRef}
+            defaultSize={`${tabSizes.editor}%`}
+            minSize="15%"
+            id={PANEL_IDS.editor}
+          >
             <div className="panel" style={{ height: "100%" }}>
               <div className="panel-content">
                 <EditorPanel />

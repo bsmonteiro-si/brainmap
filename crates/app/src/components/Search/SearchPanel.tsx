@@ -76,14 +76,13 @@ export function SearchPanel() {
   };
 
   return (
-    <div className="search-panel search-panel--sidebar">
+    <div className="search-panel">
       <div className="search-input-bar">
         <input
           type="text"
           value={query}
           onChange={(e) => handleQueryChange(e.target.value)}
           placeholder="Search notes..."
-          autoFocus
         />
         <div className="search-filters">
           <select value={typeFilter} onChange={(e) => handleTypeChange(e.target.value)}>

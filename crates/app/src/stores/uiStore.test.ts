@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useUIStore } from "./uiStore";
+import { useUIStore, getTabSizes } from "./uiStore";
 
 beforeEach(() => {
   // Reset the relevant slice of store state between tests
@@ -174,6 +174,109 @@ describe("emptyFolders actions", () => {
     useUIStore.setState({ emptyFolders: new Set(["x", "y"]) });
     useUIStore.getState().resetWorkspaceState();
     expect(useUIStore.getState().emptyFolders.size).toBe(0);
+  });
+});
+
+describe("activeLeftTab / leftPanelCollapsed", () => {
+  beforeEach(() => {
+    useUIStore.setState({
+      activeLeftTab: "files",
+      leftPanelCollapsed: false,
+      focusMode: false,
+      graphFocusPath: null,
+      graphFocusKind: null,
+    });
+  });
+
+  it("defaults to files tab, not collapsed", () => {
+    const s = useUIStore.getState();
+    expect(s.activeLeftTab).toBe("files");
+    expect(s.leftPanelCollapsed).toBe(false);
+  });
+
+  it("setActiveLeftTab switches tab", () => {
+    useUIStore.getState().setActiveLeftTab("graph");
+    expect(useUIStore.getState().activeLeftTab).toBe("graph");
+  });
+
+  it("setActiveLeftTab expands panel if collapsed", () => {
+    useUIStore.setState({ leftPanelCollapsed: true });
+    useUIStore.getState().setActiveLeftTab("search");
+    expect(useUIStore.getState().leftPanelCollapsed).toBe(false);
+    expect(useUIStore.getState().activeLeftTab).toBe("search");
+  });
+
+  it("toggleLeftPanel toggles collapsed state", () => {
+    useUIStore.getState().toggleLeftPanel();
+    expect(useUIStore.getState().leftPanelCollapsed).toBe(true);
+    useUIStore.getState().toggleLeftPanel();
+    expect(useUIStore.getState().leftPanelCollapsed).toBe(false);
+  });
+
+  it("toggleFocusMode collapses panel on enter and expands on exit", () => {
+    useUIStore.getState().toggleFocusMode();
+    expect(useUIStore.getState().focusMode).toBe(true);
+    expect(useUIStore.getState().leftPanelCollapsed).toBe(true);
+    useUIStore.getState().toggleFocusMode();
+    expect(useUIStore.getState().focusMode).toBe(false);
+    expect(useUIStore.getState().leftPanelCollapsed).toBe(false);
+  });
+
+  it("setGraphFocus switches to graph tab and expands panel", () => {
+    useUIStore.setState({ activeLeftTab: "files", leftPanelCollapsed: true });
+    useUIStore.getState().setGraphFocus("Notes/Test.md", "note");
+    const s = useUIStore.getState();
+    expect(s.activeLeftTab).toBe("graph");
+    expect(s.leftPanelCollapsed).toBe(false);
+    expect(s.graphFocusPath).toBe("Notes/Test.md");
+  });
+
+  it("resetWorkspaceState resets to files tab, not collapsed", () => {
+    useUIStore.setState({ activeLeftTab: "graph", leftPanelCollapsed: true });
+    useUIStore.getState().resetWorkspaceState();
+    const s = useUIStore.getState();
+    expect(s.activeLeftTab).toBe("files");
+    expect(s.leftPanelCollapsed).toBe(false);
+  });
+});
+
+describe("per-tab panel sizes", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useUIStore.setState({ panelSizes: {} });
+  });
+
+  it("savePanelSizes stores sizes under the tab key", () => {
+    useUIStore.getState().savePanelSizes("files", { content: 25, editor: 75 });
+    const sizes = useUIStore.getState().panelSizes;
+    expect(sizes.files).toEqual({ content: 25, editor: 75 });
+  });
+
+  it("savePanelSizes for different tabs are independent", () => {
+    useUIStore.getState().savePanelSizes("files", { content: 25, editor: 75 });
+    useUIStore.getState().savePanelSizes("graph", { content: 70, editor: 30 });
+    const sizes = useUIStore.getState().panelSizes;
+    expect(sizes.files).toEqual({ content: 25, editor: 75 });
+    expect(sizes.graph).toEqual({ content: 70, editor: 30 });
+  });
+
+  it("savePanelSizes persists to localStorage", () => {
+    useUIStore.getState().savePanelSizes("graph", { content: 60, editor: 40 });
+    const stored = JSON.parse(localStorage.getItem("brainmap:panelSizes") ?? "{}");
+    expect(stored.graph).toEqual({ content: 60, editor: 40 });
+  });
+});
+
+describe("getTabSizes", () => {
+  it("returns defaults when no stored sizes", () => {
+    expect(getTabSizes({}, "files")).toEqual({ content: 20, editor: 80 });
+    expect(getTabSizes({}, "graph")).toEqual({ content: 80, editor: 20 });
+    expect(getTabSizes({}, "search")).toEqual({ content: 20, editor: 80 });
+  });
+
+  it("returns stored sizes when available", () => {
+    const sizes = { files: { content: 30, editor: 70 } };
+    expect(getTabSizes(sizes, "files")).toEqual({ content: 30, editor: 70 });
   });
 });
 

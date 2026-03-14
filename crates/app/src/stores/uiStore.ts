@@ -39,9 +39,30 @@ const MAX_ZOOM = 2.0;
 
 export type LeftTab = "files" | "graph" | "search";
 
-interface PanelSizes {
+interface TabPanelSizes {
   content?: number;
   editor?: number;
+}
+
+interface PanelSizes {
+  files?: TabPanelSizes;
+  graph?: TabPanelSizes;
+  search?: TabPanelSizes;
+}
+
+const DEFAULT_TAB_SIZES: Record<LeftTab, TabPanelSizes> = {
+  files: { content: 20, editor: 80 },
+  graph: { content: 80, editor: 20 },
+  search: { content: 20, editor: 80 },
+};
+
+export function getTabSizes(panelSizes: PanelSizes, tab: LeftTab): Required<TabPanelSizes> {
+  const stored = panelSizes[tab];
+  const defaults = DEFAULT_TAB_SIZES[tab];
+  return {
+    content: stored?.content ?? defaults.content!,
+    editor: stored?.editor ?? defaults.editor!,
+  };
 }
 
 interface PersistedPrefs {
@@ -128,7 +149,7 @@ interface UIState {
   toggleFolder: (fullPath: string) => void;
   toggleEdgeType: (rel: string) => void;
   clearHiddenEdgeTypes: () => void;
-  savePanelSizes: (sizes: Partial<PanelSizes>) => void;
+  savePanelSizes: (tab: LeftTab, sizes: TabPanelSizes) => void;
   toggleMinimap: () => void;
   toggleClusterHulls: () => void;
   toggleEdgeParticles: () => void;
@@ -159,10 +180,17 @@ function resolveTheme(theme: Theme): "light" | "dark" {
 function loadStoredSizes(): PanelSizes {
   try {
     const raw = JSON.parse(localStorage.getItem("brainmap:panelSizes") ?? "{}");
-    // Migrate old keys (graph/right) → new keys (content/editor)
-    if (raw.content == null && raw.graph != null) raw.content = raw.graph;
-    if (raw.editor == null && raw.right != null) raw.editor = raw.right;
-    return { content: raw.content, editor: raw.editor };
+    // Already in per-tab format
+    if (raw.files || raw.graph || raw.search) {
+      return { files: raw.files, graph: raw.graph, search: raw.search };
+    }
+    // Migrate old flat keys (content/editor or graph/right) → files sub-object
+    const content = raw.content ?? raw.graph;
+    const editor = raw.editor ?? raw.right;
+    if (content != null || editor != null) {
+      return { files: { content, editor } };
+    }
+    return {};
   } catch {
     return {};
   }
@@ -286,8 +314,8 @@ export const useUIStore = create<UIState>((set, get) => ({
 
   clearHiddenEdgeTypes: () => set({ hiddenEdgeTypes: new Set<string>() }),
 
-  savePanelSizes: (sizes: Partial<PanelSizes>) => {
-    const next = { ...get().panelSizes, ...sizes };
+  savePanelSizes: (tab: LeftTab, sizes: TabPanelSizes) => {
+    const next = { ...get().panelSizes, [tab]: sizes };
     localStorage.setItem("brainmap:panelSizes", JSON.stringify(next));
     set({ panelSizes: next });
   },

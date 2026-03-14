@@ -5,6 +5,7 @@ import { useEditorStore } from "./editorStore";
 const mockApi = {
   readNote: vi.fn(),
   updateNote: vi.fn(),
+  readPlainFile: vi.fn(),
 };
 
 vi.mock("../api/bridge", () => ({
@@ -64,6 +65,7 @@ beforeEach(() => {
     _lastFmField: null,
     _lastFmTime: 0,
     viewMode: "edit",
+    rawContent: null,
     scrollTop: 0,
     cursorPos: 0,
   });
@@ -458,5 +460,86 @@ describe("frontmatter undo/redo", () => {
     useEditorStore.getState().undoFrontmatter();
     expect(useEditorStore.getState().isDirty).toBe(true);
     expect(useEditorStore.getState().editedFrontmatter).toBeNull();
+  });
+});
+
+describe("raw view mode", () => {
+  const rawFileContent = "---\ntitle: Test Note\ntype: concept\n---\n# Test\nSome body";
+
+  it("setViewMode('raw') fetches raw content and populates rawContent", async () => {
+    mockApi.readPlainFile.mockResolvedValue({ path: sampleNote.path, body: rawFileContent, binary: false });
+    useEditorStore.setState({ activeNote: sampleNote });
+
+    useEditorStore.getState().setViewMode("raw");
+    expect(useEditorStore.getState().viewMode).toBe("raw");
+    expect(useEditorStore.getState().rawContent).toBeNull(); // loading state
+
+    // Wait for async fetch
+    await vi.waitFor(() => {
+      expect(useEditorStore.getState().rawContent).toBe(rawFileContent);
+    });
+  });
+
+  it("setViewMode('raw') falls back to edit on fetch error", async () => {
+    mockApi.readPlainFile.mockRejectedValue(new Error("not found"));
+    useEditorStore.setState({ activeNote: sampleNote });
+
+    useEditorStore.getState().setViewMode("raw");
+
+    await vi.waitFor(() => {
+      expect(useEditorStore.getState().viewMode).toBe("edit");
+    });
+    expect(useEditorStore.getState().rawContent).toBeNull();
+  });
+
+  it("switching away from raw mode clears rawContent", async () => {
+    mockApi.readPlainFile.mockResolvedValue({ path: sampleNote.path, body: rawFileContent, binary: false });
+    useEditorStore.setState({ activeNote: sampleNote });
+
+    useEditorStore.getState().setViewMode("raw");
+    await vi.waitFor(() => {
+      expect(useEditorStore.getState().rawContent).toBe(rawFileContent);
+    });
+
+    useEditorStore.getState().setViewMode("edit");
+    expect(useEditorStore.getState().viewMode).toBe("edit");
+    expect(useEditorStore.getState().rawContent).toBeNull();
+  });
+
+  it("rawContent is null in clean state", () => {
+    expect(useEditorStore.getState().rawContent).toBeNull();
+  });
+
+  it("clear() resets rawContent", async () => {
+    mockApi.readPlainFile.mockResolvedValue({ path: sampleNote.path, body: rawFileContent, binary: false });
+    useEditorStore.setState({ activeNote: sampleNote });
+    useEditorStore.getState().setViewMode("raw");
+    await vi.waitFor(() => {
+      expect(useEditorStore.getState().rawContent).toBe(rawFileContent);
+    });
+
+    useEditorStore.getState().clear();
+    expect(useEditorStore.getState().rawContent).toBeNull();
+    expect(useEditorStore.getState().viewMode).toBe("edit");
+  });
+
+  it("race guard: discards stale raw fetch when note changed", async () => {
+    let resolveFirst: (v: unknown) => void;
+    const firstPromise = new Promise((r) => { resolveFirst = r; });
+    mockApi.readPlainFile.mockReturnValueOnce(firstPromise);
+
+    useEditorStore.setState({ activeNote: sampleNote });
+    useEditorStore.getState().setViewMode("raw");
+
+    // Switch to a different note before the fetch completes
+    const otherNote = { ...sampleNote, path: "Other.md", title: "Other" };
+    useEditorStore.setState({ activeNote: otherNote, viewMode: "edit", rawContent: null });
+
+    // Now resolve the stale fetch
+    resolveFirst!({ path: sampleNote.path, body: rawFileContent, binary: false });
+    await new Promise((r) => setTimeout(r, 10));
+
+    // rawContent should still be null (stale result discarded)
+    expect(useEditorStore.getState().rawContent).toBeNull();
   });
 });

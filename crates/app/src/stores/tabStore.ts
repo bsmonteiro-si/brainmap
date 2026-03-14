@@ -23,7 +23,7 @@ export interface TabState {
   conflictState: "none" | "external-change";
   fmUndoStack: FmSnapshot[];
   fmRedoStack: FmSnapshot[];
-  viewMode: "edit" | "preview";
+  viewMode: "edit" | "preview" | "raw";
   scrollTop: number;
   cursorPos: number;
 }

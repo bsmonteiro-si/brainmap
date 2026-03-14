@@ -1,6 +1,7 @@
-import { Files, GitFork, Search } from "lucide-react";
+import { Files, GitFork, Home, Search, Settings } from "lucide-react";
 import { useUIStore } from "../../stores/uiStore";
 import type { LeftTab } from "../../stores/uiStore";
+import { useWorkspaceStore } from "../../stores/workspaceStore";
 
 const SIDEBAR_ITEMS: { tab: LeftTab; icon: typeof Files; label: string }[] = [
   { tab: "files", icon: Files, label: "Files" },
@@ -13,6 +14,7 @@ export function IconSidebar() {
   const leftPanelCollapsed = useUIStore((s) => s.leftPanelCollapsed);
   const setActiveLeftTab = useUIStore((s) => s.setActiveLeftTab);
   const toggleLeftPanel = useUIStore((s) => s.toggleLeftPanel);
+  const closeWorkspace = useWorkspaceStore((s) => s.closeWorkspace);
 
   const handleClick = (tab: LeftTab) => {
     if (tab === activeLeftTab && !leftPanelCollapsed) {
@@ -24,6 +26,14 @@ export function IconSidebar() {
 
   return (
     <nav className="icon-sidebar" aria-label="Sidebar">
+      <button
+        className="icon-sidebar-btn"
+        onClick={closeWorkspace}
+        title="Home"
+        aria-label="Home"
+      >
+        <Home size={20} />
+      </button>
       {SIDEBAR_ITEMS.map(({ tab, icon: Icon, label }) => (
         <button
           key={tab}
@@ -35,6 +45,14 @@ export function IconSidebar() {
           <Icon size={20} />
         </button>
       ))}
+      <button
+        className="icon-sidebar-btn"
+        onClick={() => useUIStore.getState().openSettings()}
+        title="Settings (⌘,)"
+        aria-label="Settings"
+      >
+        <Settings size={20} />
+      </button>
     </nav>
   );
 }

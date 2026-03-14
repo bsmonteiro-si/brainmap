@@ -56,9 +56,10 @@ interface Props {
   onViewReady?: (view: EditorView | null) => void;
   restoreScrollTop?: number;
   restoreCursorPos?: number;
+  readOnly?: boolean;
 }
 
-export function MarkdownEditor({ notePath, content, onChange, onViewReady, restoreScrollTop, restoreCursorPos }: Props) {
+export function MarkdownEditor({ notePath, content, onChange, onViewReady, restoreScrollTop, restoreCursorPos, readOnly }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
@@ -81,18 +82,26 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
     const isDark = effectiveTheme === "dark";
     const extensions = [
       markdown(),
-      history(),
-      keymap.of([...formattingKeymap, { key: "Mod-y", run: redo, preventDefault: true }, ...historyKeymap, ...defaultKeymap]),
-      EditorView.updateListener.of((update) => {
-        if (update.docChanged) {
-          onChangeRef.current(update.state.doc.toString());
-        }
-      }),
       EditorView.lineWrapping,
       syntaxHighlighting(buildMarkdownHighlight(isDark)),
       linkNavigation(notePath),
       calloutDecorations(),
     ];
+
+    if (readOnly) {
+      extensions.push(EditorState.readOnly.of(true));
+      extensions.push(EditorView.editable.of(false));
+    } else {
+      extensions.push(
+        history(),
+        keymap.of([...formattingKeymap, { key: "Mod-y", run: redo, preventDefault: true }, ...historyKeymap, ...defaultKeymap]),
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged) {
+            onChangeRef.current(update.state.doc.toString());
+          }
+        }),
+      );
+    }
 
     if (isDark) {
       extensions.push(oneDark);
@@ -131,7 +140,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
       viewRef.current = null;
       onViewReady?.(null);
     };
-  }, [notePath, effectiveTheme, uiZoom, editorFontFamily, editorFontSize]);
+  }, [notePath, effectiveTheme, uiZoom, editorFontFamily, editorFontSize, readOnly]);
 
   // Sync external content changes (e.g., after save or conflict resolution)
   // without recreating the editor

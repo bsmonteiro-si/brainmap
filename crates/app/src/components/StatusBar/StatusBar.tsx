@@ -1,12 +1,10 @@
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useEditorStore } from "../../stores/editorStore";
-import { useUIStore } from "../../stores/uiStore";
 import { useSegmentStore } from "../../stores/segmentStore";
 
 export function StatusBar() {
   const info = useWorkspaceStore((s) => s.info);
   const stats = useWorkspaceStore((s) => s.stats);
-  const closeWorkspace = useWorkspaceStore((s) => s.closeWorkspace);
   const isDirty = useEditorStore((s) => s.isDirty);
   const activeNote = useEditorStore((s) => s.activeNote);
   const activeSegmentId = useSegmentStore((s) => s.activeSegmentId);
@@ -32,21 +30,6 @@ export function StatusBar() {
           </span>
         </>
       )}
-      <button
-        className="status-bar-btn"
-        style={{ marginLeft: "auto" }}
-        onClick={() => useUIStore.getState().openSettings()}
-        title="Settings (⌘,)"
-      >
-        ⚙
-      </button>
-      <button
-        className="status-bar-close-btn"
-        onClick={closeWorkspace}
-        title="Close segment"
-      >
-        ✕
-      </button>
     </div>
   );
 }
