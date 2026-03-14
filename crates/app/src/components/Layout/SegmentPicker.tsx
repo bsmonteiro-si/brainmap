@@ -249,6 +249,7 @@ export function SegmentPicker() {
   return (
     <div className="sp-root">
       <div className="sp-brand">
+        <p className="sp-brand-dedication">Minha neném Raissa é linda ❤️</p>
         <div className="sp-brand-icon">⬡</div>
         <h1 className="sp-brand-name">BrainMap</h1>
         <p className="sp-brand-tagline">Your personal knowledge graph</p>

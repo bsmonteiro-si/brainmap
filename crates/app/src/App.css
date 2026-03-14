@@ -2133,6 +2133,13 @@ body {
   margin: 0;
 }
 
+.sp-brand-dedication {
+  font-size: 20px;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+  text-align: center;
+}
+
 /* Section label */
 .sp-section {
   display: flex;

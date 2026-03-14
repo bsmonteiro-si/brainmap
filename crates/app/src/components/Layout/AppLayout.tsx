@@ -35,19 +35,18 @@ export function AppLayout() {
     }
   }, [leftPanelCollapsed, contentPanelRef]);
 
-  // When activeLeftTab changes, imperatively resize panels to the stored sizes
-  // for that tab. Skip the first mount (defaultSize handles that).
+  // When activeLeftTab or panelSizes change, imperatively resize panels to the
+  // stored sizes for that tab. Skip the first mount (defaultSize handles that).
   useEffect(() => {
     if (isFirstMount.current) {
       isFirstMount.current = false;
       return;
     }
     if (!leftPanelCollapsed) {
-      const sizes = getTabSizes(useUIStore.getState().panelSizes, activeLeftTab);
-      contentPanelRef.current?.resize(`${sizes.content}%`);
-      editorPanelRef.current?.resize(`${sizes.editor}%`);
+      contentPanelRef.current?.resize(`${tabSizes.content}%`);
+      editorPanelRef.current?.resize(`${tabSizes.editor}%`);
     }
-  }, [activeLeftTab, leftPanelCollapsed, contentPanelRef, editorPanelRef]);
+  }, [activeLeftTab, leftPanelCollapsed, tabSizes.content, tabSizes.editor, contentPanelRef, editorPanelRef]);
 
   const handleLayout = useCallback(
     (layout: Layout) => {
