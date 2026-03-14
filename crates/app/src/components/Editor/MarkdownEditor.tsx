@@ -6,7 +6,7 @@ import { defaultKeymap, history, historyKeymap, redo } from "@codemirror/command
 import { oneDark } from "@codemirror/theme-one-dark";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
-import { useUIStore } from "../../stores/uiStore";
+import { useUIStore, THEME_BASE } from "../../stores/uiStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { linkNavigation } from "./cmLinkNavigation";
 import { formattingKeymap } from "./cmFormatting";
@@ -83,7 +83,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const isDark = effectiveTheme === "dark";
+    const isDark = THEME_BASE[effectiveTheme] === "dark";
     const extensions = [
       markdown(),
       EditorView.lineWrapping,

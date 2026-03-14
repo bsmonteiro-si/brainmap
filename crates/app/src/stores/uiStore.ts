@@ -1,9 +1,32 @@
 import { create } from "zustand";
 
-type Theme = "light" | "dark" | "system";
-export type ComponentTheme = "inherit" | "light" | "dark";
+export type ThemeName = "light" | "dark" | "dracula" | "solarized-light" | "solarized-dark" | "nord" | "tokyo-night" | "one-dark";
+type Theme = ThemeName | "system";
+export type ComponentTheme = "inherit" | ThemeName;
 type GraphMode = "navigate" | "edit";
 type GraphLayout = "force" | "hierarchical";
+
+export const THEME_BASE: Record<ThemeName, "light" | "dark"> = {
+  light: "light",
+  dark: "dark",
+  dracula: "dark",
+  "solarized-light": "light",
+  "solarized-dark": "dark",
+  nord: "dark",
+  "tokyo-night": "dark",
+  "one-dark": "dark",
+};
+
+export const THEME_OPTIONS: { value: ThemeName; label: string }[] = [
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+  { value: "dracula", label: "Dracula" },
+  { value: "solarized-light", label: "Solarized Light" },
+  { value: "solarized-dark", label: "Solarized Dark" },
+  { value: "nord", label: "Nord" },
+  { value: "tokyo-night", label: "Tokyo Night" },
+  { value: "one-dark", label: "One Dark" },
+];
 
 export const FONT_PRESETS = [
   // Sans-serif
@@ -107,11 +130,11 @@ interface CreateNoteDialogOpts {
 
 interface UIState {
   theme: Theme;
-  effectiveTheme: "light" | "dark";
+  effectiveTheme: ThemeName;
   filesTheme: ComponentTheme;
   editorTheme: ComponentTheme;
-  effectiveFilesTheme: "light" | "dark";
-  effectiveEditorTheme: "light" | "dark";
+  effectiveFilesTheme: ThemeName;
+  effectiveEditorTheme: ThemeName;
   graphMode: GraphMode;
   commandPaletteOpen: boolean;
   createNoteDialogOpen: boolean;
@@ -199,11 +222,11 @@ function getSystemTheme(): "light" | "dark" {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-function resolveTheme(theme: Theme): "light" | "dark" {
+function resolveTheme(theme: Theme): ThemeName {
   return theme === "system" ? getSystemTheme() : theme;
 }
 
-function resolveComponentTheme(component: ComponentTheme, global: "light" | "dark"): "light" | "dark" {
+function resolveComponentTheme(component: ComponentTheme, global: ThemeName): ThemeName {
   return component === "inherit" ? global : component;
 }
 

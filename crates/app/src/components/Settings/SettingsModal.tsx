@@ -1,5 +1,5 @@
-import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES } from "../../stores/uiStore";
-import type { LeftTab, ComponentTheme } from "../../stores/uiStore";
+import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES, THEME_OPTIONS } from "../../stores/uiStore";
+import type { LeftTab, ComponentTheme, ThemeName } from "../../stores/uiStore";
 
 function FontFamilySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const presetValue =
@@ -86,11 +86,12 @@ export function SettingsModal() {
               <div className="settings-control">
                 <select
                   value={theme}
-                  onChange={(e) => setTheme(e.target.value as "light" | "dark" | "system")}
+                  onChange={(e) => setTheme(e.target.value as ThemeName | "system")}
                 >
                   <option value="system">System</option>
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
+                  {THEME_OPTIONS.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -102,8 +103,9 @@ export function SettingsModal() {
                   onChange={(e) => setFilesTheme(e.target.value as ComponentTheme)}
                 >
                   <option value="inherit">Inherit</option>
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
+                  {THEME_OPTIONS.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -115,8 +117,9 @@ export function SettingsModal() {
                   onChange={(e) => setEditorTheme(e.target.value as ComponentTheme)}
                 >
                   <option value="inherit">Inherit</option>
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
+                  {THEME_OPTIONS.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
