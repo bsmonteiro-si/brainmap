@@ -24,6 +24,8 @@ pub fn run() {
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             commands::open_workspace,
+            commands::close_workspace,
+            commands::switch_workspace,
             commands::get_graph_topology,
             commands::get_node_content,
             commands::create_node,

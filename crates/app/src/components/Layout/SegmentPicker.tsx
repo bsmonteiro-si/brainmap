@@ -84,6 +84,7 @@ export function SegmentPicker() {
   const removeSegment = useSegmentStore((s) => s.removeSegment);
   const touchSegment = useSegmentStore((s) => s.touchSegment);
   const setActiveSegmentId = useSegmentStore((s) => s.setActiveSegmentId);
+  const addOpenSegment = useSegmentStore((s) => s.addOpenSegment);
 
   const sortedSegments = [...segments].sort(
     (a, b) => new Date(b.lastOpenedAt).getTime() - new Date(a.lastOpenedAt).getTime()
@@ -100,6 +101,7 @@ export function SegmentPicker() {
       return;
     }
     touchSegment(segment.id);
+    addOpenSegment(segment.id);
     setActiveSegmentId(segment.id);
   };
 
@@ -145,6 +147,7 @@ export function SegmentPicker() {
       return;
     }
     touchSegment(segment.id);
+    addOpenSegment(segment.id);
     setActiveSegmentId(segment.id);
   };
 
@@ -168,6 +171,7 @@ export function SegmentPicker() {
         setOpeningId(null);
       } else {
         touchSegment(segment.id);
+        addOpenSegment(segment.id);
         setActiveSegmentId(segment.id);
       }
       return;

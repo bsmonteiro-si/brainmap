@@ -11,6 +11,8 @@ export interface Segment {
 interface SegmentStore {
   segments: Segment[];
   activeSegmentId: string | null;
+  /** IDs of currently open segments (distinct from known segments). */
+  openSegmentIds: string[];
 
   /** Idempotent by path. Returns { segment, created: false } if path already exists. */
   addSegment: (name: string, path: string) => { segment: Segment; created: boolean };
@@ -19,6 +21,12 @@ interface SegmentStore {
   touchSegment: (id: string) => void;
   setActiveSegmentId: (id: string | null) => void;
   getSegmentByPath: (path: string) => Segment | undefined;
+  /** Add a segment to the open list (no-op if already present). */
+  addOpenSegment: (id: string) => void;
+  /** Remove a segment from the open list. */
+  removeOpenSegment: (id: string) => void;
+  /** Get full Segment objects for all open segments. */
+  getOpenSegments: () => Segment[];
 }
 
 const STORAGE_KEY = "brainmap:segments";
@@ -58,6 +66,7 @@ const storedSegments = loadStoredSegments();
 export const useSegmentStore = create<SegmentStore>((set, get) => ({
   segments: storedSegments,
   activeSegmentId: null,
+  openSegmentIds: [],
 
   addSegment: (name, rawPath) => {
     const path = normalizePath(rawPath);
@@ -99,5 +108,22 @@ export const useSegmentStore = create<SegmentStore>((set, get) => ({
   getSegmentByPath: (rawPath) => {
     const path = normalizePath(rawPath);
     return get().segments.find((s) => s.path === path);
+  },
+
+  addOpenSegment: (id) => {
+    const { openSegmentIds } = get();
+    if (openSegmentIds.includes(id)) return;
+    set({ openSegmentIds: [...openSegmentIds, id] });
+  },
+
+  removeOpenSegment: (id) => {
+    set({ openSegmentIds: get().openSegmentIds.filter((i) => i !== id) });
+  },
+
+  getOpenSegments: () => {
+    const { segments, openSegmentIds } = get();
+    return openSegmentIds
+      .map((id) => segments.find((s) => s.id === id))
+      .filter((s): s is Segment => s !== undefined);
   },
 }));

@@ -27,6 +27,20 @@ export class MockBridge implements BrainMapAPI {
     };
   }
 
+  async switchWorkspace(_root: string): Promise<WorkspaceInfo> {
+    await mockDelay("openWorkspace");
+    return {
+      name: "The Book of Why",
+      root: "/mock/seed",
+      node_count: mockState.notes.size,
+      edge_count: mockState.edges.length,
+    };
+  }
+
+  async closeWorkspace(_root: string): Promise<void> {
+    // no-op in mock
+  }
+
   async getGraphTopology(): Promise<GraphTopology> {
     await mockDelay("getGraphTopology");
     return {

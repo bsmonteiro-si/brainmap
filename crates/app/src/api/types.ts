@@ -91,17 +91,19 @@ export interface StatsDto {
 }
 
 export type WorkspaceEvent =
-  | { type: "node-created"; path: string; node: NodeDto }
-  | { type: "node-updated"; path: string; node: NodeDto }
-  | { type: "node-deleted"; path: string }
-  | { type: "edge-created"; edge: EdgeDto }
-  | { type: "edge-deleted"; edge: EdgeDto }
-  | { type: "topology-changed"; added_nodes: NodeDto[]; removed_nodes: string[]; added_edges: EdgeDto[]; removed_edges: EdgeDto[] };
+  | { type: "node-created"; path: string; node: NodeDto; workspace_root?: string }
+  | { type: "node-updated"; path: string; node: NodeDto; workspace_root?: string }
+  | { type: "node-deleted"; path: string; workspace_root?: string }
+  | { type: "edge-created"; edge: EdgeDto; workspace_root?: string }
+  | { type: "edge-deleted"; edge: EdgeDto; workspace_root?: string }
+  | { type: "topology-changed"; added_nodes: NodeDto[]; removed_nodes: string[]; added_edges: EdgeDto[]; removed_edges: EdgeDto[]; workspace_root?: string };
 
 // ── API Interface ──────────────────────────────────────────────────
 
 export interface BrainMapAPI {
   openWorkspace(path: string): Promise<WorkspaceInfo>;
+  switchWorkspace(root: string): Promise<WorkspaceInfo>;
+  closeWorkspace(root: string): Promise<void>;
   getGraphTopology(): Promise<GraphTopology>;
   getNodeSummary(path: string): Promise<NodeSummary>;
   readNote(path: string): Promise<NoteDetail>;

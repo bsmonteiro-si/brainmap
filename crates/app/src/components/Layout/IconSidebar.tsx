@@ -2,6 +2,7 @@ import { Files, GitFork, Home, Search, Settings } from "lucide-react";
 import { useUIStore } from "../../stores/uiStore";
 import type { LeftTab } from "../../stores/uiStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
+import { useSegmentStore } from "../../stores/segmentStore";
 
 const SIDEBAR_ITEMS: { tab: LeftTab; icon: typeof Files; label: string }[] = [
   { tab: "files", icon: Files, label: "Files" },
@@ -14,7 +15,8 @@ export function IconSidebar() {
   const leftPanelCollapsed = useUIStore((s) => s.leftPanelCollapsed);
   const setActiveLeftTab = useUIStore((s) => s.setActiveLeftTab);
   const toggleLeftPanel = useUIStore((s) => s.toggleLeftPanel);
-  const closeWorkspace = useWorkspaceStore((s) => s.closeWorkspace);
+  const closeSegment = useWorkspaceStore((s) => s.closeSegment);
+  const activeSegmentId = useSegmentStore((s) => s.activeSegmentId);
 
   const handleClick = (tab: LeftTab) => {
     if (tab === activeLeftTab && !leftPanelCollapsed) {
@@ -28,9 +30,9 @@ export function IconSidebar() {
     <nav className="icon-sidebar" aria-label="Sidebar">
       <button
         className="icon-sidebar-btn"
-        onClick={closeWorkspace}
-        title="Home"
-        aria-label="Home"
+        onClick={() => activeSegmentId && closeSegment(activeSegmentId)}
+        title="Close segment"
+        aria-label="Close segment"
       >
         <Home size={20} />
       </button>

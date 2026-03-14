@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { EdgeDto, NodeDto, WorkspaceEvent } from "../api/types";
 import { getAPI } from "../api/bridge";
+import { applyTopologyDiff } from "./graphDiff";
 import { log } from "../utils/logger";
 
 interface GraphState {
@@ -106,69 +107,11 @@ export const useGraphStore = create<GraphState>((set, get) => ({
 
   applyEvent: (event: WorkspaceEvent) => {
     const { nodes, edges, workspaceFiles } = get();
-
-    switch (event.type) {
-      case "node-created": {
-        const newNodes = new Map(nodes);
-        newNodes.set(event.path, event.node);
-        const newFiles = workspaceFiles.includes(event.path)
-          ? workspaceFiles
-          : [...workspaceFiles, event.path];
-        set({ nodes: newNodes, workspaceFiles: newFiles });
-        break;
-      }
-      case "node-updated": {
-        const newNodes = new Map(nodes);
-        newNodes.set(event.path, event.node);
-        set({ nodes: newNodes });
-        break;
-      }
-      case "node-deleted": {
-        const newNodes = new Map(nodes);
-        newNodes.delete(event.path);
-        const newEdges = edges.filter(
-          (e) => e.source !== event.path && e.target !== event.path
-        );
-        const newFiles = workspaceFiles.filter((f) => f !== event.path);
-        set({ nodes: newNodes, edges: newEdges, workspaceFiles: newFiles });
-        break;
-      }
-      case "edge-created": {
-        set({ edges: [...edges, event.edge] });
-        break;
-      }
-      case "edge-deleted": {
-        const newEdges = edges.filter(
-          (e) =>
-            !(
-              e.source === event.edge.source &&
-              e.target === event.edge.target &&
-              e.rel === event.edge.rel
-            )
-        );
-        set({ edges: newEdges });
-        break;
-      }
-      case "topology-changed": {
-        const newNodes = new Map(nodes);
-        for (const path of event.removed_nodes) {
-          newNodes.delete(path);
-        }
-        for (const n of event.added_nodes) {
-          newNodes.set(n.path, n);
-        }
-
-        const removedKeys = new Set(
-          event.removed_edges.map((e) => `${e.source}|${e.target}|${e.rel}`)
-        );
-        let newEdges = edges.filter(
-          (e) => !removedKeys.has(`${e.source}|${e.target}|${e.rel}`)
-        );
-        newEdges = [...newEdges, ...event.added_edges];
-
-        set({ nodes: newNodes, edges: newEdges });
-        break;
-      }
-    }
+    // Use fresh copies so applyTopologyDiff doesn't mutate live store state
+    const result = applyTopologyDiff(
+      { nodes: new Map(nodes), edges: [...edges], workspaceFiles: [...workspaceFiles] },
+      event,
+    );
+    set({ nodes: result.nodes, edges: result.edges, workspaceFiles: result.workspaceFiles });
   },
 }));

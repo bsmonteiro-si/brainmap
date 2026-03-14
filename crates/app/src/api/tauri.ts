@@ -20,6 +20,14 @@ export class TauriBridge implements BrainMapAPI {
     return invoke<WorkspaceInfo>("open_workspace", { path });
   }
 
+  async switchWorkspace(root: string): Promise<WorkspaceInfo> {
+    return invoke<WorkspaceInfo>("switch_workspace", { root });
+  }
+
+  async closeWorkspace(root: string): Promise<void> {
+    return invoke<void>("close_workspace", { root });
+  }
+
   async getGraphTopology(): Promise<GraphTopology> {
     return invoke<GraphTopology>("get_graph_topology");
   }

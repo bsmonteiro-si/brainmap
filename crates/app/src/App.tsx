@@ -1,14 +1,16 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useWorkspaceStore } from "./stores/workspaceStore";
 import { useGraphStore } from "./stores/graphStore";
 import { useEditorStore } from "./stores/editorStore";
 import { useUIStore } from "./stores/uiStore";
 import { useUndoStore } from "./stores/undoStore";
 import { useNavigationStore } from "./stores/navigationStore";
+import { useSegmentStore } from "./stores/segmentStore";
 import { useAutoSave } from "./hooks/useAutoSave";
 import { useTabStore, isUntitledTab } from "./stores/tabStore";
 import { closeTabAndNavigateNext } from "./stores/tabActions";
 import { promptUnsavedChanges } from "./stores/unsavedChangesPrompt";
+import { hasDirtyUntitledTabs, applyEventToSnapshot } from "./stores/segmentStateCache";
 import { getAPI } from "./api/bridge";
 import { SegmentPicker } from "./components/Layout/SegmentPicker";
 import { AppLayout } from "./components/Layout/AppLayout";
@@ -44,6 +46,24 @@ function App() {
     let unsubscribe: (() => void) | undefined;
     getAPI().then((api) => {
       unsubscribe = api.onEvent((event) => {
+        // Skip events during segment switch to prevent cross-segment state corruption
+        if (useWorkspaceStore.getState().switchInProgress) return;
+
+        // Route event by workspace_root
+        const eventRoot = event.workspace_root;
+        const activeRoot = useWorkspaceStore.getState().info?.root;
+
+        if (eventRoot && activeRoot && eventRoot !== activeRoot) {
+          // Background segment event — apply to cached snapshot
+          const segStore = useSegmentStore.getState();
+          const segment = segStore.getSegmentByPath(eventRoot);
+          if (segment) {
+            applyEventToSnapshot(segment.id, event);
+          }
+          return;
+        }
+
+        // Active segment event — apply normally
         applyEvent(event);
         // If the event affects a note
         if (
@@ -76,9 +96,13 @@ function App() {
     return () => unsubscribe?.();
   }, [info, applyEvent]);
 
-  // Load graph topology after workspace opens
+  // Load graph topology after initial workspace open (from SegmentPicker).
+  // Segment switches handle topology loading internally via switchSegment.
+  const prevInfoRef = useRef<typeof info>(null);
   useEffect(() => {
-    if (info) {
+    const wasNull = prevInfoRef.current === null;
+    prevInfoRef.current = info;
+    if (info && wasNull) {
       loadTopology();
     }
   }, [info, loadTopology]);
@@ -224,13 +248,10 @@ function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  // Window close interception — warn about unsaved untitled tabs
+  // Window close interception — warn about unsaved untitled tabs (active + cached segments)
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      const dirtyUntitled = useTabStore.getState().tabs.filter(
-        (t) => t.kind === "untitled" && (t.editedBody ?? "").length > 0
-      );
-      if (dirtyUntitled.length > 0) {
+      if (hasDirtyUntitledTabs()) {
         e.preventDefault();
       }
     };

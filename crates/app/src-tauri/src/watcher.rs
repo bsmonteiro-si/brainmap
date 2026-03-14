@@ -16,6 +16,8 @@ use crate::state::AppState;
 struct TopologyChangedPayload {
     #[serde(rename = "type")]
     event_type: &'static str,
+    /// Canonicalized root path identifying which workspace this event belongs to.
+    workspace_root: String,
     added_nodes: Vec<NodeDtoPayload>,
     removed_nodes: Vec<String>,
     added_edges: Vec<EdgeDtoPayload>,
@@ -41,10 +43,14 @@ struct EdgeDtoPayload {
 /// Start watching `workspace_root` recursively. Debounces events by 2 seconds.
 /// Only `.md` file events are forwarded for processing.
 ///
-/// Returns the `Debouncer` handle — the caller must keep it alive in `AppState.watcher`.
+/// `canonical_root` is the HashMap key used to access the correct slot.
+/// `workspace_root` is the actual filesystem path to watch.
+///
+/// Returns the `Debouncer` handle — the caller must keep it alive.
 /// Dropping the handle stops all watching.
 pub fn start_watcher(
     app_handle: AppHandle,
+    canonical_root: String,
     workspace_root: &Path,
 ) -> notify_debouncer_mini::Debouncer<notify::RecommendedWatcher> {
     let (tx, mut rx) = mpsc::unbounded_channel::<PathBuf>();
@@ -67,21 +73,27 @@ pub fn start_watcher(
         .watch(workspace_root, RecursiveMode::Recursive)
         .expect("failed to watch workspace root");
 
+    // Capture owned canonical_root for the async task.
+    let root_key = canonical_root;
     tokio::spawn(async move {
         while let Some(path) = rx.recv().await {
-            process_change(&app_handle, path).await;
+            process_change(&app_handle, &root_key, path).await;
         }
     });
 
     debouncer
 }
 
-async fn process_change(app: &AppHandle, path: PathBuf) {
+/// Process a single file change event for a specific workspace slot.
+///
+/// `root_key` is the canonicalized root used to look up the correct slot.
+async fn process_change(app: &AppHandle, root_key: &str, path: PathBuf) {
     let state = app.state::<AppState>();
 
-    let workspace_root = match state.with_workspace(|ws| Ok(ws.root.clone())) {
+    // Get the actual workspace root from the slot (for path stripping).
+    let workspace_root = match state.with_slot(root_key, |slot| Ok(slot.workspace.root.clone())) {
         Ok(root) => root,
-        Err(_) => return,
+        Err(_) => return, // Slot was removed (workspace closed)
     };
 
     let rel_path = match path.strip_prefix(&workspace_root) {
@@ -90,28 +102,29 @@ async fn process_change(app: &AppHandle, path: PathBuf) {
     };
     let rel_path_str = rel_path.as_str().to_string();
 
-    if state.consume_expected_write(&path) {
+    // Expected writes are scoped per slot.
+    if state.consume_expected_write(root_key, &path) {
         return;
     }
 
     let path_exists = path.exists();
     let path_is_known = state
-        .with_workspace(|ws| Ok(ws.notes.contains_key(&rel_path)))
+        .with_slot(root_key, |slot| Ok(slot.workspace.notes.contains_key(&rel_path)))
         .unwrap_or(false);
 
     let diff_result = if path_exists && path_is_known {
-        state.with_workspace_mut(|ws| {
-            ws.reload_file(&rel_path_str)
+        state.with_slot_mut(root_key, |slot| {
+            slot.workspace.reload_file(&rel_path_str)
                 .map_err(|e| e.to_string())
         })
     } else if path_exists {
-        state.with_workspace_mut(|ws| {
-            ws.add_file(&rel_path_str)
+        state.with_slot_mut(root_key, |slot| {
+            slot.workspace.add_file(&rel_path_str)
                 .map_err(|e| e.to_string())
         })
     } else {
-        state.with_workspace_mut(|ws| {
-            ws.remove_file(&rel_path_str)
+        state.with_slot_mut(root_key, |slot| {
+            slot.workspace.remove_file(&rel_path_str)
                 .map_err(|e| e.to_string())
         })
     };
@@ -119,13 +132,14 @@ async fn process_change(app: &AppHandle, path: PathBuf) {
     let diff = match diff_result {
         Ok(d) => d,
         Err(e) => {
-            warn!(path = %rel_path_str, error = %e, "watcher: error processing file change");
+            warn!(path = %rel_path_str, root = %root_key, error = %e, "watcher: error processing file change");
             return;
         }
     };
 
     let payload = TopologyChangedPayload {
         event_type: "topology-changed",
+        workspace_root: root_key.to_string(),
         added_nodes: diff
             .added_nodes
             .iter()
@@ -146,7 +160,7 @@ async fn process_change(app: &AppHandle, path: PathBuf) {
     };
 
     if let Err(e) = app.emit("brainmap://workspace-event", payload) {
-        error!(error = %e, "watcher: failed to emit event");
+        error!(error = %e, root = %root_key, "watcher: failed to emit event");
     }
 }
 
