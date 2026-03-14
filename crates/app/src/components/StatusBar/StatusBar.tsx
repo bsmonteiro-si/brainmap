@@ -12,7 +12,6 @@ function nameFromPath(path: string): string {
 
 export function StatusBar() {
   const info = useWorkspaceStore((s) => s.info);
-  const stats = useWorkspaceStore((s) => s.stats);
   const switchInProgress = useWorkspaceStore((s) => s.switchInProgress);
   const switchSegment = useWorkspaceStore((s) => s.switchSegment);
   const closeSegment = useWorkspaceStore((s) => s.closeSegment);
@@ -121,10 +120,6 @@ export function StatusBar() {
           </div>
         )}
       </div>
-      <span className="separator">|</span>
-      <span>
-        {stats ? `${stats.node_count} nodes · ${stats.edge_count} edges` : "Loading..."}
-      </span>
       {activeNote && (
         <>
           <span className="separator">|</span>

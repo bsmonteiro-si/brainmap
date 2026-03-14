@@ -7,7 +7,6 @@ import { MarkdownPreview } from "./MarkdownPreview";
 import { FrontmatterForm } from "./FrontmatterForm";
 import { RelatedNotesFooter } from "./RelatedNotesFooter";
 import { EditorToolbar } from "./EditorToolbar";
-import { TabBar } from "./TabBar";
 import { getNodeColor } from "../GraphView/graphStyles";
 import type { EditorView } from "@codemirror/view";
 
@@ -64,7 +63,6 @@ export function EditorPanel() {
   if (isLoading) {
     return (
       <div className="editor-panel-container">
-        <TabBar />
         <div className="editor-placeholder">Loading note...</div>
       </div>
     );
@@ -77,8 +75,7 @@ export function EditorPanel() {
     if (activePlainFile.binary) {
       return (
         <div className="editor-panel-container">
-          <TabBar />
-          <div className="editor-panel">
+            <div className="editor-panel">
             <div className="editor-hero">
               <h1 className="editor-hero-title">{fileName}</h1>
               <div className="meta-row">
@@ -97,7 +94,6 @@ export function EditorPanel() {
 
     return (
       <div className="editor-panel-container">
-        <TabBar />
         <div className="editor-panel">
           <div className="editor-hero">
             <div className="editor-hero-top">
@@ -165,7 +161,6 @@ export function EditorPanel() {
 
     return (
       <div className="editor-panel-container">
-        <TabBar />
         <div className="editor-panel">
           <div className="editor-hero">
             <div className="editor-hero-top">
@@ -230,7 +225,6 @@ export function EditorPanel() {
   if (!activeNote) {
     return (
       <div className="editor-panel-container">
-        <TabBar />
         <div className="editor-placeholder">Loading note...</div>
       </div>
     );
@@ -244,7 +238,6 @@ export function EditorPanel() {
 
   return (
     <div className="editor-panel-container">
-      <TabBar />
       <div className="editor-panel">
         <div className="editor-hero">
           <div className="editor-hero-top">

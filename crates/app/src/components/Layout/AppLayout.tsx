@@ -9,6 +9,7 @@ import { SearchPanel } from "../Search/SearchPanel";
 import { StatusBar } from "../StatusBar/StatusBar";
 import { FileTreePanel } from "./FileTreePanel";
 import { IconSidebar } from "./IconSidebar";
+import { TabBar } from "../Editor/TabBar";
 
 const PANEL_IDS = {
   content: "content",
@@ -20,6 +21,10 @@ export function AppLayout() {
   const editorPanelRef = usePanelRef();
   const activeLeftTab = useUIStore((s) => s.activeLeftTab);
   const leftPanelCollapsed = useUIStore((s) => s.leftPanelCollapsed);
+  const filesTheme = useUIStore((s) => s.filesTheme);
+  const effectiveFilesTheme = useUIStore((s) => s.effectiveFilesTheme);
+  const editorTheme = useUIStore((s) => s.editorTheme);
+  const effectiveEditorTheme = useUIStore((s) => s.effectiveEditorTheme);
   const savePanelSizes = useUIStore((s) => s.savePanelSizes);
   const panelSizes = useUIStore((s) => s.panelSizes);
   const isFirstMount = useRef(true);
@@ -58,6 +63,8 @@ export function AppLayout() {
 
   return (
     <>
+      <StatusBar />
+      <TabBar />
       <div className="app-layout-root">
         <IconSidebar />
         <Group
@@ -72,7 +79,7 @@ export function AppLayout() {
             collapsible
             id={PANEL_IDS.content}
           >
-            <div className="panel" style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div className="panel" style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }} {...(filesTheme !== "inherit" ? { "data-theme": effectiveFilesTheme } : {})}>
               <div
                 style={{ flex: 1, overflow: "hidden", display: activeLeftTab === "graph" ? "flex" : "none", flexDirection: "column" }}
               >
@@ -97,7 +104,7 @@ export function AppLayout() {
             minSize="15%"
             id={PANEL_IDS.editor}
           >
-            <div className="panel" style={{ height: "100%" }}>
+            <div className="panel" style={{ height: "100%" }} {...(editorTheme !== "inherit" ? { "data-theme": effectiveEditorTheme } : {})}>
               <div className="panel-content">
                 <EditorPanel />
               </div>
@@ -105,7 +112,6 @@ export function AppLayout() {
           </Panel>
         </Group>
       </div>
-      <StatusBar />
     </>
   );
 }

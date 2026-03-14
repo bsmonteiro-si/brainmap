@@ -7,6 +7,7 @@ import dagre from "cytoscape-dagre";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { useUIStore } from "../../stores/uiStore";
+import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { getAPI } from "../../api/bridge";
 import type { NodeSummary } from "../../api/types";
 import { graphStylesheet, getNodeColor, getNodeShape } from "./graphStyles";
@@ -96,6 +97,7 @@ export function GraphView() {
   const showMinimap = useUIStore((s) => s.showMinimap);
   const showClusterHulls = useUIStore((s) => s.showClusterHulls);
   const showEdgeParticles = useUIStore((s) => s.showEdgeParticles);
+  const stats = useWorkspaceStore((s) => s.stats);
   const showEdgeLabelsRef = useRef(showEdgeLabels);
   const graphLayoutRef = useRef(graphLayout);
   const selectedNodePathRef = useRef(selectedNodePath);
@@ -662,6 +664,11 @@ export function GraphView() {
             className="graph-canvas-overlay"
             style={{ pointerEvents: "none" }}
           />
+        )}
+        {stats && (
+          <div className="graph-stats">
+            {stats.node_count} nodes · {stats.edge_count} edges
+          </div>
         )}
         {showMinimap && (
           <div className="graph-minimap">

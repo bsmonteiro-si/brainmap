@@ -1,30 +1,31 @@
 ---
-id: "a0000001-0000-0000-0000-000000000033"
-title: "The Causal Revolution"
+id: a0000001-0000-0000-0000-000000000033
+title: The Causal Revolution
 type: project
-tags: [causality, pearl, research-program, formalization]
+tags:
+- causality
+- pearl
+- research-program
+- formalization
 status: review
 created: 2026-02-18
-modified: 2026-03-09
-source: "The Book of Why"
-summary: >-
-  Pearl's decades-long research program to formalize causal inference,
-  resulting in causal diagrams, do-calculus, structural causal models,
-  and the counterfactual framework.
+modified: 2026-03-14
+source: The Book of Why
+summary: Pearl's decades-long research program to formalize causal inference, resulting in causal diagrams, do-calculus, structural causal models, and the counterfactual framework.
 links:
-  - target: "../Concepts/Do-Calculus.md"
-    type: contains
-  - target: "../Concepts/Structural Causal Models.md"
-    type: contains
-  - target: "../People/Judea Pearl.md"
-    type: authored-by
-  - target: "../Concepts/Causal Inference.md"
-    type: related-to
-  - target: "../Concepts/Bayesian Networks.md"
-    type: related-to
-project-status: completed
+- target: ../Concepts/Do-Calculus.md
+  type: contains
+- target: ../Concepts/Structural Causal Models.md
+  type: contains
+- target: ../People/Judea Pearl.md
+  type: authored-by
+- target: ../Concepts/Causal Inference.md
+  type: related-to
+- target: ../Concepts/Bayesian Networks.md
+  type: related-to
 start-year: 1988
 end-year: null
+project-status: completed
 ---
 
 # The Causal Revolution

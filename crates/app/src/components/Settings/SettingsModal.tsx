@@ -1,5 +1,5 @@
 import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES } from "../../stores/uiStore";
-import type { LeftTab } from "../../stores/uiStore";
+import type { LeftTab, ComponentTheme } from "../../stores/uiStore";
 
 function FontFamilySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const presetValue =
@@ -47,6 +47,10 @@ export function SettingsModal() {
   const theme = useUIStore((s) => s.theme);
   const setTheme = useUIStore((s) => s.setTheme);
   const closeSettings = useUIStore((s) => s.closeSettings);
+  const filesTheme = useUIStore((s) => s.filesTheme);
+  const editorTheme = useUIStore((s) => s.editorTheme);
+  const setFilesTheme = useUIStore((s) => s.setFilesTheme);
+  const setEditorTheme = useUIStore((s) => s.setEditorTheme);
   const uiFontFamily = useUIStore((s) => s.uiFontFamily);
   const uiFontSize = useUIStore((s) => s.uiFontSize);
   const editorFontFamily = useUIStore((s) => s.editorFontFamily);
@@ -85,6 +89,32 @@ export function SettingsModal() {
                   onChange={(e) => setTheme(e.target.value as "light" | "dark" | "system")}
                 >
                   <option value="system">System</option>
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                </select>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Files Panel</span>
+              <div className="settings-control">
+                <select
+                  value={filesTheme}
+                  onChange={(e) => setFilesTheme(e.target.value as ComponentTheme)}
+                >
+                  <option value="inherit">Inherit</option>
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                </select>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Editor Panel</span>
+              <div className="settings-control">
+                <select
+                  value={editorTheme}
+                  onChange={(e) => setEditorTheme(e.target.value as ComponentTheme)}
+                >
+                  <option value="inherit">Inherit</option>
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
                 </select>

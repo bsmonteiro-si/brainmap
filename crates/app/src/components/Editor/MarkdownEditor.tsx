@@ -67,7 +67,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
   const onChangeRef = useRef(onChange);
   const contentRef = useRef(content);
   const uiZoomRef = useRef(1);
-  const effectiveTheme = useUIStore((s) => s.effectiveTheme);
+  const effectiveTheme = useUIStore((s) => s.effectiveEditorTheme);
   const editorFontFamily = useUIStore((s) => s.editorFontFamily);
   const editorFontSize = useUIStore((s) => s.editorFontSize);
   const uiZoom = useUIStore((s) => s.uiZoom);

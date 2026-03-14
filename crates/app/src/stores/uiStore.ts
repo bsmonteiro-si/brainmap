@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 type Theme = "light" | "dark" | "system";
+export type ComponentTheme = "inherit" | "light" | "dark";
 type GraphMode = "navigate" | "edit";
 type GraphLayout = "force" | "hierarchical";
 
@@ -84,6 +85,8 @@ interface PersistedPrefs {
   editorLineNumbers?: boolean;
   uiZoom?: number;
   defaultTabSizes?: Partial<Record<LeftTab, TabPanelSizes>>;
+  filesTheme?: ComponentTheme;
+  editorTheme?: ComponentTheme;
 }
 
 type CreateNoteMode = "default" | "create-and-link";
@@ -105,6 +108,10 @@ interface CreateNoteDialogOpts {
 interface UIState {
   theme: Theme;
   effectiveTheme: "light" | "dark";
+  filesTheme: ComponentTheme;
+  editorTheme: ComponentTheme;
+  effectiveFilesTheme: "light" | "dark";
+  effectiveEditorTheme: "light" | "dark";
   graphMode: GraphMode;
   commandPaletteOpen: boolean;
   createNoteDialogOpen: boolean;
@@ -144,6 +151,8 @@ interface UIState {
   toggleLineNumbers: () => void;
   setEditorLineNumbersDefault: (v: boolean) => void;
   setTheme: (theme: Theme) => void;
+  setFilesTheme: (theme: ComponentTheme) => void;
+  setEditorTheme: (theme: ComponentTheme) => void;
   toggleGraphMode: () => void;
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
@@ -192,6 +201,10 @@ function getSystemTheme(): "light" | "dark" {
 
 function resolveTheme(theme: Theme): "light" | "dark" {
   return theme === "system" ? getSystemTheme() : theme;
+}
+
+function resolveComponentTheme(component: ComponentTheme, global: "light" | "dark"): "light" | "dark" {
+  return component === "inherit" ? global : component;
 }
 
 function loadStoredSizes(): PanelSizes {
@@ -248,6 +261,10 @@ const storedPrefs = loadStoredPrefs();
 export const useUIStore = create<UIState>((set, get) => ({
   theme: storedPrefs.theme ?? "system",
   effectiveTheme: resolveTheme(storedPrefs.theme ?? "system"),
+  filesTheme: storedPrefs.filesTheme ?? "inherit",
+  editorTheme: storedPrefs.editorTheme ?? "inherit",
+  effectiveFilesTheme: resolveComponentTheme(storedPrefs.filesTheme ?? "inherit", resolveTheme(storedPrefs.theme ?? "system")),
+  effectiveEditorTheme: resolveComponentTheme(storedPrefs.editorTheme ?? "inherit", resolveTheme(storedPrefs.theme ?? "system")),
   graphMode: "navigate",
   commandPaletteOpen: false,
   createNoteDialogOpen: false,
@@ -296,9 +313,25 @@ export const useUIStore = create<UIState>((set, get) => ({
     savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, editorLineNumbers: v, uiZoom: s.uiZoom });
   },
   setTheme: (theme: Theme) => {
-    set({ theme, effectiveTheme: resolveTheme(theme) });
+    const effective = resolveTheme(theme);
     const s = get();
+    set({
+      theme,
+      effectiveTheme: effective,
+      effectiveFilesTheme: resolveComponentTheme(s.filesTheme, effective),
+      effectiveEditorTheme: resolveComponentTheme(s.editorTheme, effective),
+    });
     savePrefs({ theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: s.uiZoom });
+  },
+  setFilesTheme: (filesTheme: ComponentTheme) => {
+    const s = get();
+    set({ filesTheme, effectiveFilesTheme: resolveComponentTheme(filesTheme, s.effectiveTheme) });
+    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: s.uiZoom, filesTheme });
+  },
+  setEditorTheme: (editorTheme: ComponentTheme) => {
+    const s = get();
+    set({ editorTheme, effectiveEditorTheme: resolveComponentTheme(editorTheme, s.effectiveTheme) });
+    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: s.uiZoom, editorTheme });
   },
 
   toggleGraphMode: () => {
@@ -408,9 +441,9 @@ export const useUIStore = create<UIState>((set, get) => ({
   }),
 
   resetFontPrefs: () => {
-    const { theme, uiZoom } = get();
-    set({ uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, showLineNumbers: false });
-    savePrefs({ theme, uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, editorLineNumbers: false, uiZoom });
+    const { theme, effectiveTheme, uiZoom } = get();
+    set({ uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, showLineNumbers: false, filesTheme: "inherit", editorTheme: "inherit", effectiveFilesTheme: effectiveTheme, effectiveEditorTheme: effectiveTheme });
+    savePrefs({ theme, uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, editorLineNumbers: false, uiZoom, filesTheme: "inherit", editorTheme: "inherit" });
   },
 
   setDefaultTabSize: (tab: LeftTab, content: number) => {
