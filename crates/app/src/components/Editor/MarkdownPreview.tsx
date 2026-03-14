@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { resolveNotePath, isLocalMdLink } from "../../utils/resolveNotePath";
@@ -6,7 +6,7 @@ import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { CALLOUT_TYPES, CALLOUT_FALLBACK, CALLOUT_RE } from "./calloutTypes";
 import { remarkCalloutMerge } from "./remarkCalloutMerge";
-import { preprocessCallouts } from "./calloutPreprocess";
+import { preprocessCallouts, encodeLinkSpaces } from "./calloutPreprocess";
 
 interface Props {
   content: string;
@@ -86,6 +86,28 @@ export function extractCalloutFromChildren(
 }
 
 export function MarkdownPreview({ content, notePath }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const addCmd = (e: KeyboardEvent) => {
+      if (e.key === "Meta" || e.key === "Control") el.classList.add("cmd-held");
+    };
+    const removeCmd = (e: KeyboardEvent) => {
+      if (e.key === "Meta" || e.key === "Control") el.classList.remove("cmd-held");
+    };
+    const blurCmd = () => el.classList.remove("cmd-held");
+    window.addEventListener("keydown", addCmd);
+    window.addEventListener("keyup", removeCmd);
+    window.addEventListener("blur", blurCmd);
+    return () => {
+      window.removeEventListener("keydown", addCmd);
+      window.removeEventListener("keyup", removeCmd);
+      window.removeEventListener("blur", blurCmd);
+    };
+  }, []);
+
   const components = useMemo(
     () => ({
       a: ({
@@ -100,10 +122,11 @@ export function MarkdownPreview({ content, notePath }: Props) {
             <a
               {...props}
               href={href}
-              title="Click to open note"
-              style={{ cursor: "pointer" }}
+              title="Cmd+Click to open note"
+              className="md-preview-link"
               onClick={(e) => {
                 e.preventDefault();
+                if (!(e.metaKey || e.ctrlKey)) return;
                 const resolved = resolveNotePath(notePath, href);
                 useGraphStore.getState().selectNode(resolved);
                 useEditorStore.getState().openNote(resolved);
@@ -159,9 +182,9 @@ export function MarkdownPreview({ content, notePath }: Props) {
   );
 
   return (
-    <div className="md-preview">
+    <div className="md-preview" ref={containerRef}>
       <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
-        {preprocessCallouts(content)}
+        {encodeLinkSpaces(preprocessCallouts(content))}
       </ReactMarkdown>
     </div>
   );

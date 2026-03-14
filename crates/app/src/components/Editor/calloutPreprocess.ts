@@ -1,4 +1,21 @@
 /**
+ * Encode spaces in markdown link destinations so that remark/CommonMark
+ * parses them correctly.  `[text](./foo bar.md)` becomes
+ * `[text](./foo%20bar.md)`.  Skips fenced code blocks and inline code.
+ */
+export function encodeLinkSpaces(md: string): string {
+  // Match markdown links: [label](destination)
+  // Only encode when the destination contains spaces.
+  return md.replace(
+    /(\[[^\]]*\]\()([^)]+)(\))/g,
+    (_match, prefix: string, dest: string, suffix: string) => {
+      if (!dest.includes(" ")) return _match;
+      return prefix + dest.replace(/ /g, "%20") + suffix;
+    },
+  );
+}
+
+/**
  * Preprocessor that converts brace-delimited callout syntax into
  * blockquote syntax before markdown parsing.
  *

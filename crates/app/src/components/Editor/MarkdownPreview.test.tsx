@@ -34,7 +34,22 @@ describe("MarkdownPreview", () => {
     }));
   });
 
-  it("renders .md links as clickable and navigates on click", () => {
+  it("navigates on Cmd+Click for .md links", () => {
+    render(
+      <MarkdownPreview
+        content="See [Confounding](./Confounding.md) for more"
+        notePath="Concepts/Causation.md"
+      />,
+    );
+
+    const link = screen.getByText("Confounding");
+    fireEvent.click(link, { metaKey: true });
+
+    expect(selectNode).toHaveBeenCalledWith("Concepts/Confounding.md");
+    expect(openNote).toHaveBeenCalledWith("Concepts/Confounding.md");
+  });
+
+  it("does not navigate on plain click for .md links", () => {
     render(
       <MarkdownPreview
         content="See [Confounding](./Confounding.md) for more"
@@ -45,8 +60,8 @@ describe("MarkdownPreview", () => {
     const link = screen.getByText("Confounding");
     fireEvent.click(link);
 
-    expect(selectNode).toHaveBeenCalledWith("Concepts/Confounding.md");
-    expect(openNote).toHaveBeenCalledWith("Concepts/Confounding.md");
+    expect(selectNode).not.toHaveBeenCalled();
+    expect(openNote).not.toHaveBeenCalled();
   });
 
   it("prevents default on .md link click", () => {
@@ -85,7 +100,7 @@ describe("MarkdownPreview", () => {
     );
 
     const link = screen.getByText("Confounding").closest("a");
-    expect(link?.getAttribute("title")).toBe("Click to open note");
+    expect(link?.getAttribute("title")).toBe("Cmd+Click to open note");
   });
 });
 

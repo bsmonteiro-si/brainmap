@@ -12,6 +12,7 @@ import { linkNavigation } from "./cmLinkNavigation";
 import { formattingKeymap } from "./cmFormatting";
 import { calloutDecorations } from "./cmCalloutDecorations";
 import { copyReferenceMenu } from "./cmCopyReference";
+import { listSpacing } from "./cmListSpacing";
 
 const ACCENT = "#4a9eff";
 const ACCENT_DARK = "#5aaeFF";
@@ -91,6 +92,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
       syntaxHighlighting(buildMarkdownHighlight(isDark)),
       linkNavigation(notePath),
       calloutDecorations(),
+      listSpacing(),
       ...(wsRoot ? [copyReferenceMenu(wsRoot.replace(/\/$/, "") + "/" + notePath)] : []),
     ];
 

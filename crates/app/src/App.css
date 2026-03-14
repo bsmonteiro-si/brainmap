@@ -1056,6 +1056,9 @@ body {
   padding-right: clamp(12px, 3%, 36px);
 }
 
+/* Extra vertical spacing for list lines in CodeMirror edit/raw views */
+.editor-body .cm-editor .cm-list-line { margin-bottom: 0.5em; }
+
 /* Cmd+hover link navigation cursor in CodeMirror */
 .cm-editor.cm-cmd-link-hover .cm-content {
   cursor: pointer;
@@ -1598,6 +1601,8 @@ body {
   font-family: var(--editor-font-family);
   font-size: var(--editor-font-size);
   color: var(--text-primary);
+  background-color: var(--bg-primary);
+  min-height: 100%;
   line-height: 1.7;
 }
 
@@ -1628,6 +1633,14 @@ body {
   text-decoration: none;
 }
 .md-preview a:hover {
+  text-decoration: underline;
+}
+/* Cmd+hover cursor feedback for local note links (matches edit mode) */
+.md-preview-link {
+  cursor: default;
+}
+.md-preview.cmd-held .md-preview-link:hover {
+  cursor: pointer;
   text-decoration: underline;
 }
 
@@ -1756,7 +1769,7 @@ body {
   margin: 0 0 1em;
   padding-left: 1.6em;
 }
-.md-preview li { margin-bottom: 0.25em; }
+.md-preview li { margin-bottom: 0.5em; }
 
 .md-preview li input[type="checkbox"] {
   margin-right: 6px;

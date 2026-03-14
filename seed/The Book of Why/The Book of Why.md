@@ -7,21 +7,22 @@ tags:
 - book
 status: review
 created: 2026-01-15
-modified: 2026-03-13
+modified: 2026-03-14
 source: Pearl, J. & Mackenzie, D. (2018). The Book of Why. Basic Books.
 summary: A non-mathematical introduction to the Causal Revolution, covering the history, theory, and implications of causal inference.
 links:
 - target: ../People/Judea Pearl.md
   type: authored-by
-publisher: Basic Books
-isbn: 978-0-465-09760-9
 book-title: 'The Book of Why: The New Science of Cause and Effect'
+publisher: Basic Books
 year: 2018
+isbn: 978-0-465-09760-9
 ---
 
 # The Book of Why - The New Science of Cause and Effect
 
 A comprehensive introduction to causal inference written for a general audience by Judea Pearl, winner of the Turing Award, and science writer Dana Mackenzie.
+text here.
 
 The book presents three main missions:
 1. To present the Causal Revolution in non-mathematical language
