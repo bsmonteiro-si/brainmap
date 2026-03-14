@@ -55,6 +55,8 @@ export function SettingsModal() {
   const setUIFontSize = useUIStore((s) => s.setUIFontSize);
   const setEditorFontFamily = useUIStore((s) => s.setEditorFontFamily);
   const setEditorFontSize = useUIStore((s) => s.setEditorFontSize);
+  const showLineNumbers = useUIStore((s) => s.showLineNumbers);
+  const setEditorLineNumbersDefault = useUIStore((s) => s.setEditorLineNumbersDefault);
   const resetFontPrefs = useUIStore((s) => s.resetFontPrefs);
   const setDefaultTabSize = useUIStore((s) => s.setDefaultTabSize);
   const resetLayoutPrefs = useUIStore((s) => s.resetLayoutPrefs);
@@ -138,6 +140,17 @@ export function SettingsModal() {
                   <span className="settings-size-value">{editorFontSize}px</span>
                 </div>
               </div>
+            </div>
+            <div className="settings-row" style={{ alignItems: "center" }}>
+              <span className="settings-label">Line numbers</span>
+              <label className="settings-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={showLineNumbers}
+                  onChange={(e) => setEditorLineNumbersDefault(e.target.checked)}
+                />
+                Show by default
+              </label>
             </div>
           </div>
 

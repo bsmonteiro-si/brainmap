@@ -81,6 +81,7 @@ interface PersistedPrefs {
   uiFontSize?: number;
   editorFontFamily?: string;
   editorFontSize?: number;
+  editorLineNumbers?: boolean;
   uiZoom?: number;
   defaultTabSizes?: Partial<Record<LeftTab, TabPanelSizes>>;
 }
@@ -137,8 +138,11 @@ interface UIState {
   editorFontFamily: string;
   editorFontSize: number;
   uiZoom: number;
+  showLineNumbers: boolean;
   emptyFolders: Set<string>;
 
+  toggleLineNumbers: () => void;
+  setEditorLineNumbersDefault: (v: boolean) => void;
   setTheme: (theme: Theme) => void;
   toggleGraphMode: () => void;
   openCommandPalette: () => void;
@@ -277,8 +281,20 @@ export const useUIStore = create<UIState>((set, get) => ({
   editorFontFamily: storedPrefs.editorFontFamily ?? DEFAULT_EDITOR_FONT,
   editorFontSize: storedPrefs.editorFontSize ?? DEFAULT_EDITOR_SIZE,
   uiZoom: storedPrefs.uiZoom ?? DEFAULT_ZOOM,
+  showLineNumbers: storedPrefs.editorLineNumbers ?? false,
   emptyFolders: new Set<string>(),
 
+  toggleLineNumbers: () => {
+    const next = !get().showLineNumbers;
+    set({ showLineNumbers: next });
+    const s = get();
+    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, editorLineNumbers: next, uiZoom: s.uiZoom });
+  },
+  setEditorLineNumbersDefault: (v: boolean) => {
+    set({ showLineNumbers: v });
+    const s = get();
+    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, editorLineNumbers: v, uiZoom: s.uiZoom });
+  },
   setTheme: (theme: Theme) => {
     set({ theme, effectiveTheme: resolveTheme(theme) });
     const s = get();
@@ -386,14 +402,15 @@ export const useUIStore = create<UIState>((set, get) => ({
     graphFocusPath: null,
     graphFocusKind: null,
     emptyFolders: new Set<string>(),
+    treeExpandedFolders: new Set<string>(),
     activeLeftTab: "files" as LeftTab,
     leftPanelCollapsed: false,
   }),
 
   resetFontPrefs: () => {
     const { theme, uiZoom } = get();
-    set({ uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE });
-    savePrefs({ theme, uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, uiZoom });
+    set({ uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, showLineNumbers: false });
+    savePrefs({ theme, uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, editorLineNumbers: false, uiZoom });
   },
 
   setDefaultTabSize: (tab: LeftTab, content: number) => {

@@ -21,6 +21,8 @@ export function EditorPanel() {
   const resolveConflict = useEditorStore((s) => s.resolveConflict);
   const focusMode = useUIStore((s) => s.focusMode);
   const toggleFocusMode = useUIStore((s) => s.toggleFocusMode);
+  const showLineNumbers = useUIStore((s) => s.showLineNumbers);
+  const toggleLineNumbers = useUIStore((s) => s.toggleLineNumbers);
   const isDirty = useEditorStore((s) => s.isDirty);
   const editedFm = useEditorStore((s) => s.editedFrontmatter);
   const viewMode = useEditorStore((s) => s.viewMode);
@@ -263,6 +265,13 @@ export function EditorPanel() {
                 type="button"
               >Raw</button>
             </div>
+            <button
+              className={`editor-line-numbers-btn${showLineNumbers ? " editor-line-numbers-btn--active" : ""}`}
+              onClick={toggleLineNumbers}
+              title={showLineNumbers ? "Hide line numbers" : "Show line numbers"}
+            >
+              #
+            </button>
             <button
               className="editor-focus-btn"
               onClick={toggleFocusMode}

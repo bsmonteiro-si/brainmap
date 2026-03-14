@@ -1375,7 +1375,8 @@ body {
 }
 
 /* ── Editor Header Bar (legacy, replaced by .editor-hero) ────── */
-.editor-focus-btn {
+.editor-focus-btn,
+.editor-line-numbers-btn {
   padding: 2px 6px;
   font-size: 14px;
   border: 1px solid var(--border-color);
@@ -1385,8 +1386,13 @@ body {
   cursor: pointer;
   flex-shrink: 0;
 }
-.editor-focus-btn:hover {
+.editor-focus-btn:hover,
+.editor-line-numbers-btn:hover {
   background: var(--bg-tertiary);
+}
+.editor-line-numbers-btn--active {
+  background: var(--bg-tertiary);
+  color: var(--accent);
 }
 
 /* ── Editor view toggle ───────────────────────────────────────── */
@@ -2088,6 +2094,20 @@ body {
   cursor: pointer;
 }
 .settings-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+.settings-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: var(--ui-font-sm);
+  color: var(--text-secondary);
+}
+.settings-checkbox-label input[type="checkbox"] {
   width: 16px;
   height: 16px;
   cursor: pointer;

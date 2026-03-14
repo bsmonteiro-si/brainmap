@@ -354,3 +354,42 @@ describe("graph visual toggles", () => {
     expect(useUIStore.getState().showEdgeParticles).toBe(false);
   });
 });
+
+describe("line numbers toggle", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useUIStore.setState({ showLineNumbers: false });
+  });
+
+  it("showLineNumbers defaults to false", () => {
+    expect(useUIStore.getState().showLineNumbers).toBe(false);
+  });
+
+  it("toggleLineNumbers flips the value", () => {
+    useUIStore.getState().toggleLineNumbers();
+    expect(useUIStore.getState().showLineNumbers).toBe(true);
+    useUIStore.getState().toggleLineNumbers();
+    expect(useUIStore.getState().showLineNumbers).toBe(false);
+  });
+
+  it("toggleLineNumbers persists to localStorage", () => {
+    useUIStore.getState().toggleLineNumbers();
+    const stored = JSON.parse(localStorage.getItem("brainmap:uiPrefs") ?? "{}");
+    expect(stored.editorLineNumbers).toBe(true);
+  });
+
+  it("setEditorLineNumbersDefault sets value and persists", () => {
+    useUIStore.getState().setEditorLineNumbersDefault(true);
+    expect(useUIStore.getState().showLineNumbers).toBe(true);
+    const stored = JSON.parse(localStorage.getItem("brainmap:uiPrefs") ?? "{}");
+    expect(stored.editorLineNumbers).toBe(true);
+  });
+
+  it("resetFontPrefs resets line numbers to false", () => {
+    useUIStore.getState().setEditorLineNumbersDefault(true);
+    useUIStore.getState().resetFontPrefs();
+    expect(useUIStore.getState().showLineNumbers).toBe(false);
+    const stored = JSON.parse(localStorage.getItem("brainmap:uiPrefs") ?? "{}");
+    expect(stored.editorLineNumbers).toBe(false);
+  });
+});

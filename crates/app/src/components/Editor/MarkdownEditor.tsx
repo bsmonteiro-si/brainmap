@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import { EditorView, keymap } from "@codemirror/view";
+import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { markdown } from "@codemirror/lang-markdown";
 import { defaultKeymap, history, historyKeymap, redo } from "@codemirror/commands";
@@ -71,6 +71,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
   const editorFontFamily = useUIStore((s) => s.editorFontFamily);
   const editorFontSize = useUIStore((s) => s.editorFontSize);
   const uiZoom = useUIStore((s) => s.uiZoom);
+  const showLineNumbers = useUIStore((s) => s.showLineNumbers);
   const wsRoot = useWorkspaceStore((s) => s.info?.root);
 
   // Keep refs up-to-date
@@ -86,6 +87,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
     const extensions = [
       markdown(),
       EditorView.lineWrapping,
+      ...(showLineNumbers ? [lineNumbers()] : []),
       syntaxHighlighting(buildMarkdownHighlight(isDark)),
       linkNavigation(notePath),
       calloutDecorations(),
@@ -144,7 +146,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
       viewRef.current = null;
       onViewReady?.(null);
     };
-  }, [notePath, effectiveTheme, uiZoom, editorFontFamily, editorFontSize, readOnly, wsRoot]);
+  }, [notePath, effectiveTheme, uiZoom, editorFontFamily, editorFontSize, readOnly, wsRoot, showLineNumbers]);
 
   // Sync external content changes (e.g., after save or conflict resolution)
   // without recreating the editor
