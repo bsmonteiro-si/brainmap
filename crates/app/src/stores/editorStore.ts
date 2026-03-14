@@ -28,6 +28,7 @@ interface EditorState {
   _lastFmTime: number;
   viewMode: "edit" | "preview" | "raw";
   rawContent: string | null;
+  _rawDirty: boolean;
   scrollTop: number;
   cursorPos: number;
 
@@ -37,6 +38,7 @@ interface EditorState {
   activateUntitledTab: (id: string) => Promise<void>;
   refreshActiveNote: () => Promise<void>;
   updateContent: (body: string) => void;
+  updateRawContent: (content: string) => void;
   updateFrontmatter: (changes: Partial<EditableFrontmatter>) => void;
   undoFrontmatter: () => void;
   redoFrontmatter: () => void;
@@ -82,6 +84,7 @@ const CLEAN_EDITOR_STATE = {
   _lastFmTime: 0,
   viewMode: "edit" as const,
   rawContent: null,
+  _rawDirty: false,
   scrollTop: 0,
   cursorPos: 0,
 };
@@ -102,6 +105,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   _lastFmTime: 0,
   viewMode: "edit",
   rawContent: null,
+  _rawDirty: false,
   scrollTop: 0,
   cursorPos: 0,
 
@@ -153,6 +157,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           _lastFmTime: 0,
           viewMode: existingTab.viewMode,
           rawContent: null,
+          _rawDirty: existingTab.viewMode === "raw" && existingTab.isDirty,
           scrollTop: existingTab.scrollTop,
           cursorPos: existingTab.cursorPos,
         });
@@ -350,6 +355,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (tabId) useTabStore.getState().updateTabState(tabId, { isDirty: true, editedBody: body });
   },
 
+  updateRawContent: (content: string) => {
+    set({ rawContent: content, isDirty: true, _rawDirty: true });
+    const tabId = useTabStore.getState().activeTabId;
+    if (tabId) useTabStore.getState().updateTabState(tabId, { isDirty: true });
+  },
+
   updateFrontmatter: (changes: Partial<EditableFrontmatter>) => {
     const { editedFrontmatter, fmUndoStack, _lastFmField, _lastFmTime } = get();
     const current = editedFrontmatter ?? {};
@@ -421,8 +432,48 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   saveNote: async () => {
-    const { activeNote, activePlainFile, editedBody, editedFrontmatter, isDirty } = get();
+    const { activeNote, activePlainFile, editedBody, editedFrontmatter, isDirty, _rawDirty, rawContent } = get();
     if (!isDirty) return;
+
+    // Raw mode save path — write full file content then re-parse
+    if (activeNote && _rawDirty && rawContent !== null) {
+      const savingRaw = rawContent;
+      try {
+        set({ savingInProgress: true });
+        const api = await getAPI();
+        await api.writeRawNote(activeNote.path, savingRaw);
+        const refreshed = await api.readNote(activeNote.path);
+
+        if (refreshed.title !== activeNote.title || refreshed.note_type !== activeNote.note_type) {
+          useGraphStore.getState().applyEvent({
+            type: "node-updated",
+            path: activeNote.path,
+            node: { path: refreshed.path, title: refreshed.title, note_type: refreshed.note_type },
+          });
+        }
+
+        const current = get();
+        const stillDirty = current.rawContent !== savingRaw;
+        set({
+          activeNote: refreshed,
+          isDirty: stillDirty,
+          _rawDirty: stillDirty,
+          editedBody: null,
+          editedFrontmatter: null,
+          rawContent: stillDirty ? current.rawContent : savingRaw,
+          conflictState: "none",
+          savingInProgress: false,
+        });
+        const tabId = useTabStore.getState().activeTabId;
+        if (tabId) useTabStore.getState().updateTabState(tabId, {
+          isDirty: stillDirty, title: refreshed.title, noteType: refreshed.note_type,
+        });
+      } catch (e) {
+        log.error("stores::editor", "failed to save raw note", { path: activeNote.path, error: String(e) });
+        set({ savingInProgress: false });
+      }
+      return;
+    }
 
     // Plain file save path
     if (activePlainFile) {
@@ -552,7 +603,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   resolveConflict: async (action: "keep-mine" | "accept-theirs") => {
     if (action === "accept-theirs") {
       const { activeNote, activePlainFile } = get();
-      set({ isDirty: false, editedBody: null, editedFrontmatter: null, conflictState: "none", rawContent: null, fmUndoStack: [], fmRedoStack: [], _lastFmField: null, _lastFmTime: 0 });
+      set({ isDirty: false, editedBody: null, editedFrontmatter: null, conflictState: "none", rawContent: null, _rawDirty: false, fmUndoStack: [], fmRedoStack: [], _lastFmField: null, _lastFmTime: 0 });
       try {
         const api = await getAPI();
         if (activeNote) {
@@ -581,27 +632,49 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setViewMode: (mode: "edit" | "preview" | "raw") => {
     const prev = get().viewMode;
+    const { isDirty, _rawDirty, savingInProgress, editedFrontmatter, activeNote } = get();
+
+    // Auto-save before switching modes when dirty
+    const needsSave = isDirty && !savingInProgress &&
+      !(editedFrontmatter?.title !== undefined && editedFrontmatter.title.trim() === "");
+
     if (mode === "raw") {
-      set({ viewMode: "raw", rawContent: null });
-      const tabId = useTabStore.getState().activeTabId;
-      if (tabId) useTabStore.getState().updateTabState(tabId, { viewMode: "raw" });
-      const { activeNote } = get();
-      if (activeNote) {
-        getAPI().then(api => api.readPlainFile(activeNote.path)).then(file => {
-          if (get().viewMode === "raw" && get().activeNote?.path === activeNote.path) {
-            set({ rawContent: file.body });
-          }
-        }).catch(e => {
-          log.error("stores::editor", "failed to fetch raw content", { error: String(e) });
-          set({ viewMode: "edit", rawContent: null });
-          const tid = useTabStore.getState().activeTabId;
-          if (tid) useTabStore.getState().updateTabState(tid, { viewMode: "edit" });
-        });
+      // Switching TO raw: save body/fm edits first, then fetch raw
+      const doSwitch = () => {
+        set({ viewMode: "raw", rawContent: null, _rawDirty: false });
+        const tabId = useTabStore.getState().activeTabId;
+        if (tabId) useTabStore.getState().updateTabState(tabId, { viewMode: "raw" });
+        const note = get().activeNote;
+        if (note) {
+          getAPI().then(api => api.readPlainFile(note.path)).then(file => {
+            if (get().viewMode === "raw" && get().activeNote?.path === note.path) {
+              set({ rawContent: file.body });
+            }
+          }).catch(e => {
+            log.error("stores::editor", "failed to fetch raw content", { error: String(e) });
+            set({ viewMode: "edit", rawContent: null });
+            const tid = useTabStore.getState().activeTabId;
+            if (tid) useTabStore.getState().updateTabState(tid, { viewMode: "edit" });
+          });
+        }
+      };
+      if (needsSave && !_rawDirty) {
+        get().saveNote().then(doSwitch).catch(doSwitch);
+      } else {
+        doSwitch();
       }
     } else {
-      set({ viewMode: mode, rawContent: prev === "raw" ? null : get().rawContent });
-      const tabId = useTabStore.getState().activeTabId;
-      if (tabId) useTabStore.getState().updateTabState(tabId, { viewMode: mode });
+      // Switching FROM raw (or edit↔preview): save raw edits first if needed
+      const doSwitch = () => {
+        set({ viewMode: mode, rawContent: null, _rawDirty: false });
+        const tabId = useTabStore.getState().activeTabId;
+        if (tabId) useTabStore.getState().updateTabState(tabId, { viewMode: mode });
+      };
+      if (needsSave && _rawDirty && prev === "raw") {
+        get().saveNote().then(doSwitch).catch(doSwitch);
+      } else {
+        doSwitch();
+      }
     }
   },
 
@@ -628,6 +701,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       _lastFmTime: 0,
       viewMode: "edit",
       rawContent: null,
+      _rawDirty: false,
       scrollTop: 0,
       cursorPos: 0,
     });

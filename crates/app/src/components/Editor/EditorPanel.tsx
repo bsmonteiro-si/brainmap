@@ -11,8 +11,6 @@ import { TabBar } from "./TabBar";
 import { getNodeColor } from "../GraphView/graphStyles";
 import type { EditorView } from "@codemirror/view";
 
-const NOOP = () => {};
-
 export function EditorPanel() {
   const editorViewRef = useRef<EditorView | null>(null);
   const activeNote = useEditorStore((s) => s.activeNote);
@@ -36,6 +34,10 @@ export function EditorPanel() {
 
   const onEditorChange = useCallback((body: string) => {
     useEditorStore.getState().updateContent(body);
+  }, []);
+
+  const onRawChange = useCallback((body: string) => {
+    useEditorStore.getState().updateRawContent(body);
   }, []);
 
   // Capture scroll/cursor from editorView before note switch
@@ -327,8 +329,7 @@ export function EditorPanel() {
                 key="raw"
                 notePath={activeNote.path}
                 content={rawContent}
-                onChange={NOOP}
-                readOnly={true}
+                onChange={onRawChange}
               />
             ) : viewMode === "raw" ? (
               <div className="editor-placeholder">Loading raw content...</div>

@@ -1,4 +1,5 @@
-import { useUIStore, FONT_PRESETS } from "../../stores/uiStore";
+import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES } from "../../stores/uiStore";
+import type { LeftTab } from "../../stores/uiStore";
 
 function FontFamilySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const presetValue =
@@ -55,6 +56,12 @@ export function SettingsModal() {
   const setEditorFontFamily = useUIStore((s) => s.setEditorFontFamily);
   const setEditorFontSize = useUIStore((s) => s.setEditorFontSize);
   const resetFontPrefs = useUIStore((s) => s.resetFontPrefs);
+  const setDefaultTabSize = useUIStore((s) => s.setDefaultTabSize);
+  const resetLayoutPrefs = useUIStore((s) => s.resetLayoutPrefs);
+  const panelSizes = useUIStore((s) => s.panelSizes);
+
+  const getContentSize = (tab: LeftTab) =>
+    panelSizes[tab]?.content ?? BUILTIN_TAB_SIZES[tab].content;
 
   return (
     <div className="settings-overlay" onClick={closeSettings}>
@@ -81,6 +88,32 @@ export function SettingsModal() {
                 </select>
               </div>
             </div>
+          </div>
+
+          {/* ── Layout ── */}
+          <div className="settings-section">
+            <div className="settings-section-title">Panel Layout</div>
+            {(["files", "graph", "search"] as LeftTab[]).map((tab) => (
+              <div className="settings-row" key={tab}>
+                <span className="settings-label" style={{ textTransform: "capitalize" }}>{tab}</span>
+                <div className="settings-control">
+                  <div className="settings-size-row">
+                    <input
+                      type="range"
+                      min={10}
+                      max={90}
+                      step={5}
+                      value={getContentSize(tab)}
+                      onChange={(e) => setDefaultTabSize(tab, Number(e.target.value))}
+                    />
+                    <span className="settings-size-value">{getContentSize(tab)}% / {100 - getContentSize(tab)}%</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <button className="settings-reset" onClick={resetLayoutPrefs}>
+              Reset layout to defaults
+            </button>
           </div>
 
           {/* ── Editor Font ── */}

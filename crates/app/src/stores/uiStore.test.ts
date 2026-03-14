@@ -280,6 +280,36 @@ describe("getTabSizes", () => {
   });
 });
 
+describe("setDefaultTabSize / resetLayoutPrefs", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useUIStore.setState({ panelSizes: {} });
+  });
+
+  it("setDefaultTabSize persists to uiPrefs and updates panelSizes", () => {
+    useUIStore.getState().setDefaultTabSize("graph", 60);
+    const prefs = JSON.parse(localStorage.getItem("brainmap:uiPrefs") ?? "{}");
+    expect(prefs.defaultTabSizes.graph).toEqual({ content: 60, editor: 40 });
+    expect(useUIStore.getState().panelSizes.graph).toEqual({ content: 60, editor: 40 });
+  });
+
+  it("setDefaultTabSize for different tabs are independent", () => {
+    useUIStore.getState().setDefaultTabSize("files", 30);
+    useUIStore.getState().setDefaultTabSize("graph", 70);
+    const prefs = JSON.parse(localStorage.getItem("brainmap:uiPrefs") ?? "{}");
+    expect(prefs.defaultTabSizes.files).toEqual({ content: 30, editor: 70 });
+    expect(prefs.defaultTabSizes.graph).toEqual({ content: 70, editor: 30 });
+  });
+
+  it("resetLayoutPrefs clears defaultTabSizes from prefs", () => {
+    useUIStore.getState().setDefaultTabSize("graph", 60);
+    useUIStore.getState().resetLayoutPrefs();
+    const prefs = JSON.parse(localStorage.getItem("brainmap:uiPrefs") ?? "{}");
+    expect(prefs.defaultTabSizes).toBeUndefined();
+    expect(useUIStore.getState().panelSizes).toEqual({});
+  });
+});
+
 // autoSave was removed — auto-save is always on
 
 describe("graph visual toggles", () => {

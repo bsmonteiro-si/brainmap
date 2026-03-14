@@ -285,6 +285,10 @@ export class MockBridge implements BrainMapAPI {
     // No-op in mock
   }
 
+  async writeRawNote(_path: string, _content: string): Promise<void> {
+    // No-op in mock
+  }
+
   async deleteFolder(path: string, force?: boolean): Promise<{ deleted_paths: string[] }> {
     await mockDelay("deleteNote");
     const prefix = path.endsWith("/") ? path : path + "/";

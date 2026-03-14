@@ -134,17 +134,26 @@ export function GraphView() {
 
   // When graph tab becomes visible after being hidden (display:none), resize
   // the Cytoscape canvas. Fit on first reveal only so subsequent tab switches
-  // don't discard the user's zoom/pan. hasBeenFittedRef is more reliable than
-  // reading offsetWidth after layout (which may already be non-zero by effect time).
+  // don't discard the user's zoom/pan. A short delay lets the panel resize
+  // animation settle so Cytoscape picks up the final container dimensions.
   useEffect(() => {
     if (activeLeftTab === "graph") {
       const cy = cyRef.current;
       if (cy) {
+        // Immediate resize for instant feedback
         cy.resize();
         if (!hasBeenFittedRef.current && cy.nodes().length > 0) {
           cy.fit(undefined, 40);
           hasBeenFittedRef.current = true;
         }
+        // Delayed resize after panel animation settles
+        const timer = setTimeout(() => {
+          cy.resize();
+          if (cy.nodes().length > 0) {
+            cy.fit(undefined, 40);
+          }
+        }, 100);
+        return () => clearTimeout(timer);
       }
     }
   }, [activeLeftTab]);

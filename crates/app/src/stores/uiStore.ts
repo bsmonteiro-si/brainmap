@@ -50,18 +50,28 @@ interface PanelSizes {
   search?: TabPanelSizes;
 }
 
-const DEFAULT_TAB_SIZES: Record<LeftTab, TabPanelSizes> = {
+export const BUILTIN_TAB_SIZES: Record<LeftTab, Required<TabPanelSizes>> = {
   files: { content: 20, editor: 80 },
   graph: { content: 80, editor: 20 },
   search: { content: 20, editor: 80 },
 };
 
+export function getDefaultTabSizes(prefs: PersistedPrefs): Record<LeftTab, Required<TabPanelSizes>> {
+  const custom = prefs.defaultTabSizes;
+  if (!custom) return BUILTIN_TAB_SIZES;
+  return {
+    files: { content: custom.files?.content ?? BUILTIN_TAB_SIZES.files.content, editor: custom.files?.editor ?? BUILTIN_TAB_SIZES.files.editor },
+    graph: { content: custom.graph?.content ?? BUILTIN_TAB_SIZES.graph.content, editor: custom.graph?.editor ?? BUILTIN_TAB_SIZES.graph.editor },
+    search: { content: custom.search?.content ?? BUILTIN_TAB_SIZES.search.content, editor: custom.search?.editor ?? BUILTIN_TAB_SIZES.search.editor },
+  };
+}
+
 export function getTabSizes(panelSizes: PanelSizes, tab: LeftTab): Required<TabPanelSizes> {
   const stored = panelSizes[tab];
-  const defaults = DEFAULT_TAB_SIZES[tab];
+  const defaults = BUILTIN_TAB_SIZES[tab];
   return {
-    content: stored?.content ?? defaults.content!,
-    editor: stored?.editor ?? defaults.editor!,
+    content: stored?.content ?? defaults.content,
+    editor: stored?.editor ?? defaults.editor,
   };
 }
 
@@ -72,6 +82,7 @@ interface PersistedPrefs {
   editorFontFamily?: string;
   editorFontSize?: number;
   uiZoom?: number;
+  defaultTabSizes?: Partial<Record<LeftTab, TabPanelSizes>>;
 }
 
 type CreateNoteMode = "default" | "create-and-link";
@@ -160,6 +171,8 @@ interface UIState {
   setEditorFontFamily: (v: string) => void;
   setEditorFontSize: (v: number) => void;
   resetFontPrefs: () => void;
+  setDefaultTabSize: (tab: LeftTab, content: number) => void;
+  resetLayoutPrefs: () => void;
   resetWorkspaceState: () => void;
   zoomIn: () => void;
   zoomOut: () => void;
@@ -180,17 +193,32 @@ function resolveTheme(theme: Theme): "light" | "dark" {
 function loadStoredSizes(): PanelSizes {
   try {
     const raw = JSON.parse(localStorage.getItem("brainmap:panelSizes") ?? "{}");
-    // Already in per-tab format
-    if (raw.files || raw.graph || raw.search) {
-      return { files: raw.files, graph: raw.graph, search: raw.search };
+    let result: PanelSizes = {};
+
+    // Already in per-tab format (values are objects, not numbers)
+    if (typeof raw.files === "object" || typeof raw.graph === "object" || typeof raw.search === "object") {
+      result = { files: raw.files, graph: raw.graph, search: raw.search };
+    } else {
+      // Migrate old flat keys (content/editor or graph/right) → files sub-object
+      const content = raw.content ?? raw.graph;
+      const editor = raw.editor ?? raw.right;
+      if (content != null || editor != null) {
+        result = { files: { content, editor } };
+      }
     }
-    // Migrate old flat keys (content/editor or graph/right) → files sub-object
-    const content = raw.content ?? raw.graph;
-    const editor = raw.editor ?? raw.right;
-    if (content != null || editor != null) {
-      return { files: { content, editor } };
+
+    // For tabs with no stored sizes, apply user's custom defaults from prefs
+    const customDefaults = loadStoredPrefs().defaultTabSizes;
+    if (customDefaults) {
+      const tabs: LeftTab[] = ["files", "graph", "search"];
+      for (const tab of tabs) {
+        if (!result[tab] && customDefaults[tab]) {
+          result[tab] = customDefaults[tab];
+        }
+      }
     }
-    return {};
+
+    return result;
   } catch {
     return {};
   }
@@ -205,7 +233,9 @@ function loadStoredPrefs(): PersistedPrefs {
 }
 
 function savePrefs(prefs: PersistedPrefs) {
-  localStorage.setItem("brainmap:uiPrefs", JSON.stringify(prefs));
+  // Merge with existing to preserve keys not explicitly set (e.g. defaultTabSizes)
+  const existing = loadStoredPrefs();
+  localStorage.setItem("brainmap:uiPrefs", JSON.stringify({ ...existing, ...prefs }));
 }
 
 const storedSizes = loadStoredSizes();
@@ -364,6 +394,27 @@ export const useUIStore = create<UIState>((set, get) => ({
     const { theme, uiZoom } = get();
     set({ uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE });
     savePrefs({ theme, uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, uiZoom });
+  },
+
+  setDefaultTabSize: (tab: LeftTab, content: number) => {
+    const s = get();
+    const prefs = loadStoredPrefs();
+    const next = { ...prefs.defaultTabSizes, [tab]: { content, editor: 100 - content } };
+    savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: s.uiZoom, defaultTabSizes: next });
+    // Also update current panel sizes so the change is immediately visible
+    const panelNext = { ...s.panelSizes, [tab]: { content, editor: 100 - content } };
+    localStorage.setItem("brainmap:panelSizes", JSON.stringify(panelNext));
+    set({ panelSizes: panelNext });
+  },
+
+  resetLayoutPrefs: () => {
+    // Write directly to bypass savePrefs merge (which would re-introduce the key)
+    const prefs = loadStoredPrefs();
+    delete prefs.defaultTabSizes;
+    localStorage.setItem("brainmap:uiPrefs", JSON.stringify(prefs));
+    // Clear current panel sizes so builtin defaults apply
+    localStorage.setItem("brainmap:panelSizes", "{}");
+    set({ panelSizes: {} });
   },
 
   zoomIn: () => {

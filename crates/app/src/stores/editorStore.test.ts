@@ -6,6 +6,7 @@ const mockApi = {
   readNote: vi.fn(),
   updateNote: vi.fn(),
   readPlainFile: vi.fn(),
+  writeRawNote: vi.fn(),
 };
 
 vi.mock("../api/bridge", () => ({
@@ -66,6 +67,7 @@ beforeEach(() => {
     _lastFmTime: 0,
     viewMode: "edit",
     rawContent: null,
+    _rawDirty: false,
     scrollTop: 0,
     cursorPos: 0,
   });
@@ -541,5 +543,55 @@ describe("raw view mode", () => {
 
     // rawContent should still be null (stale result discarded)
     expect(useEditorStore.getState().rawContent).toBeNull();
+  });
+
+  it("updateRawContent sets isDirty, _rawDirty, and updates rawContent", () => {
+    useEditorStore.setState({ activeNote: sampleNote, rawContent: rawFileContent, viewMode: "raw" });
+    useEditorStore.getState().updateRawContent("edited raw content");
+    const s = useEditorStore.getState();
+    expect(s.rawContent).toBe("edited raw content");
+    expect(s.isDirty).toBe(true);
+    expect(s._rawDirty).toBe(true);
+  });
+
+  it("saveNote in raw mode calls writeRawNote and refreshes activeNote", async () => {
+    const refreshed = { ...sampleNote, title: "Updated Title", modified: "2026-03-14" };
+    mockApi.writeRawNote.mockResolvedValue(undefined);
+    mockApi.readNote.mockResolvedValue(refreshed);
+
+    const editedRaw = "---\ntitle: Updated Title\ntype: concept\n---\n# Test\nSome body";
+    useEditorStore.setState({
+      activeNote: sampleNote,
+      isDirty: true,
+      _rawDirty: true,
+      rawContent: editedRaw,
+      viewMode: "raw",
+    });
+
+    await useEditorStore.getState().saveNote();
+
+    expect(mockApi.writeRawNote).toHaveBeenCalledWith(sampleNote.path, editedRaw);
+    expect(mockApi.readNote).toHaveBeenCalledWith(sampleNote.path);
+    expect(useEditorStore.getState().activeNote?.title).toBe("Updated Title");
+    expect(useEditorStore.getState().isDirty).toBe(false);
+    expect(useEditorStore.getState()._rawDirty).toBe(false);
+  });
+
+  it("saveNote raw error preserves dirty state", async () => {
+    mockApi.writeRawNote.mockRejectedValue(new Error("parse error"));
+
+    useEditorStore.setState({
+      activeNote: sampleNote,
+      isDirty: true,
+      _rawDirty: true,
+      rawContent: "invalid yaml content",
+      viewMode: "raw",
+    });
+
+    await useEditorStore.getState().saveNote();
+
+    expect(useEditorStore.getState().isDirty).toBe(true);
+    expect(useEditorStore.getState()._rawDirty).toBe(true);
+    expect(useEditorStore.getState().savingInProgress).toBe(false);
   });
 });

@@ -234,6 +234,15 @@ pub fn write_plain_file(state: State<'_, AppState>, path: String, body: String) 
 }
 
 #[tauri::command]
+pub fn write_raw_note(state: State<'_, AppState>, path: String, content: String) -> Result<(), String> {
+    let abs_path = state.with_workspace(|ws| {
+        handlers::validate_relative_path(&ws.root, &path)
+    })?;
+    state.register_expected_write(abs_path);
+    state.with_workspace_mut(|ws| handlers::handle_write_raw_note(ws, &path, &content))
+}
+
+#[tauri::command]
 pub fn list_workspace_files(state: State<'_, AppState>) -> Result<Vec<String>, String> {
     state.with_workspace(|ws| Ok(handlers::handle_list_workspace_files(ws)))
 }

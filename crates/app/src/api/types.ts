@@ -140,5 +140,6 @@ export interface BrainMapAPI {
   listWorkspaceFiles(): Promise<string[]>;
   readPlainFile(path: string): Promise<PlainFileDetail>;
   writePlainFile(path: string, body: string): Promise<void>;
+  writeRawNote(path: string, content: string): Promise<void>;
   onEvent(callback: (event: WorkspaceEvent) => void): () => void;
 }

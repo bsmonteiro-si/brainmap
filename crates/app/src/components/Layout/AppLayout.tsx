@@ -52,7 +52,7 @@ export function AppLayout() {
   const handleLayout = useCallback(
     (layout: Layout) => {
       const tab = useUIStore.getState().activeLeftTab;
-      savePanelSizes(tab, { content: layout[0], editor: layout[1] });
+      savePanelSizes(tab, { content: layout[PANEL_IDS.content], editor: layout[PANEL_IDS.editor] });
     },
     [savePanelSizes]
   );

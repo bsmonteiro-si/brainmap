@@ -116,6 +116,10 @@ export class TauriBridge implements BrainMapAPI {
     return invoke<void>("write_plain_file", { path, body });
   }
 
+  async writeRawNote(path: string, content: string): Promise<void> {
+    return invoke<void>("write_raw_note", { path, content });
+  }
+
   onEvent(callback: (event: WorkspaceEvent) => void): () => void {
     let unlisten: (() => void) | null = null;
     let cancelled = false;

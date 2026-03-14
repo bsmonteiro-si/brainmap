@@ -42,6 +42,7 @@ pub fn run() {
             commands::list_workspace_files,
             commands::read_plain_file,
             commands::write_plain_file,
+            commands::write_raw_note,
             commands::write_log,
         ])
         .run(tauri::generate_context!())
