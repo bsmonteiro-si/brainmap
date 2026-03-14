@@ -7,9 +7,11 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { useUIStore } from "../../stores/uiStore";
+import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { linkNavigation } from "./cmLinkNavigation";
 import { formattingKeymap } from "./cmFormatting";
 import { calloutDecorations } from "./cmCalloutDecorations";
+import { copyReferenceMenu } from "./cmCopyReference";
 
 const ACCENT = "#4a9eff";
 const ACCENT_DARK = "#5aaeFF";
@@ -69,6 +71,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
   const editorFontFamily = useUIStore((s) => s.editorFontFamily);
   const editorFontSize = useUIStore((s) => s.editorFontSize);
   const uiZoom = useUIStore((s) => s.uiZoom);
+  const wsRoot = useWorkspaceStore((s) => s.info?.root);
 
   // Keep refs up-to-date
   onChangeRef.current = onChange;
@@ -86,6 +89,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
       syntaxHighlighting(buildMarkdownHighlight(isDark)),
       linkNavigation(notePath),
       calloutDecorations(),
+      ...(wsRoot ? [copyReferenceMenu(wsRoot.replace(/\/$/, "") + "/" + notePath)] : []),
     ];
 
     if (readOnly) {
@@ -140,7 +144,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
       viewRef.current = null;
       onViewReady?.(null);
     };
-  }, [notePath, effectiveTheme, uiZoom, editorFontFamily, editorFontSize, readOnly]);
+  }, [notePath, effectiveTheme, uiZoom, editorFontFamily, editorFontSize, readOnly, wsRoot]);
 
   // Sync external content changes (e.g., after save or conflict resolution)
   // without recreating the editor
