@@ -10,6 +10,7 @@ import { useUIStore } from "../../stores/uiStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { getAPI } from "../../api/bridge";
 import type { NodeSummary } from "../../api/types";
+import type { GraphLayout } from "../../stores/uiStore";
 import { graphStylesheet, getNodeColor, getNodeShape } from "./graphStyles";
 import { getNodeIconSvg, getNodeIconSvgWhite } from "./graphIcons";
 
@@ -45,7 +46,21 @@ function applyEdgeLabelVisibility(cy: Core, show: boolean, selectedPath: string 
   }
 }
 
-function runLayout(cy: Core, layout: "force" | "hierarchical", animate = false) {
+function getMostConnectedNodeId(cy: Core): string | undefined {
+  let maxDeg = 0;
+  let maxId: string | undefined;
+  cy.nodes().forEach((n) => {
+    const d = n.degree(false);
+    if (d > maxDeg) { maxDeg = d; maxId = n.id(); }
+  });
+  return maxId;
+}
+
+function getRadialRootId(cy: Core): string | undefined {
+  return useUIStore.getState().homeNotePath ?? getMostConnectedNodeId(cy);
+}
+
+function runLayout(cy: Core, layout: GraphLayout, animate = false, rootNodeId?: string | null) {
   if (layout === "hierarchical") {
     cy.elements()
       .filter((el) => el.isNode() || DIRECTIONAL_RELS.has(el.data("label") as string))
@@ -61,7 +76,79 @@ function runLayout(cy: Core, layout: "force" | "hierarchical", animate = false) 
         padding: 40,
       } as cytoscape.LayoutOptions)
       .run();
+  } else if (layout === "radial") {
+    const root = rootNodeId ?? getMostConnectedNodeId(cy);
+    cy.layout({
+      name: "breadthfirst",
+      circle: true,
+      roots: root ? [root] : undefined,
+      spacingFactor: 1.5,
+      animate,
+      animationDuration: 500,
+      animationEasing: "ease-in-out-sine",
+      fit: true,
+      padding: 60,
+    } as cytoscape.LayoutOptions).run();
+  } else if (layout === "concentric") {
+    cy.layout({
+      name: "concentric",
+      concentric: (node: cytoscape.NodeSingular) => node.degree(false),
+      levelWidth: () => 2,
+      minNodeSpacing: 60,
+      animate,
+      animationDuration: 500,
+      animationEasing: "ease-in-out-sine",
+      fit: true,
+      padding: 60,
+    } as cytoscape.LayoutOptions).run();
+  } else if (layout === "grouped") {
+    // Partition nodes by type, assign group centers on a circle
+    const typeGroups = new Map<string, string[]>();
+    cy.nodes().forEach((n) => {
+      const t = n.data("noteType") as string;
+      if (!typeGroups.has(t)) typeGroups.set(t, []);
+      typeGroups.get(t)!.push(n.id());
+    });
+
+    const groupCount = typeGroups.size;
+    const radius = Math.max(200, cy.nodes().length * 8);
+    let gi = 0;
+
+    for (const [, ids] of typeGroups) {
+      const angle = (2 * Math.PI * gi) / groupCount;
+      const cx = radius * Math.cos(angle);
+      const cy_ = radius * Math.sin(angle);
+      ids.forEach((id, j) => {
+        const jitterAngle = (2 * Math.PI * j) / ids.length;
+        const jitterR = Math.min(80, ids.length * 10);
+        cy.getElementById(id).position({
+          x: cx + jitterR * Math.cos(jitterAngle),
+          y: cy_ + jitterR * Math.sin(jitterAngle),
+        });
+      });
+      gi++;
+    }
+
+    // Run fcose with pre-positioned nodes (randomize: false) and stronger gravity to keep clusters
+    cy.layout({
+      name: "fcose",
+      animate,
+      animationDuration: 500,
+      animationEasing: "ease-in-out-sine",
+      quality: "proof",
+      idealEdgeLength: 150,
+      nodeRepulsion: 30000,
+      edgeElasticity: 0.20,
+      gravity: 0.25,
+      gravityRange: 3.0,
+      numIter: 1500,
+      fit: true,
+      padding: 60,
+      nodeDimensionsIncludeLabels: false,
+      randomize: false,
+    } as cytoscape.LayoutOptions).run();
   } else {
+    // "force" layout (default fallback)
     cy.layout({
       name: "fcose",
       animate,
@@ -134,6 +221,14 @@ export function GraphView() {
   } | null>(null);
   const tooltipCacheRef = useRef<Map<string, NodeSummary>>(new Map());
 
+  // Graph node context menu state
+  const [ctxMenu, setCtxMenu] = useState<{
+    x: number;
+    y: number;
+    nodePath: string;
+    noteType: string;
+  } | null>(null);
+
   // When graph tab becomes visible after being hidden (display:none), resize
   // the Cytoscape canvas. Fit on first reveal only so subsequent tab switches
   // don't discard the user's zoom/pan. A short delay lets the panel resize
@@ -172,7 +267,8 @@ export function GraphView() {
     graphLayoutRef.current = graphLayout;
     const cy = cyRef.current;
     if (cy && cy.nodes().length > 0) {
-      runLayout(cy, graphLayout, true);
+      const rootId = graphLayout === "radial" ? getRadialRootId(cy) : undefined;
+      runLayout(cy, graphLayout, true, rootId);
     }
   }, [graphLayout]);
 
@@ -208,13 +304,37 @@ export function GraphView() {
       expandNodeRef.current(nodePath);
     });
 
+    cy.on("cxttap", "node", (evt) => {
+      evt.originalEvent.preventDefault();
+      const nodePath = evt.target.id();
+      const nodeData = useGraphStore.getState().nodes.get(nodePath);
+      const container = containerRef.current;
+      const rect = container?.getBoundingClientRect();
+      const rp = evt.renderedPosition;
+      // Position menu to top-left of click point, clamped to viewport
+      const rawX = (rect?.left ?? 0) + rp.x - 170;
+      const rawY = (rect?.top ?? 0) + rp.y - 50;
+      setCtxMenu({
+        x: Math.max(0, rawX),
+        y: Math.max(0, rawY),
+        nodePath,
+        noteType: nodeData?.note_type ?? "reference",
+      });
+    });
+
+    cy.on("cxttap", (evt) => {
+      if (evt.target === cy) setCtxMenu((prev) => prev ? null : prev);
+    });
+
     cy.on("tap", (evt) => {
+      setCtxMenu((prev) => prev ? null : prev);
       if (evt.target === cy) {
         selectNodeRef.current(null);
       }
     });
 
     cy.on("zoom", () => {
+      setCtxMenu((prev) => prev ? null : prev);
       const autoShow = cy.zoom() >= 0.8;
       applyEdgeLabelVisibility(
         cy,
@@ -300,6 +420,7 @@ export function GraphView() {
     return () => {
       if (entranceTimerRef.current) clearTimeout(entranceTimerRef.current);
       setTooltip(null);
+      setCtxMenu(null);
       cy.destroy();
       cyRef.current = null;
     };
@@ -374,8 +495,20 @@ export function GraphView() {
       cy.getElementById(focalPath).addClass("graph-focus-node");
     }
 
+    // Mark the home node with a gold glow; clear if home note was deleted
+    const homePath = useUIStore.getState().homeNotePath;
+    if (homePath) {
+      if (nodeIds.has(homePath)) {
+        cy.getElementById(homePath).addClass("home-node");
+      } else {
+        useUIStore.getState().clearHomeNote();
+      }
+    }
+
     if (cyNodes.length > 0) {
-      runLayout(cy, graphLayoutRef.current);
+      const currentLayout = graphLayoutRef.current;
+      const rootId = currentLayout === "radial" ? getRadialRootId(cy) : undefined;
+      runLayout(cy, currentLayout, false, rootId);
       applyEdgeLabelVisibility(cy, showEdgeLabelsRef.current, selectedNodePathRef.current);
 
       // Staggered fade-in entrance (first load only)
@@ -623,6 +756,26 @@ export function GraphView() {
     };
   }, [showEdgeParticles, filteredNodes]);
 
+  // Dismiss graph context menu on click-outside or Escape
+  const ctxMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (ctxMenuRef.current && !ctxMenuRef.current.contains(e.target as Node)) {
+        setCtxMenu(null);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setCtxMenu(null);
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [ctxMenu]);
+
   const showOverlay = isLoading || filteredNodes.length === 0;
   const overlayText = isLoading
     ? "Loading graph..."
@@ -650,7 +803,7 @@ export function GraphView() {
         </div>
       )}
       <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
-        <div ref={containerRef} className="graph-container" />
+        <div ref={containerRef} className="graph-container" onContextMenu={(e) => e.preventDefault()} />
         {showClusterHulls && (
           <canvas
             ref={hullCanvasRef}
@@ -674,6 +827,41 @@ export function GraphView() {
           <div className="graph-minimap">
             <div ref={minimapContainerRef} className="graph-minimap-cy" />
             <canvas ref={minimapCanvasRef} className="graph-minimap-canvas" />
+          </div>
+        )}
+        {ctxMenu && (
+          <div
+            ref={ctxMenuRef}
+            className="context-menu"
+            style={{ left: ctxMenu.x, top: ctxMenu.y }}
+          >
+            <div
+              className="context-menu-item"
+              onClick={() => {
+                useUIStore
+                  .getState()
+                  .setGraphFocus(ctxMenu.nodePath, ctxMenu.noteType === "folder" ? "folder" : "note");
+                setCtxMenu(null);
+              }}
+            >
+              Focus in Graph
+            </div>
+            {ctxMenu.noteType !== "folder" && (
+              <div
+                className="context-menu-item"
+                onClick={() => {
+                  const ui = useUIStore.getState();
+                  if (ui.homeNotePath === ctxMenu.nodePath) {
+                    ui.clearHomeNote();
+                  } else {
+                    ui.setHomeNote(ctxMenu.nodePath);
+                  }
+                  setCtxMenu(null);
+                }}
+              >
+                {useUIStore.getState().homeNotePath === ctxMenu.nodePath ? "Unset Home Note" : "Set as Home Note"}
+              </div>
+            )}
           </div>
         )}
         {tooltip && (

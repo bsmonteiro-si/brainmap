@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useUIStore, getTabSizes } from "./uiStore";
+import { useUIStore, getTabSizes, DEFAULT_TOOLTIP_SIZE, DEFAULT_TOOLTIP_PILL_SIZE, DEFAULT_TOOLTIP_CONNECTIONS_SIZE, DEFAULT_TOOLTIP_SUMMARY_SIZE, DEFAULT_TOOLTIP_TAG_SIZE } from "./uiStore";
 
 beforeEach(() => {
   // Reset the relevant slice of store state between tests
@@ -391,5 +391,62 @@ describe("line numbers toggle", () => {
     expect(useUIStore.getState().showLineNumbers).toBe(false);
     const stored = JSON.parse(localStorage.getItem("brainmap:uiPrefs") ?? "{}");
     expect(stored.editorLineNumbers).toBe(false);
+  });
+});
+
+describe("tooltip font size settings", () => {
+  beforeEach(() => {
+    useUIStore.getState().resetTooltipPrefs();
+  });
+
+  it("setTooltipFontSize scales all sub-sizes proportionally", () => {
+    useUIStore.getState().setTooltipFontSize(36); // 2x default (18)
+    const s = useUIStore.getState();
+    expect(s.tooltipFontSize).toBe(36);
+    expect(s.tooltipPillSize).toBe(28); // 14 * 2
+    expect(s.tooltipConnectionsSize).toBe(28); // 14 * 2
+    expect(s.tooltipSummarySize).toBe(30); // 15 * 2
+    expect(s.tooltipTagSize).toBe(28); // 14 * 2
+  });
+
+  it("setTooltipFontSize persists to localStorage", () => {
+    useUIStore.getState().setTooltipFontSize(24);
+    const stored = JSON.parse(localStorage.getItem("brainmap:uiPrefs") ?? "{}");
+    expect(stored.tooltipFontSize).toBe(24);
+    expect(stored.tooltipPillSize).toBe(Math.round(14 * 24 / 18));
+  });
+
+  it("individual setters update only their field", () => {
+    useUIStore.getState().setTooltipPillSize(20);
+    const s = useUIStore.getState();
+    expect(s.tooltipPillSize).toBe(20);
+    expect(s.tooltipFontSize).toBe(DEFAULT_TOOLTIP_SIZE); // unchanged
+    expect(s.tooltipConnectionsSize).toBe(DEFAULT_TOOLTIP_CONNECTIONS_SIZE); // unchanged
+  });
+
+  it("individual setters persist to localStorage", () => {
+    useUIStore.getState().setTooltipSummarySize(22);
+    const stored = JSON.parse(localStorage.getItem("brainmap:uiPrefs") ?? "{}");
+    expect(stored.tooltipSummarySize).toBe(22);
+  });
+
+  it("resetTooltipPrefs restores all defaults", () => {
+    useUIStore.getState().setTooltipFontSize(28);
+    useUIStore.getState().setTooltipTagSize(10);
+    useUIStore.getState().resetTooltipPrefs();
+    const s = useUIStore.getState();
+    expect(s.tooltipFontSize).toBe(DEFAULT_TOOLTIP_SIZE);
+    expect(s.tooltipPillSize).toBe(DEFAULT_TOOLTIP_PILL_SIZE);
+    expect(s.tooltipConnectionsSize).toBe(DEFAULT_TOOLTIP_CONNECTIONS_SIZE);
+    expect(s.tooltipSummarySize).toBe(DEFAULT_TOOLTIP_SUMMARY_SIZE);
+    expect(s.tooltipTagSize).toBe(DEFAULT_TOOLTIP_TAG_SIZE);
+  });
+
+  it("resetFontPrefs also resets tooltip sizes", () => {
+    useUIStore.getState().setTooltipFontSize(28);
+    useUIStore.getState().resetFontPrefs();
+    const s = useUIStore.getState();
+    expect(s.tooltipFontSize).toBe(DEFAULT_TOOLTIP_SIZE);
+    expect(s.tooltipPillSize).toBe(DEFAULT_TOOLTIP_PILL_SIZE);
   });
 });

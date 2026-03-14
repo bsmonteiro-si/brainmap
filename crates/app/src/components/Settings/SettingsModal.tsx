@@ -62,6 +62,17 @@ export function SettingsModal() {
   const showLineNumbers = useUIStore((s) => s.showLineNumbers);
   const setEditorLineNumbersDefault = useUIStore((s) => s.setEditorLineNumbersDefault);
   const resetFontPrefs = useUIStore((s) => s.resetFontPrefs);
+  const tooltipFontSize = useUIStore((s) => s.tooltipFontSize);
+  const tooltipPillSize = useUIStore((s) => s.tooltipPillSize);
+  const tooltipConnectionsSize = useUIStore((s) => s.tooltipConnectionsSize);
+  const tooltipSummarySize = useUIStore((s) => s.tooltipSummarySize);
+  const tooltipTagSize = useUIStore((s) => s.tooltipTagSize);
+  const setTooltipFontSize = useUIStore((s) => s.setTooltipFontSize);
+  const setTooltipPillSize = useUIStore((s) => s.setTooltipPillSize);
+  const setTooltipConnectionsSize = useUIStore((s) => s.setTooltipConnectionsSize);
+  const setTooltipSummarySize = useUIStore((s) => s.setTooltipSummarySize);
+  const setTooltipTagSize = useUIStore((s) => s.setTooltipTagSize);
+  const resetTooltipPrefs = useUIStore((s) => s.resetTooltipPrefs);
   const setDefaultTabSize = useUIStore((s) => s.setDefaultTabSize);
   const resetLayoutPrefs = useUIStore((s) => s.resetLayoutPrefs);
   const panelSizes = useUIStore((s) => s.panelSizes);
@@ -210,6 +221,59 @@ export function SettingsModal() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* ── Graph Tooltip ── */}
+          <div className="settings-section">
+            <div className="settings-section-title">Graph Tooltip</div>
+            <div className="settings-row">
+              <span className="settings-label">Overall</span>
+              <div className="settings-control">
+                <div className="settings-size-row">
+                  <input type="range" min={10} max={28} step={1} value={tooltipFontSize} onChange={(e) => setTooltipFontSize(Number(e.target.value))} />
+                  <span className="settings-size-value">{tooltipFontSize}px</span>
+                </div>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Type pill</span>
+              <div className="settings-control">
+                <div className="settings-size-row">
+                  <input type="range" min={8} max={24} step={1} value={tooltipPillSize} onChange={(e) => setTooltipPillSize(Number(e.target.value))} />
+                  <span className="settings-size-value">{tooltipPillSize}px</span>
+                </div>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Links</span>
+              <div className="settings-control">
+                <div className="settings-size-row">
+                  <input type="range" min={8} max={24} step={1} value={tooltipConnectionsSize} onChange={(e) => setTooltipConnectionsSize(Number(e.target.value))} />
+                  <span className="settings-size-value">{tooltipConnectionsSize}px</span>
+                </div>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Summary</span>
+              <div className="settings-control">
+                <div className="settings-size-row">
+                  <input type="range" min={8} max={24} step={1} value={tooltipSummarySize} onChange={(e) => setTooltipSummarySize(Number(e.target.value))} />
+                  <span className="settings-size-value">{tooltipSummarySize}px</span>
+                </div>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Tags</span>
+              <div className="settings-control">
+                <div className="settings-size-row">
+                  <input type="range" min={8} max={24} step={1} value={tooltipTagSize} onChange={(e) => setTooltipTagSize(Number(e.target.value))} />
+                  <span className="settings-size-value">{tooltipTagSize}px</span>
+                </div>
+              </div>
+            </div>
+            <button className="settings-reset" onClick={resetTooltipPrefs}>
+              Reset tooltip to defaults
+            </button>
           </div>
 
           <button className="settings-reset" onClick={resetFontPrefs}>

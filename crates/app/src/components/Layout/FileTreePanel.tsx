@@ -302,6 +302,20 @@ function ContextMenu({
           <div className="context-menu-item" onClick={handleFocusInGraph}>
             Focus in Graph
           </div>
+          <div
+            className="context-menu-item"
+            onClick={() => {
+              const ui = useUIStore.getState();
+              if (ui.homeNotePath === state.node!.fullPath) {
+                ui.clearHomeNote();
+              } else {
+                ui.setHomeNote(state.node!.fullPath);
+              }
+              onClose();
+            }}
+          >
+            {useUIStore.getState().homeNotePath === state.node!.fullPath ? "Unset Home Note" : "Set as Home Note"}
+          </div>
           <div className="context-menu-separator" />
           <div className="context-menu-item context-menu-item--danger" onClick={handleDelete}>
             Delete

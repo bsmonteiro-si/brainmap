@@ -77,6 +77,7 @@ export interface SegmentSnapshot {
   emptyFolders: Set<string>;
   activeLeftTab: LeftTab;
   leftPanelCollapsed: boolean;
+  homeNotePath: string | null;
 }
 
 // ── Module-level cache ────────────────────────────────────────────────
@@ -158,6 +159,7 @@ export function captureSnapshot(): SegmentSnapshot {
     emptyFolders: cloneSet(ui.emptyFolders),
     activeLeftTab: ui.activeLeftTab,
     leftPanelCollapsed: ui.leftPanelCollapsed,
+    homeNotePath: ui.homeNotePath,
   };
 }
 
@@ -234,6 +236,7 @@ export function restoreSnapshot(snapshot: SegmentSnapshot): void {
     emptyFolders: cloneSet(snapshot.emptyFolders),
     activeLeftTab: snapshot.activeLeftTab,
     leftPanelCollapsed: snapshot.leftPanelCollapsed,
+    homeNotePath: snapshot.homeNotePath,
   });
 }
 
@@ -300,6 +303,11 @@ export function applyEventToSnapshot(segmentId: string, event: WorkspaceEvent): 
   snapshot.nodes = result.nodes;
   snapshot.edges = result.edges;
   snapshot.workspaceFiles = result.workspaceFiles;
+
+  // Clear home note if the deleted node was the home note
+  if (snapshot.homeNotePath && !result.nodes.has(snapshot.homeNotePath)) {
+    snapshot.homeNotePath = null;
+  }
 }
 
 /** Get all cached segment IDs. */

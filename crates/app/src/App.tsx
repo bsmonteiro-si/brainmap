@@ -7,6 +7,7 @@ import { useUndoStore } from "./stores/undoStore";
 import { useNavigationStore } from "./stores/navigationStore";
 import { useSegmentStore } from "./stores/segmentStore";
 import { useAutoSave } from "./hooks/useAutoSave";
+import { useHomeAutoFocus } from "./hooks/useHomeAutoFocus";
 import { useTabStore, isUntitledTab } from "./stores/tabStore";
 import { closeTabAndNavigateNext } from "./stores/tabActions";
 import { promptUnsavedChanges } from "./stores/unsavedChangesPrompt";
@@ -37,6 +38,13 @@ function App() {
   const uiFontSize = useUIStore((s) => s.uiFontSize);
   const editorFontFamily = useUIStore((s) => s.editorFontFamily);
   const editorFontSize = useUIStore((s) => s.editorFontSize);
+  const { tooltipFontSize, tooltipPillSize, tooltipConnectionsSize, tooltipSummarySize, tooltipTagSize } = useUIStore((s) => ({
+    tooltipFontSize: s.tooltipFontSize,
+    tooltipPillSize: s.tooltipPillSize,
+    tooltipConnectionsSize: s.tooltipConnectionsSize,
+    tooltipSummarySize: s.tooltipSummarySize,
+    tooltipTagSize: s.tooltipTagSize,
+  }));
   const uiZoom = useUIStore((s) => s.uiZoom); // drives zoom useEffect below
 
   // Subscribe to workspace events for live updates
@@ -271,7 +279,12 @@ function App() {
     root.style.setProperty("--ui-font-size", `${uiFontSize}px`);
     root.style.setProperty("--editor-font-family", editorFontFamily);
     root.style.setProperty("--editor-font-size", `${editorFontSize}px`);
-  }, [uiFontFamily, uiFontSize, editorFontFamily, editorFontSize]);
+    root.style.setProperty("--tooltip-font-size", `${tooltipFontSize}px`);
+    root.style.setProperty("--tooltip-pill-size", `${tooltipPillSize}px`);
+    root.style.setProperty("--tooltip-connections-size", `${tooltipConnectionsSize}px`);
+    root.style.setProperty("--tooltip-summary-size", `${tooltipSummarySize}px`);
+    root.style.setProperty("--tooltip-tag-size", `${tooltipTagSize}px`);
+  }, [uiFontFamily, uiFontSize, editorFontFamily, editorFontSize, tooltipFontSize, tooltipPillSize, tooltipConnectionsSize, tooltipSummarySize, tooltipTagSize]);
 
   // Apply zoom at document level so mouse event coordinates remain consistent
   // (applying zoom to a sub-element breaks Cytoscape hit-testing).
@@ -289,6 +302,9 @@ function App() {
 
   // Auto-save: debounced save on edit, save on blur, save on note switch
   useAutoSave();
+
+  // Auto-focus graph on home/index note when workspace loads
+  useHomeAutoFocus();
 
   if (!info) {
     return <SegmentPicker />;

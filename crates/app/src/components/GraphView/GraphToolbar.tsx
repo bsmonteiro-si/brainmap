@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from "react";
-import { useUIStore } from "../../stores/uiStore";
+import { Home } from "lucide-react";
+import { useUIStore, type GraphLayout } from "../../stores/uiStore";
 import { useGraphStore } from "../../stores/graphStore";
 
 export function GraphToolbar() {
@@ -13,6 +14,8 @@ export function GraphToolbar() {
   const toggleEdgeType = useUIStore((s) => s.toggleEdgeType);
   const graphFocusPath = useUIStore((s) => s.graphFocusPath);
   const clearGraphFocus = useUIStore((s) => s.clearGraphFocus);
+  const homeNotePath = useUIStore((s) => s.homeNotePath);
+  const setGraphFocus = useUIStore((s) => s.setGraphFocus);
   const showMinimap = useUIStore((s) => s.showMinimap);
   const toggleMinimap = useUIStore((s) => s.toggleMinimap);
   const showClusterHulls = useUIStore((s) => s.showClusterHulls);
@@ -55,11 +58,25 @@ export function GraphToolbar() {
       </button>
       <select
         value={graphLayout}
-        onChange={(e) => setGraphLayout(e.target.value as "force" | "hierarchical")}
+        onChange={(e) => setGraphLayout(e.target.value as GraphLayout)}
       >
         <option value="force">Force Layout</option>
         <option value="hierarchical">Hierarchical (LR)</option>
+        <option value="radial">Radial</option>
+        <option value="concentric">Concentric</option>
+        <option value="grouped">Grouped by Type</option>
       </select>
+      {homeNotePath && (
+        <button
+          onClick={() => {
+            setGraphFocus(homeNotePath, "note");
+            setGraphLayout("radial");
+          }}
+          title="Go to home note (radial view)"
+        >
+          <Home size={14} /> Home
+        </button>
+      )}
       <div ref={popoverRef} style={{ position: "relative" }}>
         <button
           className={edgeTypes.some((r) => hiddenEdgeTypes.has(r)) ? "active" : ""}

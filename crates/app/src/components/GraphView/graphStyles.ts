@@ -141,6 +141,20 @@ export const graphStylesheet: any[] = [
     },
   },
   {
+    // Home/index node — gold glow ring to signal the graph entrypoint
+    selector: "node.home-node",
+    style: {
+      width: 26,
+      height: 26,
+      "border-width": 2,
+      "border-color": "#ffd700",
+      "border-opacity": 0.7,
+      "shadow-blur": 18,
+      "shadow-opacity": 0.9,
+      "shadow-color": "#ffd700",
+    },
+  },
+  {
     selector: "edge[kind = 'Implicit']",
     style: {
       "line-style": "dashed",

@@ -4,7 +4,7 @@ export type ThemeName = "light" | "dark" | "dracula" | "solarized-light" | "sola
 type Theme = ThemeName | "system";
 export type ComponentTheme = "inherit" | ThemeName;
 type GraphMode = "navigate" | "edit";
-type GraphLayout = "force" | "hierarchical";
+export type GraphLayout = "force" | "hierarchical" | "radial" | "concentric" | "grouped";
 
 export const THEME_BASE: Record<ThemeName, "light" | "dark"> = {
   light: "light",
@@ -60,6 +60,11 @@ const DEFAULT_EDITOR_SIZE = 14;
 const DEFAULT_ZOOM = 1.0;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.0;
+export const DEFAULT_TOOLTIP_SIZE = 18;
+export const DEFAULT_TOOLTIP_PILL_SIZE = 14;
+export const DEFAULT_TOOLTIP_CONNECTIONS_SIZE = 14;
+export const DEFAULT_TOOLTIP_SUMMARY_SIZE = 15;
+export const DEFAULT_TOOLTIP_TAG_SIZE = 14;
 
 export type LeftTab = "files" | "graph" | "search";
 
@@ -110,6 +115,12 @@ interface PersistedPrefs {
   defaultTabSizes?: Partial<Record<LeftTab, TabPanelSizes>>;
   filesTheme?: ComponentTheme;
   editorTheme?: ComponentTheme;
+  homeNotes?: Record<string, string>; // workspaceRoot → notePath
+  tooltipFontSize?: number;
+  tooltipPillSize?: number;
+  tooltipConnectionsSize?: number;
+  tooltipSummarySize?: number;
+  tooltipTagSize?: number;
 }
 
 type CreateNoteMode = "default" | "create-and-link";
@@ -169,8 +180,16 @@ interface UIState {
   editorFontSize: number;
   uiZoom: number;
   showLineNumbers: boolean;
+  tooltipFontSize: number;
+  tooltipPillSize: number;
+  tooltipConnectionsSize: number;
+  tooltipSummarySize: number;
+  tooltipTagSize: number;
   emptyFolders: Set<string>;
+  homeNotePath: string | null;
 
+  setHomeNote: (path: string) => void;
+  clearHomeNote: () => void;
   toggleLineNumbers: () => void;
   setEditorLineNumbersDefault: (v: boolean) => void;
   setTheme: (theme: Theme) => void;
@@ -206,6 +225,12 @@ interface UIState {
   setUIFontSize: (v: number) => void;
   setEditorFontFamily: (v: string) => void;
   setEditorFontSize: (v: number) => void;
+  setTooltipFontSize: (v: number) => void;
+  setTooltipPillSize: (v: number) => void;
+  setTooltipConnectionsSize: (v: number) => void;
+  setTooltipSummarySize: (v: number) => void;
+  setTooltipTagSize: (v: number) => void;
+  resetTooltipPrefs: () => void;
   resetFontPrefs: () => void;
   setDefaultTabSize: (tab: LeftTab, content: number) => void;
   resetLayoutPrefs: () => void;
@@ -278,6 +303,39 @@ function savePrefs(prefs: PersistedPrefs) {
   localStorage.setItem("brainmap:uiPrefs", JSON.stringify({ ...existing, ...prefs }));
 }
 
+/** Get the active workspace root for home note persistence. Lazy to avoid circular imports. */
+function getWorkspaceRoot(): string | null {
+  try {
+    // Dynamic require at call time to break circular dependency
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useWorkspaceStore } = require("./workspaceStore");
+    return useWorkspaceStore.getState().info?.root ?? null;
+  } catch { return null; }
+}
+
+function persistHomeNote(path: string | null) {
+  try {
+    const root = getWorkspaceRoot();
+    if (!root) return;
+    const prefs = loadStoredPrefs();
+    const homeNotes = { ...prefs.homeNotes };
+    if (path) {
+      homeNotes[root] = path;
+    } else {
+      delete homeNotes[root];
+    }
+    savePrefs({ ...prefs, homeNotes });
+  } catch { /* ignore persistence errors */ }
+}
+
+/** Load persisted home note for a given workspace root. */
+export function loadHomeNoteForWorkspace(workspaceRoot: string): string | null {
+  try {
+    const prefs = loadStoredPrefs();
+    return prefs.homeNotes?.[workspaceRoot] ?? null;
+  } catch { return null; }
+}
+
 const storedSizes = loadStoredSizes();
 const storedPrefs = loadStoredPrefs();
 
@@ -322,8 +380,22 @@ export const useUIStore = create<UIState>((set, get) => ({
   editorFontSize: storedPrefs.editorFontSize ?? DEFAULT_EDITOR_SIZE,
   uiZoom: storedPrefs.uiZoom ?? DEFAULT_ZOOM,
   showLineNumbers: storedPrefs.editorLineNumbers ?? false,
+  tooltipFontSize: storedPrefs.tooltipFontSize ?? DEFAULT_TOOLTIP_SIZE,
+  tooltipPillSize: storedPrefs.tooltipPillSize ?? DEFAULT_TOOLTIP_PILL_SIZE,
+  tooltipConnectionsSize: storedPrefs.tooltipConnectionsSize ?? DEFAULT_TOOLTIP_CONNECTIONS_SIZE,
+  tooltipSummarySize: storedPrefs.tooltipSummarySize ?? DEFAULT_TOOLTIP_SUMMARY_SIZE,
+  tooltipTagSize: storedPrefs.tooltipTagSize ?? DEFAULT_TOOLTIP_TAG_SIZE,
   emptyFolders: new Set<string>(),
+  homeNotePath: null,
 
+  setHomeNote: (path: string) => {
+    set({ homeNotePath: path });
+    persistHomeNote(path);
+  },
+  clearHomeNote: () => {
+    set({ homeNotePath: null });
+    persistHomeNote(null);
+  },
   toggleLineNumbers: () => {
     const next = !get().showLineNumbers;
     set({ showLineNumbers: next });
@@ -453,6 +525,36 @@ export const useUIStore = create<UIState>((set, get) => ({
     savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: v, uiZoom: s.uiZoom });
   },
 
+  setTooltipFontSize: (v: number) => {
+    const scale = v / DEFAULT_TOOLTIP_SIZE;
+    const pill = Math.round(DEFAULT_TOOLTIP_PILL_SIZE * scale);
+    const conn = Math.round(DEFAULT_TOOLTIP_CONNECTIONS_SIZE * scale);
+    const summ = Math.round(DEFAULT_TOOLTIP_SUMMARY_SIZE * scale);
+    const tag = Math.round(DEFAULT_TOOLTIP_TAG_SIZE * scale);
+    set({ tooltipFontSize: v, tooltipPillSize: pill, tooltipConnectionsSize: conn, tooltipSummarySize: summ, tooltipTagSize: tag });
+    savePrefs({ tooltipFontSize: v, tooltipPillSize: pill, tooltipConnectionsSize: conn, tooltipSummarySize: summ, tooltipTagSize: tag });
+  },
+  setTooltipPillSize: (v: number) => {
+    set({ tooltipPillSize: v });
+    savePrefs({ tooltipPillSize: v });
+  },
+  setTooltipConnectionsSize: (v: number) => {
+    set({ tooltipConnectionsSize: v });
+    savePrefs({ tooltipConnectionsSize: v });
+  },
+  setTooltipSummarySize: (v: number) => {
+    set({ tooltipSummarySize: v });
+    savePrefs({ tooltipSummarySize: v });
+  },
+  setTooltipTagSize: (v: number) => {
+    set({ tooltipTagSize: v });
+    savePrefs({ tooltipTagSize: v });
+  },
+  resetTooltipPrefs: () => {
+    set({ tooltipFontSize: DEFAULT_TOOLTIP_SIZE, tooltipPillSize: DEFAULT_TOOLTIP_PILL_SIZE, tooltipConnectionsSize: DEFAULT_TOOLTIP_CONNECTIONS_SIZE, tooltipSummarySize: DEFAULT_TOOLTIP_SUMMARY_SIZE, tooltipTagSize: DEFAULT_TOOLTIP_TAG_SIZE });
+    savePrefs({ tooltipFontSize: DEFAULT_TOOLTIP_SIZE, tooltipPillSize: DEFAULT_TOOLTIP_PILL_SIZE, tooltipConnectionsSize: DEFAULT_TOOLTIP_CONNECTIONS_SIZE, tooltipSummarySize: DEFAULT_TOOLTIP_SUMMARY_SIZE, tooltipTagSize: DEFAULT_TOOLTIP_TAG_SIZE });
+  },
+
   resetWorkspaceState: () => set({
     hiddenEdgeTypes: new Set<string>(),
     graphFocusPath: null,
@@ -461,12 +563,13 @@ export const useUIStore = create<UIState>((set, get) => ({
     treeExpandedFolders: new Set<string>(),
     activeLeftTab: "files" as LeftTab,
     leftPanelCollapsed: false,
+    homeNotePath: null,
   }),
 
   resetFontPrefs: () => {
     const { theme, effectiveTheme, uiZoom } = get();
-    set({ uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, showLineNumbers: false, filesTheme: "inherit", editorTheme: "inherit", effectiveFilesTheme: effectiveTheme, effectiveEditorTheme: effectiveTheme });
-    savePrefs({ theme, uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, editorLineNumbers: false, uiZoom, filesTheme: "inherit", editorTheme: "inherit" });
+    set({ uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, showLineNumbers: false, filesTheme: "inherit", editorTheme: "inherit", effectiveFilesTheme: effectiveTheme, effectiveEditorTheme: effectiveTheme, tooltipFontSize: DEFAULT_TOOLTIP_SIZE, tooltipPillSize: DEFAULT_TOOLTIP_PILL_SIZE, tooltipConnectionsSize: DEFAULT_TOOLTIP_CONNECTIONS_SIZE, tooltipSummarySize: DEFAULT_TOOLTIP_SUMMARY_SIZE, tooltipTagSize: DEFAULT_TOOLTIP_TAG_SIZE });
+    savePrefs({ theme, uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, editorLineNumbers: false, uiZoom, filesTheme: "inherit", editorTheme: "inherit", tooltipFontSize: DEFAULT_TOOLTIP_SIZE, tooltipPillSize: DEFAULT_TOOLTIP_PILL_SIZE, tooltipConnectionsSize: DEFAULT_TOOLTIP_CONNECTIONS_SIZE, tooltipSummarySize: DEFAULT_TOOLTIP_SUMMARY_SIZE, tooltipTagSize: DEFAULT_TOOLTIP_TAG_SIZE });
   },
 
   setDefaultTabSize: (tab: LeftTab, content: number) => {

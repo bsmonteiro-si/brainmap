@@ -18,6 +18,12 @@
   --ui-font-size: 13px;
   --editor-font-family: ui-monospace, 'Menlo', 'Monaco', 'Consolas', monospace;
   --editor-font-size: 14px;
+  /* Graph tooltip — overridden at runtime by UIStore */
+  --tooltip-font-size: 18px;
+  --tooltip-pill-size: 14px;
+  --tooltip-connections-size: 14px;
+  --tooltip-summary-size: 15px;
+  --tooltip-tag-size: 14px;
   --editor-inset-shadow: inset 0 1px 3px rgba(0,0,0,0.06);
   --glass-bg: rgba(255, 255, 255, 0.55);
   --glass-bg-dense: rgba(255, 255, 255, 0.88);
@@ -2023,12 +2029,12 @@ body {
   pointer-events: none;
   border-radius: 6px;
   padding: 8px 10px;
-  font-size: 11px;
+  font-size: var(--tooltip-font-size);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  max-width: 280px;
+  gap: 6px;
+  max-width: 380px;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   background: rgba(30, 30, 30, 0.88);
@@ -2047,16 +2053,16 @@ body {
 }
 .tooltip-type-pill {
   display: inline-block;
-  padding: 1px 6px;
+  padding: 3px 10px;
   border-radius: 9999px;
   color: #fff;
-  font-size: 9px;
+  font-size: var(--tooltip-pill-size);
   font-weight: 600;
   text-transform: capitalize;
 }
 .tooltip-connections {
   color: var(--text-muted);
-  font-size: 9px;
+  font-size: var(--tooltip-connections-size);
   white-space: nowrap;
 }
 .tooltip-title {
@@ -2068,7 +2074,7 @@ body {
 }
 .tooltip-summary {
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--tooltip-summary-size);
   line-height: 1.3;
   overflow: hidden;
   display: -webkit-box;
@@ -2082,9 +2088,9 @@ body {
   margin-top: 1px;
 }
 .tooltip-tag {
-  padding: 0 4px;
-  border-radius: 3px;
-  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: var(--tooltip-tag-size);
   background: var(--bg-tertiary);
   color: var(--text-secondary);
 }
