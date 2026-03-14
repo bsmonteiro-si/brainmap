@@ -3,13 +3,10 @@ import { getAPI } from "../../api/bridge";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
-import { useUIStore } from "../../stores/uiStore";
 import type { SearchResult } from "../../api/types";
 import { log } from "../../utils/logger";
 
 export function SearchPanel() {
-  const expanded = useUIStore((s) => s.searchExpanded);
-  const toggleExpanded = useUIStore((s) => s.toggleSearchExpanded);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [typeFilter, setTypeFilter] = useState("");
@@ -79,61 +76,49 @@ export function SearchPanel() {
   };
 
   return (
-    <div className="search-panel">
-      <button
-        className="section-toggle"
-        aria-expanded={expanded}
-        aria-controls="search-content"
-        onClick={toggleExpanded}
-      >
-        <span>{expanded ? "▾" : "▸"}</span>
-        Search
-      </button>
-      {expanded && (
-        <div id="search-content">
-          <div className="search-input-bar">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => handleQueryChange(e.target.value)}
-              placeholder="Search notes..."
-            />
-            <div className="search-filters">
-              <select value={typeFilter} onChange={(e) => handleTypeChange(e.target.value)}>
-                <option value="">All Types</option>
-                {noteTypes.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="search-results">
-            {isSearching && (
-              <div style={{ padding: 12, color: "var(--text-muted)", fontSize: 13 }}>
-                Searching...
-              </div>
-            )}
-            {!isSearching && query && results.length === 0 && (
-              <div style={{ padding: 12, color: "var(--text-muted)", fontSize: 13 }}>
-                No results found.
-              </div>
-            )}
-            {results.map((r) => (
-              <div
-                key={r.path}
-                className="search-result-item"
-                onClick={() => handleResultClick(r)}
-              >
-                <div className="title">
-                  <span className="type-badge">{r.note_type}</span>
-                  {r.title}
-                </div>
-                <div className="snippet">{r.snippet}</div>
-              </div>
+    <div className="search-panel search-panel--sidebar">
+      <div className="search-input-bar">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => handleQueryChange(e.target.value)}
+          placeholder="Search notes..."
+          autoFocus
+        />
+        <div className="search-filters">
+          <select value={typeFilter} onChange={(e) => handleTypeChange(e.target.value)}>
+            <option value="">All Types</option>
+            {noteTypes.map((t) => (
+              <option key={t} value={t}>{t}</option>
             ))}
-          </div>
+          </select>
         </div>
-      )}
+      </div>
+      <div className="search-results">
+        {isSearching && (
+          <div style={{ padding: 12, color: "var(--text-muted)", fontSize: 13 }}>
+            Searching...
+          </div>
+        )}
+        {!isSearching && query && results.length === 0 && (
+          <div style={{ padding: 12, color: "var(--text-muted)", fontSize: 13 }}>
+            No results found.
+          </div>
+        )}
+        {results.map((r) => (
+          <div
+            key={r.path}
+            className="search-result-item"
+            onClick={() => handleResultClick(r)}
+          >
+            <div className="title">
+              <span className="type-badge">{r.note_type}</span>
+              {r.title}
+            </div>
+            <div className="snippet">{r.snippet}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

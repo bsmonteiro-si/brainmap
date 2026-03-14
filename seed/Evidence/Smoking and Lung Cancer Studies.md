@@ -1,30 +1,29 @@
 ---
-id: "a0000001-0000-0000-0000-000000000031"
-title: "Smoking and Lung Cancer Studies"
+id: a0000001-0000-0000-0000-000000000031
+title: Smoking and Lung Cancer Studies
 type: evidence
-tags: [epidemiology, smoking, causality, history]
+tags:
+- epidemiology
+- smoking
+- causality
+- history
 status: draft
 created: 2026-02-12
-modified: 2026-03-05
-source: "The Book of Why, Ch4 + Ch7"
-summary: >-
-  The epidemiological evidence linking smoking to lung cancer — a landmark
-  case in the history of causal inference, where the lack of formal causal
-  tools delayed scientific consensus for decades.
+modified: 2026-03-14
+source: The Book of Why, Ch4 + Ch7
+summary: The epidemiological evidence linking smoking to lung cancer — a landmark case in the history of causal inference, where the lack of formal causal tools delayed scientific consensus for decades.
 links:
-  - target: "../Arguments/Causal Reasoning is Formalizable.md"
-    type: supports
-  - target: "../People/Ronald Fisher.md"
-    type: related-to
-  - target: "../Concepts/Confounding.md"
-    type: related-to
-  - target: "../Concepts/Randomized Controlled Trials.md"
-    type: related-to
-  - target: "Personal::Notes/Some Topic.md"
-    type: related-to
-evidence-type: observational
-strength: strong
+- target: ../Arguments/Causal Reasoning is Formalizable.md
+  type: supports
+- target: ../People/Ronald Fisher.md
+  type: related-to
+- target: ../Concepts/Confounding.md
+  type: related-to
+- target: ../Concepts/Randomized Controlled Trials.md
+  type: related-to
 domain: epidemiology
+strength: strong
+evidence-type: observational
 ---
 
 # Smoking and Lung Cancer Studies

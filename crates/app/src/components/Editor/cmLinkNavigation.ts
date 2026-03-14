@@ -27,15 +27,14 @@ export function extractLinkAtPos(
 }
 
 /**
- * CodeMirror extension that enables Cmd+Click (or Ctrl+Click) on markdown
- * links to navigate to the linked note.
+ * CodeMirror extension that enables click on markdown links to navigate
+ * to the linked note.
  */
 export function linkNavigation(notePath: string): Extension {
-  let cmdHeld = false;
   let lastLinkAtMouse = false;
 
   function updateHoverClass(view: EditorView, isOverLink: boolean) {
-    if (isOverLink && cmdHeld) {
+    if (isOverLink) {
       view.dom.classList.add("cm-cmd-link-hover");
     } else {
       view.dom.classList.remove("cm-cmd-link-hover");
@@ -56,8 +55,6 @@ export function linkNavigation(notePath: string): Extension {
 
   const handlers = EditorView.domEventHandlers({
     click(event: MouseEvent, view: EditorView) {
-      if (!(event.metaKey || event.ctrlKey)) return false;
-
       const target = checkLinkAtCoords(view, event.clientX, event.clientY);
       if (!target || !isLocalMdLink(target)) return false;
 
@@ -69,27 +66,10 @@ export function linkNavigation(notePath: string): Extension {
       return true;
     },
 
-    mousemove(event: MouseEvent, view: EditorView) {
-      cmdHeld = event.metaKey || event.ctrlKey;
-      const target = checkLinkAtCoords(view, event.clientX, event.clientY);
+    mousemove(_event: MouseEvent, view: EditorView) {
+      const target = checkLinkAtCoords(view, _event.clientX, _event.clientY);
       lastLinkAtMouse = target !== null && isLocalMdLink(target);
       updateHoverClass(view, lastLinkAtMouse);
-      return false;
-    },
-
-    keydown(event: KeyboardEvent, view: EditorView) {
-      if (event.key === "Meta" || event.key === "Control") {
-        cmdHeld = true;
-        updateHoverClass(view, lastLinkAtMouse);
-      }
-      return false;
-    },
-
-    keyup(event: KeyboardEvent, view: EditorView) {
-      if (event.key === "Meta" || event.key === "Control") {
-        cmdHeld = false;
-        updateHoverClass(view, false);
-      }
       return false;
     },
 

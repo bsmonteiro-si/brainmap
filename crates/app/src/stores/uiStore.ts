@@ -37,11 +37,11 @@ const DEFAULT_ZOOM = 1.0;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.0;
 
+export type LeftTab = "files" | "graph" | "search";
+
 interface PanelSizes {
-  graph?: number;
-  right?: number;
+  content?: number;
   editor?: number;
-  search?: number;
 }
 
 interface PersistedPrefs {
@@ -90,7 +90,8 @@ interface UIState {
   showLegend: boolean;
   graphLayout: GraphLayout;
   focusMode: boolean;
-  treeOpen: boolean;
+  activeLeftTab: LeftTab;
+  leftPanelCollapsed: boolean;
   treeExpandedFolders: Set<string>;
   hiddenEdgeTypes: Set<string>;
   panelSizes: PanelSizes;
@@ -99,7 +100,6 @@ interface UIState {
   showMinimap: boolean;
   showClusterHulls: boolean;
   showEdgeParticles: boolean;
-  searchExpanded: boolean;
   uiFontFamily: string;
   uiFontSize: number;
   editorFontFamily: string;
@@ -123,7 +123,8 @@ interface UIState {
   toggleLegend: () => void;
   setGraphLayout: (layout: GraphLayout) => void;
   toggleFocusMode: () => void;
-  toggleTree: () => void;
+  setActiveLeftTab: (tab: LeftTab) => void;
+  toggleLeftPanel: () => void;
   toggleFolder: (fullPath: string) => void;
   toggleEdgeType: (rel: string) => void;
   clearHiddenEdgeTypes: () => void;
@@ -131,7 +132,6 @@ interface UIState {
   toggleMinimap: () => void;
   toggleClusterHulls: () => void;
   toggleEdgeParticles: () => void;
-  toggleSearchExpanded: () => void;
   setGraphFocus: (path: string, kind: "note" | "folder") => void;
   clearGraphFocus: () => void;
   setUIFontFamily: (v: string) => void;
@@ -158,7 +158,11 @@ function resolveTheme(theme: Theme): "light" | "dark" {
 
 function loadStoredSizes(): PanelSizes {
   try {
-    return JSON.parse(localStorage.getItem("brainmap:panelSizes") ?? "{}");
+    const raw = JSON.parse(localStorage.getItem("brainmap:panelSizes") ?? "{}");
+    // Migrate old keys (graph/right) → new keys (content/editor)
+    if (raw.content == null && raw.graph != null) raw.content = raw.graph;
+    if (raw.editor == null && raw.right != null) raw.editor = raw.right;
+    return { content: raw.content, editor: raw.editor };
   } catch {
     return {};
   }
@@ -200,14 +204,14 @@ export const useUIStore = create<UIState>((set, get) => ({
   showLegend: false,
   graphLayout: "force",
   focusMode: false,
-  treeOpen: false,
+  activeLeftTab: "files",
+  leftPanelCollapsed: false,
   treeExpandedFolders: new Set<string>(),
   hiddenEdgeTypes: new Set<string>(),
   panelSizes: storedSizes,
   showMinimap: false,
   showClusterHulls: false,
   showEdgeParticles: false,
-  searchExpanded: false,
   graphFocusPath: null,
   graphFocusKind: null,
   uiFontFamily: storedPrefs.uiFontFamily ?? DEFAULT_UI_FONT,
@@ -257,8 +261,12 @@ export const useUIStore = create<UIState>((set, get) => ({
   toggleEdgeLabels: () => set((s) => ({ showEdgeLabels: !s.showEdgeLabels })),
   toggleLegend: () => set((s) => ({ showLegend: !s.showLegend })),
   setGraphLayout: (layout: GraphLayout) => set({ graphLayout: layout }),
-  toggleFocusMode: () => set((s) => ({ focusMode: !s.focusMode })),
-  toggleTree: () => set((s) => ({ treeOpen: !s.treeOpen })),
+  toggleFocusMode: () => set((s) => {
+    const next = !s.focusMode;
+    return { focusMode: next, leftPanelCollapsed: next };
+  }),
+  setActiveLeftTab: (tab: LeftTab) => set({ activeLeftTab: tab, leftPanelCollapsed: false }),
+  toggleLeftPanel: () => set((s) => ({ leftPanelCollapsed: !s.leftPanelCollapsed })),
 
   toggleFolder: (fullPath: string) =>
     set((s) => {
@@ -287,11 +295,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   toggleMinimap: () => set((s) => ({ showMinimap: !s.showMinimap })),
   toggleClusterHulls: () => set((s) => ({ showClusterHulls: !s.showClusterHulls })),
   toggleEdgeParticles: () => set((s) => ({ showEdgeParticles: !s.showEdgeParticles })),
-  toggleSearchExpanded: () => set((s) => ({ searchExpanded: !s.searchExpanded })),
 
-  // treeOpen: false is set atomically so there's no intermediate render where
-  // focus is active but the Files tab is still visible.
-  setGraphFocus: (path, kind) => set({ graphFocusPath: path, graphFocusKind: kind, treeOpen: false }),
+  setGraphFocus: (path, kind) => set({ graphFocusPath: path, graphFocusKind: kind, activeLeftTab: "graph", leftPanelCollapsed: false }),
   clearGraphFocus: () => set({ graphFocusPath: null, graphFocusKind: null }),
 
   setUIFontFamily: (v: string) => {
@@ -323,6 +328,8 @@ export const useUIStore = create<UIState>((set, get) => ({
     graphFocusPath: null,
     graphFocusKind: null,
     emptyFolders: new Set<string>(),
+    activeLeftTab: "files" as LeftTab,
+    leftPanelCollapsed: false,
   }),
 
   resetFontPrefs: () => {

@@ -89,7 +89,7 @@ export function GraphView() {
   const showEdgeLabels = useUIStore((s) => s.showEdgeLabels);
   const showLegend = useUIStore((s) => s.showLegend);
   const graphLayout = useUIStore((s) => s.graphLayout);
-  const treeOpen = useUIStore((s) => s.treeOpen);
+  const activeLeftTab = useUIStore((s) => s.activeLeftTab);
   const hiddenEdgeTypes = useUIStore((s) => s.hiddenEdgeTypes);
   const graphFocusPath = useUIStore((s) => s.graphFocusPath);
   const graphFocusKind = useUIStore((s) => s.graphFocusKind);
@@ -137,7 +137,7 @@ export function GraphView() {
   // don't discard the user's zoom/pan. hasBeenFittedRef is more reliable than
   // reading offsetWidth after layout (which may already be non-zero by effect time).
   useEffect(() => {
-    if (!treeOpen) {
+    if (activeLeftTab === "graph") {
       const cy = cyRef.current;
       if (cy) {
         cy.resize();
@@ -147,7 +147,7 @@ export function GraphView() {
         }
       }
     }
-  }, [treeOpen]);
+  }, [activeLeftTab]);
 
   // Sync showEdgeLabels → cy classes
   useEffect(() => {

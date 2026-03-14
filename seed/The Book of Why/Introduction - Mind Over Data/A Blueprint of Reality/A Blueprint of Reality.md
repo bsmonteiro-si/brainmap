@@ -1,25 +1,26 @@
 ---
-id: "a0000001-0000-0000-0000-000000000003"
-title: "A Blueprint of Reality"
+id: a0000001-0000-0000-0000-000000000003
+title: A Blueprint of Reality
 type: book-note
-tags: [causality, causal-diagrams, models, introduction]
+tags:
+- causality
+- causal-diagrams
+- models
+- introduction
 status: draft
 created: 2026-01-22
-modified: 2026-02-10
-source: "The Book of Why, Introduction"
-summary: >-
-  Explores how causal diagrams serve as blueprints of reality — compact
-  representations of causal assumptions that enable formal reasoning about
-  cause and effect.
+modified: 2026-03-13
+source: The Book of Why, Introduction
+summary: Explores how causal diagrams serve as blueprints of reality — compact representations of causal assumptions that enable formal reasoning about cause and effect.
 links:
-  - target: "../../../Concepts/Causal Inference.md"
-    type: related-to
-  - target: "../../../Concepts/Causal Diagrams.md"
-    type: contains
-  - target: "../Introduction - Mind Over Data.md"
-    type: part-of
-chapter: "Introduction"
-page-range: "23-30"
+- target: ../../../Concepts/Causal Inference.md
+  type: related-to
+- target: ../../../Concepts/Causal Diagrams.md
+  type: contains
+- target: ../Introduction - Mind Over Data.md
+  type: part-of
+page-range: 23-30
+chapter: Introduction
 ---
 
 # A Blueprint of Reality

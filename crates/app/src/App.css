@@ -62,6 +62,8 @@ body {
 
 /* ── Layout ──────────────────────────────────────────────────── */
 .app-layout {
+  flex: 1;
+  min-width: 0;
   height: 100%;
 }
 
@@ -535,6 +537,8 @@ body {
   font-weight: 600;
   color: var(--text-secondary);
   margin-top: 4px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
 }
 
 .frontmatter-extra-toggle {
@@ -543,7 +547,9 @@ body {
   gap: 4px;
   background: none;
   border: none;
+  border-top: 1px solid var(--border-color);
   padding: 0;
+  padding-top: 10px;
   margin-top: 4px;
   font-size: var(--ui-font-sm);
   font-weight: 600;
@@ -681,12 +687,12 @@ body {
 }
 
 .link-rel {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-secondary);
   background: var(--bg-tertiary, rgba(128,128,128,0.12));
-  padding: 1px 6px;
-  border-radius: 3px;
+  padding: 3px 10px;
+  border-radius: 2px;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -1101,36 +1107,50 @@ body {
   background: var(--accent);
 }
 
-/* ── Left Panel Tabs ──────────────────────────────────────────── */
-.left-panel-tabs {
+/* ── App Layout Root ─────────────────────────────────────────── */
+.app-layout-root {
   display: flex;
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-primary);
-  padding: 0 4px;
-  gap: 2px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
-.left-panel-tab {
-  padding: 5px 10px;
-  font-size: var(--ui-font-xs);
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  text-align: center;
-  background: none;
+
+/* ── Icon Sidebar ────────────────────────────────────────────── */
+.icon-sidebar {
+  width: 40px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 8px;
+  gap: 4px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+}
+
+.icon-sidebar-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
-  border-radius: 4px 4px 0 0;
+  background: none;
+  border-radius: 4px;
   cursor: pointer;
   color: var(--text-muted);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  transition: color 0.12s;
+  border-left: 3px solid transparent;
+  transition: color 0.12s, background 0.12s;
 }
-.left-panel-tab:hover {
+
+.icon-sidebar-btn:hover {
   color: var(--text-primary);
+  background: var(--bg-tertiary);
 }
-.left-panel-tab.active {
-  color: var(--text-primary);
-  border-bottom-color: var(--accent);
+
+.icon-sidebar-btn.active {
+  color: var(--accent);
+  border-left-color: var(--accent);
 }
 
 /* ── File Tree ────────────────────────────────────────────────── */

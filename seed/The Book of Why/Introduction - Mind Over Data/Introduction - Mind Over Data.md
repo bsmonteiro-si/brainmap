@@ -1,31 +1,32 @@
 ---
-id: "a0000001-0000-0000-0000-000000000002"
-title: "Introduction - Mind Over Data"
+id: a0000001-0000-0000-0000-000000000002
+title: Introduction - Mind Over Data
 type: book-note
-tags: [causality, introduction, causal-inference, do-calculus]
+tags:
+- causality
+- introduction
+- causal-inference
+- do-calculus
 status: review
 created: 2026-01-20
-modified: 2026-02-15
-source: "The Book of Why, Introduction"
-summary: >-
-  Introduces causal inference as the science studying cause-and-effect
-  using causal models, formal language, and data. Presents the do-operator
-  and the key distinction between seeing and doing.
+modified: 2026-03-13
+source: The Book of Why, Introduction
+summary: Introduces causal inference as the science studying cause-and-effect using causal models, formal language, and data. Presents the do-operator and the key distinction between seeing and doing.
 links:
-  - target: "../../Concepts/Causal Inference.md"
-    type: contains
-  - target: "../../Concepts/Seeing vs Doing.md"
-    type: contains
-  - target: "../../Concepts/Do-Calculus.md"
-    type: contains
-  - target: "../../Concepts/Causal Diagrams.md"
-    type: contains
-  - target: "../../Concepts/Counterfactual Reasoning.md"
-    type: contains
-  - target: "../../Questions/Can Machines Think Causally.md"
-    type: leads-to
-chapter: "Introduction"
-page-range: "1-38"
+- target: ../../Concepts/Causal Inference.md
+  type: contains
+- target: ../../Concepts/Seeing vs Doing.md
+  type: contains
+- target: ../../Concepts/Do-Calculus.md
+  type: contains
+- target: ../../Concepts/Causal Diagrams.md
+  type: contains
+- target: ../../Concepts/Counterfactual Reasoning.md
+  type: contains
+- target: ../../Questions/Can Machines Think Causally.md
+  type: leads-to
+chapter: Introduction
+page-range: 1-38
 ---
 
 # Introduction - Mind Over Data
@@ -56,3 +57,4 @@ Probably the biggest insight the Causal Revolution introduces is the distinction
 ## Implications for AI
 
 Pearl's background in machine learning gave him another incentive for studying causation. A causal reasoning module would give machines the ability to reflect on their mistakes, pinpoint weaknesses in their software, function as moral entities.
+  

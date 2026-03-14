@@ -152,7 +152,7 @@ function App() {
         const target = e.target as HTMLElement | null;
         if (!target?.closest(".cm-editor")) {
           e.preventDefault();
-          useUIStore.getState().toggleTree();
+          useUIStore.getState().toggleLeftPanel();
         }
       }
       if (isMod && e.key === ",") {

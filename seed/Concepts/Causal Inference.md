@@ -1,34 +1,34 @@
 ---
-id: "a0000001-0000-0000-0000-000000000010"
-title: "Causal Inference"
+id: a0000001-0000-0000-0000-000000000010
+title: Causal Inference
 type: concept
-tags: [causality, inference, methodology, foundations]
-status: review
+tags:
+- dd
+status: archived
 created: 2026-01-18
-modified: 2026-03-05
-source: "The Book of Why, Introduction + Ch1"
-summary: >-
-  The science of drawing conclusions about causal relationships from
-  data and assumptions, formalized through causal models, the do-calculus,
-  and counterfactual reasoning.
+modified: 2026-03-13
+source: The Book of Why, Introduction + Ch1
+summary: The science of drawing conclusions about causal relationships from data and assumptions, formalized through causal models, the do-calculus, and counterfactual reasoning.
 links:
-  - target: "./Do-Calculus.md"
-    type: contains
-  - target: "./Structural Causal Models.md"
-    type: contains
-  - target: "./Counterfactual Reasoning.md"
-    type: contains
-  - target: "./Causal Diagrams.md"
-    type: contains
-  - target: "./Confounding.md"
-    type: related-to
-  - target: "./Potential Outcomes Framework.md"
-    type: related-to
-  - target: "../People/Judea Pearl.md"
-    type: authored-by
-domain: causal-ml
+- target: ./Do-Calculus.md
+  type: contains
+- target: ./Structural Causal Models.md
+  type: contains
+- target: ./Counterfactual Reasoning.md
+  type: contains
+- target: ./Causal Diagrams.md
+  type: contains
+- target: ./Confounding.md
+  type: related-to
+- target: ./Potential Outcomes Framework.md
+  type: related-to
+- target: ../People/Judea Pearl.md
+  type: authored-by
 maturity: foundational
-aliases: [causal analysis, causal reasoning]
+domain: causal-ml
+aliases:
+- causal analysis
+- causal reasoning
 ---
 
 # Causal Inference
