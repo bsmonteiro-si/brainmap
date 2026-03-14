@@ -2,11 +2,9 @@
 id: a0000001-0000-0000-0000-000000000010
 title: Causal Inference
 type: concept
-tags:
-- dd
 status: archived
 created: 2026-01-18
-modified: 2026-03-13
+modified: 2026-03-14
 source: The Book of Why, Introduction + Ch1
 summary: The science of drawing conclusions about causal relationships from data and assumptions, formalized through causal models, the do-calculus, and counterfactual reasoning.
 links:
@@ -24,11 +22,11 @@ links:
   type: related-to
 - target: ../People/Judea Pearl.md
   type: authored-by
-maturity: foundational
-domain: causal-ml
 aliases:
 - causal analysis
 - causal reasoning
+maturity: foundational
+domain: causal-ml
 ---
 
 # Causal Inference

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { StatsDto, WorkspaceInfo } from "../api/types";
 import { getAPI } from "../api/bridge";
-import { useUIStore } from "./uiStore";
+import { useUIStore, registerWorkspaceStoreForUIStore } from "./uiStore";
 import { useGraphStore } from "./graphStore";
 import { useEditorStore } from "./editorStore";
 import { useSegmentStore } from "./segmentStore";
@@ -244,3 +244,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }
   },
 }));
+
+// Register lazy workspace root getter for uiStore home note persistence
+registerWorkspaceStoreForUIStore(() => useWorkspaceStore.getState().info?.root ?? null);

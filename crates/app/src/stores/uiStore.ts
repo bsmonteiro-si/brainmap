@@ -303,19 +303,18 @@ function savePrefs(prefs: PersistedPrefs) {
   localStorage.setItem("brainmap:uiPrefs", JSON.stringify({ ...existing, ...prefs }));
 }
 
-/** Get the active workspace root for home note persistence. Lazy to avoid circular imports. */
-function getWorkspaceRoot(): string | null {
-  try {
-    // Dynamic require at call time to break circular dependency
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { useWorkspaceStore } = require("./workspaceStore");
-    return useWorkspaceStore.getState().info?.root ?? null;
-  } catch { return null; }
+// Lazy reference to workspaceStore to avoid circular import at module init.
+// Set via `registerWorkspaceStoreForUIStore` called from workspaceStore after its own init.
+let _getWorkspaceRoot: (() => string | null) | null = null;
+
+/** Called by workspaceStore to provide lazy access without circular imports. */
+export function registerWorkspaceStoreForUIStore(getter: () => string | null) {
+  _getWorkspaceRoot = getter;
 }
 
 function persistHomeNote(path: string | null) {
   try {
-    const root = getWorkspaceRoot();
+    const root = _getWorkspaceRoot?.() ?? null;
     if (!root) return;
     const prefs = loadStoredPrefs();
     const homeNotes = { ...prefs.homeNotes };

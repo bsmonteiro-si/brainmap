@@ -1,8 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useGraphStore } from "../stores/graphStore";
 import { useUIStore, loadHomeNoteForWorkspace } from "../stores/uiStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { autoDetectHomeNote } from "../utils/homeNoteDetect";
+
+// Module-level flag — survives React StrictMode double-mount.
+// Tracks the last workspace root we auto-focused on.
+let lastAutoFocusedRoot: string | null = null;
 
 /**
  * Reactive hook that auto-focuses the graph on the home/index note
@@ -14,15 +18,19 @@ import { autoDetectHomeNote } from "../utils/homeNoteDetect";
  *   opens with radial layout focused on it.
  */
 export function useHomeAutoFocus() {
-  const info = useWorkspaceStore((s) => s.info);
-  const nodes = useGraphStore((s) => s.nodes);
-  const prevRootRef = useRef<string | null>(null);
-
   useEffect(() => {
-    const root = info?.root ?? null;
-    // Only run when workspace root changes (new workspace opened) and nodes are loaded
-    if (!root || root === prevRootRef.current || nodes.size === 0) return;
-    prevRootRef.current = root;
+    const root = useWorkspaceStore.getState().info?.root ?? null;
+    const nodes = useGraphStore.getState().nodes;
+
+    // Reset when workspace is closed so reopening triggers auto-focus again
+    if (!root) {
+      lastAutoFocusedRoot = null;
+      return;
+    }
+
+    // Guard: only run once per workspace root
+    if (nodes.size === 0 || root === lastAutoFocusedRoot) return;
+    lastAutoFocusedRoot = root;
 
     const ui = useUIStore.getState();
 
@@ -41,8 +49,11 @@ export function useHomeAutoFocus() {
     const detected = autoDetectHomeNote(nodes);
     if (detected && nodes.has(detected)) {
       ui.setHomeNote(detected);
-      ui.setGraphFocus(detected, "note");
-      ui.setGraphLayout("radial");
+      // Defer state updates out of React's render cycle to prevent infinite loop
+      queueMicrotask(() => {
+        useUIStore.getState().setGraphFocus(detected, "note");
+        useUIStore.getState().setGraphLayout("radial");
+      });
     }
-  }, [info, nodes]);
+  }); // No deps — runs after every render, but module-level flag ensures body runs once per workspace
 }

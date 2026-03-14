@@ -38,13 +38,11 @@ function App() {
   const uiFontSize = useUIStore((s) => s.uiFontSize);
   const editorFontFamily = useUIStore((s) => s.editorFontFamily);
   const editorFontSize = useUIStore((s) => s.editorFontSize);
-  const { tooltipFontSize, tooltipPillSize, tooltipConnectionsSize, tooltipSummarySize, tooltipTagSize } = useUIStore((s) => ({
-    tooltipFontSize: s.tooltipFontSize,
-    tooltipPillSize: s.tooltipPillSize,
-    tooltipConnectionsSize: s.tooltipConnectionsSize,
-    tooltipSummarySize: s.tooltipSummarySize,
-    tooltipTagSize: s.tooltipTagSize,
-  }));
+  const tooltipFontSize = useUIStore((s) => s.tooltipFontSize);
+  const tooltipPillSize = useUIStore((s) => s.tooltipPillSize);
+  const tooltipConnectionsSize = useUIStore((s) => s.tooltipConnectionsSize);
+  const tooltipSummarySize = useUIStore((s) => s.tooltipSummarySize);
+  const tooltipTagSize = useUIStore((s) => s.tooltipTagSize);
   const uiZoom = useUIStore((s) => s.uiZoom); // drives zoom useEffect below
 
   // Subscribe to workspace events for live updates
