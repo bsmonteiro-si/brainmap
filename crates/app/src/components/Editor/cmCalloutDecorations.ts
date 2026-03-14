@@ -8,13 +8,11 @@
  */
 import {
   EditorView,
-  ViewPlugin,
-  ViewUpdate,
   Decoration,
   WidgetType,
   type DecorationSet,
 } from "@codemirror/view";
-import { RangeSetBuilder, type Text, type Extension } from "@codemirror/state";
+import { RangeSetBuilder, StateField, type Text, type Extension } from "@codemirror/state";
 import { foldService, codeFolding, foldKeymap } from "@codemirror/language";
 import { keymap } from "@codemirror/view";
 import { CALLOUT_TYPES, CALLOUT_FALLBACK } from "./calloutTypes";
@@ -229,6 +227,7 @@ class CalloutHeaderWidget extends WidgetType {
 
     const wrapper = document.createElement("span");
     wrapper.className = "cm-callout-widget-header";
+    wrapper.style.verticalAlign = "middle";
     wrapper.style.setProperty("--callout-color", color);
 
     const img = document.createElement("img");
@@ -347,39 +346,23 @@ function buildDecorations(
 }
 
 // ---------------------------------------------------------------------------
-// Main ViewPlugin
+// StateField (decorations participate in initial render for accurate height map)
 // ---------------------------------------------------------------------------
-class CalloutDecorationPlugin {
-  decorations: DecorationSet;
-  ranges: CalloutRange[];
-
-  constructor(view: EditorView) {
-    this.ranges = scanCallouts(view.state.doc);
-    const cursorLine = view.state.doc.lineAt(
-      view.state.selection.main.head,
-    ).number;
-    this.decorations = buildDecorations(this.ranges, view.state.doc, cursorLine);
-  }
-
-  update(update: ViewUpdate) {
-    if (update.docChanged || update.viewportChanged) {
-      this.ranges = scanCallouts(update.state.doc);
-    }
-    if (update.docChanged || update.selectionSet || update.viewportChanged) {
-      const cursorLine = update.state.doc.lineAt(
-        update.state.selection.main.head,
-      ).number;
-      this.decorations = buildDecorations(
-        this.ranges,
-        update.state.doc,
-        cursorLine,
-      );
-    }
-  }
-}
-
-const calloutViewPlugin = ViewPlugin.fromClass(CalloutDecorationPlugin, {
-  decorations: (v) => v.decorations,
+const calloutField = StateField.define<{ ranges: CalloutRange[]; cursorLine: number; decos: DecorationSet }>({
+  create(state) {
+    const ranges = scanCallouts(state.doc);
+    const cursorLine = state.doc.lineAt(state.selection.main.head).number;
+    return { ranges, cursorLine, decos: buildDecorations(ranges, state.doc, cursorLine) };
+  },
+  update(value, tr) {
+    const cursorLine = tr.state.doc.lineAt(tr.state.selection.main.head).number;
+    const docChanged = tr.docChanged;
+    const lineChanged = cursorLine !== value.cursorLine;
+    if (!docChanged && !lineChanged) return value;
+    const ranges = docChanged ? scanCallouts(tr.state.doc) : value.ranges;
+    return { ranges, cursorLine, decos: buildDecorations(ranges, tr.state.doc, cursorLine) };
+  },
+  provide: (f) => EditorView.decorations.from(f, (v) => v.decos),
 });
 
 // ---------------------------------------------------------------------------
@@ -457,7 +440,7 @@ const baseTheme = EditorView.baseTheme({
 // ---------------------------------------------------------------------------
 export function calloutDecorations(): Extension {
   return [
-    calloutViewPlugin,
+    calloutField,
     calloutFoldService,
     codeFolding(),
     keymap.of(foldKeymap),
