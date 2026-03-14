@@ -237,8 +237,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           fmRedoStack: [],
           _lastFmField: null,
           _lastFmTime: 0,
-          viewMode: existingTab.viewMode === "raw" ? "edit" : existingTab.viewMode,
-          rawContent: null,
+          viewMode: existingTab.viewMode,
+          rawContent: existingTab.viewMode === "raw" ? (existingTab.editedBody ?? file.body) : null,
+          _rawDirty: false,
           scrollTop: existingTab.scrollTop,
           cursorPos: existingTab.cursorPos,
         });
@@ -322,7 +323,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       isUntitledTab: true,
       editedBody: tab.editedBody,
       isDirty: tab.isDirty,
-      viewMode: tab.viewMode === "raw" ? "edit" : tab.viewMode,
+      viewMode: tab.viewMode,
+      rawContent: tab.viewMode === "raw" ? (tab.editedBody ?? "") : null,
+      _rawDirty: false,
       scrollTop: tab.scrollTop,
       cursorPos: tab.cursorPos,
       isLoading: false,
@@ -479,20 +482,26 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     // Plain file save path
     if (activePlainFile) {
-      if (activePlainFile.binary || editedBody === null) return;
-      const savingBody = editedBody;
+      const { viewMode: vm, rawContent: rc, _rawDirty: rd } = get();
+      const bodyToSave = (vm === "raw" && rd && rc !== null) ? rc : editedBody;
+      if (activePlainFile.binary || bodyToSave === null) return;
+      const savingBody = bodyToSave;
       try {
         set({ savingInProgress: true });
         const api = await getAPI();
         await api.writePlainFile(activePlainFile.path, savingBody);
 
         const current = get();
+        const wasRawSave = current.viewMode === "raw" && current._rawDirty;
         const newBody = current.editedBody === savingBody ? null : current.editedBody;
-        const newIsDirty = newBody !== null;
+        const newRawDirty = wasRawSave ? false : current._rawDirty;
+        const newIsDirty = newBody !== null || newRawDirty;
         set({
           activePlainFile: { ...activePlainFile, body: savingBody },
           isDirty: newIsDirty,
           editedBody: newBody,
+          rawContent: wasRawSave ? savingBody : current.rawContent,
+          _rawDirty: newRawDirty,
           conflictState: "none",
           savingInProgress: false,
         });
@@ -647,6 +656,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const tabId = useTabStore.getState().activeTabId;
         if (tabId) useTabStore.getState().updateTabState(tabId, { viewMode: "raw" });
         const note = get().activeNote;
+        const plainFile = get().activePlainFile;
         if (note) {
           getAPI().then(api => api.readPlainFile(note.path)).then(file => {
             if (get().viewMode === "raw" && get().activeNote?.path === note.path) {
@@ -658,6 +668,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             const tid = useTabStore.getState().activeTabId;
             if (tid) useTabStore.getState().updateTabState(tid, { viewMode: "edit" });
           });
+        } else if (plainFile) {
+          // Plain file: body IS the raw content, no fetch needed
+          set({ rawContent: get().editedBody ?? plainFile.body });
+        } else {
+          // Untitled tab: in-memory content is the raw content
+          set({ rawContent: get().editedBody ?? "" });
         }
       };
       if (needsSave && !_rawDirty) {

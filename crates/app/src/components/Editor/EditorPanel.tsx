@@ -108,7 +108,19 @@ export function EditorPanel() {
                   onClick={() => setViewMode("preview")}
                   type="button"
                 >Preview</button>
+                <button
+                  className={`editor-view-btn${viewMode === "raw" ? " editor-view-btn--active" : ""}`}
+                  onClick={() => setViewMode("raw")}
+                  type="button"
+                >Raw</button>
               </div>
+              <button
+                className={`editor-line-numbers-btn${showLineNumbers ? " editor-line-numbers-btn--active" : ""}`}
+                onClick={toggleLineNumbers}
+                title={showLineNumbers ? "Hide line numbers" : "Show line numbers"}
+              >
+                #
+              </button>
               <button
                 className="editor-focus-btn"
                 onClick={toggleFocusMode}
@@ -147,6 +159,18 @@ export function EditorPanel() {
             <div className={`editor-view-layer${viewMode === "preview" ? " editor-view-layer--active" : ""}`}>
               <MarkdownPreview content={body} notePath={activePlainFile.path} />
             </div>
+            <div className={`editor-view-layer${viewMode === "raw" ? " editor-view-layer--active" : ""}`}>
+              {rawContent !== null ? (
+                <MarkdownEditor
+                  key="raw"
+                  notePath={activePlainFile.path}
+                  content={rawContent}
+                  onChange={onRawChange}
+                />
+              ) : viewMode === "raw" ? (
+                <div className="editor-placeholder">Loading raw content...</div>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
@@ -175,7 +199,19 @@ export function EditorPanel() {
                   onClick={() => setViewMode("preview")}
                   type="button"
                 >Preview</button>
+                <button
+                  className={`editor-view-btn${viewMode === "raw" ? " editor-view-btn--active" : ""}`}
+                  onClick={() => setViewMode("raw")}
+                  type="button"
+                >Raw</button>
               </div>
+              <button
+                className={`editor-line-numbers-btn${showLineNumbers ? " editor-line-numbers-btn--active" : ""}`}
+                onClick={toggleLineNumbers}
+                title={showLineNumbers ? "Hide line numbers" : "Show line numbers"}
+              >
+                #
+              </button>
               <button
                 className="editor-focus-btn"
                 onClick={toggleFocusMode}
@@ -203,6 +239,18 @@ export function EditorPanel() {
             </div>
             <div className={`editor-view-layer${viewMode === "preview" ? " editor-view-layer--active" : ""}`}>
               <MarkdownPreview content={body} notePath={activeTabId} />
+            </div>
+            <div className={`editor-view-layer${viewMode === "raw" ? " editor-view-layer--active" : ""}`}>
+              {rawContent !== null ? (
+                <MarkdownEditor
+                  key="raw"
+                  notePath={activeTabId}
+                  content={rawContent}
+                  onChange={onRawChange}
+                />
+              ) : viewMode === "raw" ? (
+                <div className="editor-placeholder">Loading raw content...</div>
+              ) : null}
             </div>
           </div>
         </div>
