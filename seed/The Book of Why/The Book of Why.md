@@ -13,10 +13,10 @@ summary: A non-mathematical introduction to the Causal Revolution, covering the 
 links:
 - target: ../People/Judea Pearl.md
   type: authored-by
-book-title: 'The Book of Why: The New Science of Cause and Effect'
 publisher: Basic Books
-year: 2018
 isbn: 978-0-465-09760-9
+year: 2018
+book-title: 'The Book of Why: The New Science of Cause and Effect'
 ---
 
 # The Book of Why - The New Science of Cause and Effect

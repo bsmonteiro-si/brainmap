@@ -208,6 +208,22 @@ export function scanCallouts(doc: Text): CalloutRange[] {
 // ---------------------------------------------------------------------------
 // Feature B: Widgets
 // ---------------------------------------------------------------------------
+class ZeroHeightWidget extends WidgetType {
+  toDOM() {
+    const el = document.createElement("span");
+    el.style.height = "0";
+    el.style.overflow = "hidden";
+    el.style.display = "block";
+    return el;
+  }
+  get estimatedHeight() {
+    return 0;
+  }
+  ignoreEvent() {
+    return false;
+  }
+}
+
 class CalloutHeaderWidget extends WidgetType {
   constructor(
     readonly type: string,
@@ -315,22 +331,18 @@ function buildDecorations(
       );
     }
 
-    // Closing line — collapse when hidden, tinted background when cursor is on it
+    // Closing line — block-replace when hidden, tinted background when cursor is on it
     if (r.closed) {
       if (cursorLine !== closingLineNum) {
-        // Collapse the line visually (1px tall)
+        // Replace with zero-height block widget so CodeMirror's height map stays accurate
         builder.add(
           r.closingLineFrom,
-          r.closingLineFrom,
-          Decoration.line({ class: "cm-callout-closing-hidden" }),
+          r.closingLineTo,
+          Decoration.replace({
+            widget: new ZeroHeightWidget(),
+            block: true,
+          }),
         );
-        if (r.closingLineFrom < r.closingLineTo) {
-          builder.add(
-            r.closingLineFrom,
-            r.closingLineTo,
-            Decoration.replace({}),
-          );
-        }
       } else {
         // Cursor on closing line: show raw } with tinted background
         builder.add(
