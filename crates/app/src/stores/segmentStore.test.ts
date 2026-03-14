@@ -127,3 +127,66 @@ describe("segmentStore actions", () => {
     expect(updated.createdAt).toBe(segment.createdAt);
   });
 });
+
+describe("openSegmentIds management", () => {
+  let storage: Record<string, string>;
+
+  beforeEach(() => {
+    storage = makeMockStorage();
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => storage[key] ?? null,
+      setItem: (key: string, val: string) => { storage[key] = val; },
+      removeItem: (key: string) => { delete storage[key]; },
+      clear: () => { for (const k in storage) delete storage[k]; },
+    });
+    useSegmentStore.setState({ segments: [], activeSegmentId: null, openSegmentIds: [] });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("addOpenSegment appends to the list", () => {
+    useSegmentStore.getState().addOpenSegment("seg-1");
+    expect(useSegmentStore.getState().openSegmentIds).toEqual(["seg-1"]);
+  });
+
+  it("addOpenSegment is idempotent", () => {
+    useSegmentStore.getState().addOpenSegment("seg-1");
+    useSegmentStore.getState().addOpenSegment("seg-1");
+    expect(useSegmentStore.getState().openSegmentIds).toEqual(["seg-1"]);
+  });
+
+  it("removeOpenSegment removes the ID", () => {
+    useSegmentStore.getState().addOpenSegment("seg-1");
+    useSegmentStore.getState().addOpenSegment("seg-2");
+    useSegmentStore.getState().removeOpenSegment("seg-1");
+    expect(useSegmentStore.getState().openSegmentIds).toEqual(["seg-2"]);
+  });
+
+  it("removeOpenSegment no-ops for unknown ID", () => {
+    useSegmentStore.getState().addOpenSegment("seg-1");
+    useSegmentStore.getState().removeOpenSegment("unknown");
+    expect(useSegmentStore.getState().openSegmentIds).toEqual(["seg-1"]);
+  });
+
+  it("getOpenSegments returns full segment objects for open IDs", () => {
+    const { segment: a } = useSegmentStore.getState().addSegment("A", "/a");
+    const { segment: b } = useSegmentStore.getState().addSegment("B", "/b");
+    useSegmentStore.getState().addOpenSegment(a.id);
+    useSegmentStore.getState().addOpenSegment(b.id);
+    const open = useSegmentStore.getState().getOpenSegments();
+    expect(open).toHaveLength(2);
+    expect(open[0].name).toBe("A");
+    expect(open[1].name).toBe("B");
+  });
+
+  it("getOpenSegments filters out IDs that no longer match a known segment", () => {
+    const { segment } = useSegmentStore.getState().addSegment("A", "/a");
+    useSegmentStore.getState().addOpenSegment(segment.id);
+    useSegmentStore.getState().addOpenSegment("orphan-id");
+    const open = useSegmentStore.getState().getOpenSegments();
+    expect(open).toHaveLength(1);
+    expect(open[0].id).toBe(segment.id);
+  });
+});
