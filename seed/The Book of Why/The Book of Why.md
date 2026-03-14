@@ -20,9 +20,7 @@ isbn: 978-0-465-09760-9
 ---
 
 # The Book of Why - The New Science of Cause and Effect
-
 A comprehensive introduction to causal inference written for a general audience by Judea Pearl, winner of the Turing Award, and science writer Dana Mackenzie.
-text here.
 
 The book presents three main missions:
 1. To present the Causal Revolution in non-mathematical language
@@ -30,7 +28,6 @@ The book presents three main missions:
 3. To explore implications for artificial intelligence and causal reasoning
 
 ## Chapters
-
 - [Introduction - Mind Over Data](./Introduction - Mind Over Data/Introduction - Mind Over Data.md)
 - [Ch1 - The Ladder of Causation](./Ch1 - The Ladder of Causation/Ch1 - The Ladder of Causation.md)
 - [Ch2 - Genesis of Causal Inference](./Ch2 - Genesis of Causal Inference/Ch2 - Genesis of Causal Inference.md)
@@ -41,7 +38,6 @@ The book presents three main missions:
 - [Ch10 - Big Data AI and the Big Questions](./Ch10 - Big Data AI and the Big Questions/Ch10 - Big Data AI and the Big Questions.md)
 
 [!ai-answer] {
-
 
 }
 
