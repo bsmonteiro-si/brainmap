@@ -64,7 +64,6 @@ export function AppLayout() {
   return (
     <>
       <StatusBar />
-      <TabBar />
       <div className="app-layout-root">
         <IconSidebar />
         <Group
@@ -104,8 +103,9 @@ export function AppLayout() {
             minSize="15%"
             id={PANEL_IDS.editor}
           >
-            <div className="panel" style={{ height: "100%" }} {...(editorTheme !== "inherit" ? { "data-theme": effectiveEditorTheme } : {})}>
-              <div className="panel-content">
+            <div className="panel" style={{ height: "100%", display: "flex", flexDirection: "column" }} {...(editorTheme !== "inherit" ? { "data-theme": effectiveEditorTheme } : {})}>
+              <TabBar />
+              <div className="panel-content" style={{ flex: 1, minHeight: 0 }}>
                 <EditorPanel />
               </div>
             </div>

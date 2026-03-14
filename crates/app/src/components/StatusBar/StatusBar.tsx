@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Plus, X } from "lucide-react";
+import { ChevronDown, Plus, FolderPlus, X } from "lucide-react";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { useSegmentStore } from "../../stores/segmentStore";
@@ -23,6 +23,10 @@ export function StatusBar() {
   const addSegment = useSegmentStore((s) => s.addSegment);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createPath, setCreatePath] = useState("");
+  const [createNameTouched, setCreateNameTouched] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -31,6 +35,10 @@ export function StatusBar() {
     const handleClick = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
+        setShowCreateForm(false);
+        setCreateName("");
+        setCreatePath("");
+        setCreateNameTouched(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
@@ -72,6 +80,37 @@ export function StatusBar() {
     const { segment } = addSegment(name, path);
 
     // Switch to the new segment via the proper switchSegment flow
+    await switchSegment(segment.id);
+  };
+
+  const handleCreatePathChange = (value: string) => {
+    setCreatePath(value);
+    if (!createNameTouched) {
+      const parts = value.trim().split("/").filter(Boolean);
+      setCreateName(parts[parts.length - 1] ?? "");
+    }
+  };
+
+  const handleCreateBrowse = async () => {
+    try {
+      const path = await pickFolder();
+      if (path) handleCreatePathChange(path);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleCreateSubmit = async () => {
+    const trimmedName = createName.trim();
+    const trimmedPath = createPath.trim();
+    if (!trimmedName || !trimmedPath) return;
+
+    const { segment } = addSegment(trimmedName, trimmedPath);
+    setDropdownOpen(false);
+    setShowCreateForm(false);
+    setCreateName("");
+    setCreatePath("");
+    setCreateNameTouched(false);
     await switchSegment(segment.id);
   };
 
@@ -117,6 +156,49 @@ export function StatusBar() {
               <Plus size={14} />
               <span>Open Folder as Segment</span>
             </button>
+            <button
+              className="segment-switcher-add"
+              onClick={() => setShowCreateForm(!showCreateForm)}
+            >
+              <FolderPlus size={14} />
+              <span>Create Folder as Segment</span>
+            </button>
+            {showCreateForm && (
+              <div className="segment-create-form">
+                <input
+                  className="segment-create-input"
+                  type="text"
+                  placeholder="Segment name"
+                  value={createName}
+                  onChange={(e) => { setCreateName(e.target.value); setCreateNameTouched(true); }}
+                  autoFocus
+                />
+                <div className="segment-create-row">
+                  <input
+                    className="segment-create-input"
+                    type="text"
+                    placeholder="/path/to/folder"
+                    value={createPath}
+                    onChange={(e) => handleCreatePathChange(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleCreateSubmit()}
+                  />
+                  <button
+                    className="segment-create-browse"
+                    type="button"
+                    onClick={handleCreateBrowse}
+                  >
+                    Browse…
+                  </button>
+                </div>
+                <button
+                  className="segment-create-submit"
+                  onClick={handleCreateSubmit}
+                  disabled={!createName.trim() || !createPath.trim()}
+                >
+                  Create
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

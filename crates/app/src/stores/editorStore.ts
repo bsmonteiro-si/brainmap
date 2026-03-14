@@ -174,9 +174,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             useTabStore.getState().updateTabState(path, { viewMode: "edit" });
           });
         }
-      } catch (e) {
-        log.error("stores::editor", "failed to open note", { path, error: String(e) });
+      } catch {
         set({ isLoading: false });
+        // File may lack frontmatter — fall back to plain file view
+        await get().openPlainFile(path);
       }
       return;
     }
@@ -189,9 +190,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       tabStore.openTab(path, "note", note.title, note.note_type);
       set({ activeNote: note, isLoading: false });
       useNavigationStore.getState().push(path);
-    } catch (e) {
-      log.error("stores::editor", "failed to open note", { path, error: String(e) });
+    } catch {
       set({ isLoading: false });
+      // File may lack frontmatter — fall back to plain file view
+      await get().openPlainFile(path);
     }
   },
 

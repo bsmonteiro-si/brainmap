@@ -1,21 +1,22 @@
 ---
-id: "a0000001-0000-0000-0000-000000000004"
-title: "Ch1 - The Ladder of Causation"
+id: a0000001-0000-0000-0000-000000000004
+title: Ch1 - The Ladder of Causation
 type: book-note
-tags: [causality, ladder-of-causation, hierarchy, reasoning]
+tags:
+- causality
+- ladder-of-causation
+- hierarchy
+- reasoning
 status: draft
 created: 2026-01-20
-modified: 2026-02-15
-source: "The Book of Why, Chapter 1"
-summary: >-
-  Pearl's three-level hierarchy of causal reasoning: Association (seeing),
-  Intervention (doing), and Counterfactuals (imagining). Each rung represents
-  a qualitatively different type of cognitive ability.
+modified: 2026-03-14
+source: The Book of Why, Chapter 1
+summary: 'Pearl''s three-level hierarchy of causal reasoning: Association (seeing), Intervention (doing), and Counterfactuals (imagining). Each rung represents a qualitatively different type of cognitive ability.'
 links:
-  - target: "../../Concepts/The Ladder of Causation.md"
-    type: contains
-chapter: "1"
-page-range: "23-51"
+- target: ../../Concepts/The Ladder of Causation.md
+  type: contains
+page-range: 23-51
+chapter: '1'
 ---
 
 # Ch1 - The Ladder of Causation
