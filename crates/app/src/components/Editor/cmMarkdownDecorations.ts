@@ -132,6 +132,10 @@ const fencedBodyDeco = Decoration.line({ class: "cm-fenced-code" });
 const inlineCodeMark = Decoration.mark({ class: "cm-inline-code" });
 const imageUrlMark = Decoration.mark({ class: "cm-image-url" });
 const linkDimMark = Decoration.mark({ class: "cm-link-dim" });
+const tableHeaderDeco = Decoration.line({ class: "cm-table-line cm-table-header" });
+const tableDelimDeco = Decoration.line({ class: "cm-table-line cm-table-delimiter" });
+const tableRowDeco = Decoration.line({ class: "cm-table-line cm-table-row" });
+const tableRowEvenDeco = Decoration.line({ class: "cm-table-line cm-table-row cm-table-row-even" });
 
 function buildDecorations(state: EditorState, cls: LineClassification, cursorLine: number): DecorationSet {
   const doc = state.doc;
@@ -188,6 +192,24 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
           if (parenStart >= 0) {
             const urlFrom = node.from + parenStart + 1; // the `(`
             decos.push({ from: urlFrom, to: node.to, deco: imageUrlMark });
+          }
+        }
+        return false;
+      }
+
+      // Table — line decorations for header, delimiter, and data rows
+      if (node.name === "Table") {
+        let rowIndex = 0;
+        const tableNode = node.node;
+        for (let child = tableNode.firstChild; child; child = child.nextSibling) {
+          const line = doc.lineAt(child.from);
+          if (child.name === "TableHeader") {
+            decos.push({ from: line.from, to: line.from, deco: tableHeaderDeco });
+          } else if (child.name === "TableDelimiter") {
+            decos.push({ from: line.from, to: line.from, deco: tableDelimDeco });
+          } else if (child.name === "TableRow") {
+            decos.push({ from: line.from, to: line.from, deco: rowIndex % 2 === 1 ? tableRowEvenDeco : tableRowDeco });
+            rowIndex++;
           }
         }
         return false;
