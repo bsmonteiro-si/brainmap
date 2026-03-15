@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use brainmap_core::model::{Edge, EdgeKind, NodeData, Note};
 use brainmap_core::workspace::WorkspaceStats;
 
 // ── Request DTOs ───────────────────────────────────────────────────
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct CreateNoteParams {
     pub path: String,
     pub title: String,
@@ -18,12 +20,14 @@ pub struct CreateNoteParams {
     pub source: Option<String>,
     pub summary: Option<String>,
     #[serde(default)]
+    #[ts(type = "Record<string, unknown>")]
     pub extra: HashMap<String, serde_json::Value>,
     #[serde(default)]
     pub body: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct UpdateNoteParams {
     pub path: String,
     pub title: Option<String>,
@@ -32,11 +36,13 @@ pub struct UpdateNoteParams {
     pub status: Option<String>,
     pub source: Option<String>,
     pub summary: Option<String>,
+    #[ts(type = "Record<string, unknown> | null")]
     pub extra: Option<HashMap<String, serde_json::Value>>,
     pub body: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct SearchParams {
     pub query: String,
     pub note_type: Option<String>,
@@ -44,7 +50,8 @@ pub struct SearchParams {
     pub status: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct NeighborsParams {
     pub path: String,
     pub depth: usize,
@@ -52,7 +59,8 @@ pub struct NeighborsParams {
     pub rel_filter: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct LinkParams {
     pub source: String,
     pub target: String,
@@ -60,14 +68,16 @@ pub struct LinkParams {
     pub annotation: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct ListLinksParams {
     pub path: String,
     pub direction: String,
     pub rel_filter: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct ListNodesParams {
     pub note_type: Option<String>,
     pub tag: Option<String>,
@@ -76,7 +86,8 @@ pub struct ListNodesParams {
 
 // ── Response DTOs ──────────────────────────────────────────────────
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct WorkspaceInfoDto {
     pub name: String,
     pub root: String,
@@ -84,17 +95,21 @@ pub struct WorkspaceInfoDto {
     pub edge_count: usize,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct GraphTopologyDto {
     pub nodes: Vec<NodeDto>,
     pub edges: Vec<EdgeDto>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct NodeDto {
     pub path: String,
     pub title: String,
     pub note_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
 }
 
 impl From<&NodeData> for NodeDto {
@@ -103,11 +118,13 @@ impl From<&NodeData> for NodeDto {
             path: nd.path.as_str().to_string(),
             title: nd.title.clone(),
             note_type: nd.note_type.clone(),
+            tags: None,
         }
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct EdgeDto {
     pub source: String,
     pub target: String,
@@ -130,7 +147,8 @@ impl From<&Edge> for EdgeDto {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct NoteDetailDto {
     pub path: String,
     pub title: String,
@@ -142,11 +160,13 @@ pub struct NoteDetailDto {
     pub source: Option<String>,
     pub summary: Option<String>,
     pub links: Vec<TypedLinkDto>,
+    #[ts(type = "Record<string, unknown>")]
     pub extra: HashMap<String, serde_json::Value>,
     pub body: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct TypedLinkDto {
     pub target: String,
     pub rel: String,
@@ -188,7 +208,8 @@ impl From<&Note> for NoteDetailDto {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct NodeSummaryDto {
     pub path: String,
     pub title: String,
@@ -215,7 +236,8 @@ impl From<&Note> for NodeSummaryDto {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct SearchResultDto {
     pub path: String,
     pub title: String,
@@ -224,13 +246,15 @@ pub struct SearchResultDto {
     pub rank: f64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct SubgraphDto {
     pub nodes: Vec<NodeDto>,
     pub edges: Vec<EdgeDto>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct StatsDto {
     pub node_count: usize,
     pub edge_count: usize,
@@ -255,12 +279,14 @@ impl From<WorkspaceStats> for StatsDto {
 
 // ── Delete Folder DTOs ────────────────────────────────────────────
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct DeleteFolderResultDto {
     pub deleted_paths: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct ExternalBacklinkDto {
     pub source_path: String,
     pub target_path: String,
@@ -269,13 +295,15 @@ pub struct ExternalBacklinkDto {
 
 // ── Move DTOs ─────────────────────────────────────────────────────
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct MoveNoteResultDto {
     pub new_path: String,
     pub rewritten_paths: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct MoveFolderResultDto {
     pub new_folder: String,
     pub moved_notes: Vec<(String, String)>,
@@ -284,7 +312,8 @@ pub struct MoveFolderResultDto {
 
 // ── Plain File DTOs ───────────────────────────────────────────────
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct PlainFileDto {
     pub path: String,
     pub body: String,
@@ -293,10 +322,12 @@ pub struct PlainFileDto {
 
 // ── PDF DTOs ─────────────────────────────────────────────────────
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
 pub struct PdfMetaDto {
     pub path: String,
     pub absolute_path: String,
+    #[ts(type = "number")]
     pub size_bytes: u64,
 }
 
@@ -372,5 +403,41 @@ fn json_to_yaml(v: &serde_json::Value) -> serde_yaml::Value {
                 .collect();
             serde_yaml::Value::Mapping(map)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn export_ts_bindings() {
+        // Each call writes the .ts file to ../../src/api/generated/<StructName>.ts
+        // Request DTOs
+        CreateNoteParams::export_all().expect("CreateNoteParams");
+        UpdateNoteParams::export_all().expect("UpdateNoteParams");
+        SearchParams::export_all().expect("SearchParams");
+        NeighborsParams::export_all().expect("NeighborsParams");
+        LinkParams::export_all().expect("LinkParams");
+        ListLinksParams::export_all().expect("ListLinksParams");
+        ListNodesParams::export_all().expect("ListNodesParams");
+
+        // Response DTOs
+        WorkspaceInfoDto::export_all().expect("WorkspaceInfoDto");
+        GraphTopologyDto::export_all().expect("GraphTopologyDto");
+        NodeDto::export_all().expect("NodeDto");
+        EdgeDto::export_all().expect("EdgeDto");
+        NoteDetailDto::export_all().expect("NoteDetailDto");
+        TypedLinkDto::export_all().expect("TypedLinkDto");
+        NodeSummaryDto::export_all().expect("NodeSummaryDto");
+        SearchResultDto::export_all().expect("SearchResultDto");
+        SubgraphDto::export_all().expect("SubgraphDto");
+        StatsDto::export_all().expect("StatsDto");
+        DeleteFolderResultDto::export_all().expect("DeleteFolderResultDto");
+        ExternalBacklinkDto::export_all().expect("ExternalBacklinkDto");
+        MoveNoteResultDto::export_all().expect("MoveNoteResultDto");
+        MoveFolderResultDto::export_all().expect("MoveFolderResultDto");
+        PlainFileDto::export_all().expect("PlainFileDto");
+        PdfMetaDto::export_all().expect("PdfMetaDto");
     }
 }

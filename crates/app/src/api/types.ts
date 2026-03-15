@@ -1,100 +1,28 @@
-// TypeScript interfaces matching the Rust DTOs in src-tauri/src/dto.rs.
-// Hand-written for reliability — kept in sync manually.
+// DTO types auto-generated from Rust via ts-rs.
+// Re-run `cargo test export_ts_bindings` in crates/app/src-tauri/ to regenerate.
+// Only BrainMapAPI, WorkspaceEvent, and SearchFilters are hand-written (no Rust equivalent).
 
-export interface WorkspaceInfo {
-  name: string;
-  root: string;
-  node_count: number;
-  edge_count: number;
-}
+// ── Re-exports from generated types ─────────────────────────────────
 
-export interface NodeDto {
-  path: string;
-  title: string;
-  note_type: string;
-  tags?: string[];
-}
+export type { NodeDto, EdgeDto, TypedLinkDto, StatsDto } from "./generated";
 
-export interface EdgeDto {
-  source: string;
-  target: string;
-  rel: string;
-  kind: "Explicit" | "Implicit" | "Inline";
-}
+export type { GraphTopologyDto as GraphTopology } from "./generated";
+export type { WorkspaceInfoDto as WorkspaceInfo } from "./generated";
+export type { NoteDetailDto as NoteDetail } from "./generated";
+export type { PlainFileDto as PlainFileDetail } from "./generated";
+export type { PdfMetaDto as PdfFileMeta } from "./generated";
+export type { NodeSummaryDto as NodeSummary } from "./generated";
+export type { SearchResultDto as SearchResult } from "./generated";
+export type { SubgraphDto as Subgraph } from "./generated";
 
-export interface GraphTopology {
-  nodes: NodeDto[];
-  edges: EdgeDto[];
-}
+// ── Hand-written types (no Rust equivalent) ─────────────────────────
 
-export interface TypedLinkDto {
-  target: string;
-  rel: string;
-  annotation?: string;
-}
-
-export interface NoteDetail {
-  path: string;
-  title: string;
-  note_type: string;
-  tags: string[];
-  status: string | null;
-  created: string;
-  modified: string;
-  source: string | null;
-  summary: string | null;
-  links: TypedLinkDto[];
-  extra: Record<string, unknown>;
-  body: string;
-}
-
-export interface PlainFileDetail {
-  path: string;
-  body: string;
-  binary: boolean;
-}
-
-export interface PdfFileMeta {
-  path: string;
-  absolute_path: string;
-  size_bytes: number;
-}
-
-export interface NodeSummary {
-  path: string;
-  title: string;
-  note_type: string;
-  tags: string[];
-  status: string | null;
-  summary: string | null;
-}
-
-export interface SearchResult {
-  path: string;
-  title: string;
-  note_type: string;
-  snippet: string;
-  rank: number;
-}
+import type { NodeDto, EdgeDto } from "./generated";
 
 export interface SearchFilters {
   note_type?: string;
   tag?: string;
   status?: string;
-}
-
-export interface Subgraph {
-  nodes: NodeDto[];
-  edges: EdgeDto[];
-}
-
-export interface StatsDto {
-  node_count: number;
-  edge_count: number;
-  nodes_by_type: Record<string, number>;
-  edges_by_rel: Record<string, number>;
-  edges_by_kind: Record<string, number>;
-  orphan_count: number;
 }
 
 export type WorkspaceEvent =
@@ -108,14 +36,26 @@ export type WorkspaceEvent =
 
 // ── API Interface ──────────────────────────────────────────────────
 
+import type {
+  WorkspaceInfoDto,
+  GraphTopologyDto,
+  NodeSummaryDto,
+  NoteDetailDto,
+  SearchResultDto,
+  SubgraphDto,
+  StatsDto,
+  PlainFileDto,
+  PdfMetaDto,
+} from "./generated";
+
 export interface BrainMapAPI {
-  openWorkspace(path: string): Promise<WorkspaceInfo>;
-  switchWorkspace(root: string): Promise<WorkspaceInfo>;
+  openWorkspace(path: string): Promise<WorkspaceInfoDto>;
+  switchWorkspace(root: string): Promise<WorkspaceInfoDto>;
   closeWorkspace(root: string): Promise<void>;
-  getGraphTopology(): Promise<GraphTopology>;
-  getNodeSummary(path: string): Promise<NodeSummary>;
-  readNote(path: string): Promise<NoteDetail>;
-  listNodes(filters?: { note_type?: string; tag?: string; status?: string }): Promise<NodeSummary[]>;
+  getGraphTopology(): Promise<GraphTopologyDto>;
+  getNodeSummary(path: string): Promise<NodeSummaryDto>;
+  readNote(path: string): Promise<NoteDetailDto>;
+  listNodes(filters?: { note_type?: string; tag?: string; status?: string }): Promise<NodeSummaryDto[]>;
   createNote(params: {
     path: string;
     title: string;
@@ -142,15 +82,15 @@ export interface BrainMapAPI {
   createLink(source: string, target: string, rel: string, annotation?: string): Promise<void>;
   deleteLink(source: string, target: string, rel: string): Promise<void>;
   listLinks(path: string, direction: "Outgoing" | "Incoming" | "Both", relFilter?: string): Promise<EdgeDto[]>;
-  search(query: string, filters?: SearchFilters): Promise<SearchResult[]>;
-  getNeighbors(path: string, depth: number, direction?: string, relFilter?: string): Promise<Subgraph>;
+  search(query: string, filters?: SearchFilters): Promise<SearchResultDto[]>;
+  getNeighbors(path: string, depth: number, direction?: string, relFilter?: string): Promise<SubgraphDto>;
   getStats(): Promise<StatsDto>;
   createFolder(path: string): Promise<void>;
   deleteFolder(path: string, force?: boolean): Promise<{ deleted_paths: string[] }>;
   listWorkspaceFiles(): Promise<string[]>;
   createPlainFile(path: string, body?: string): Promise<string>;
-  readPlainFile(path: string): Promise<PlainFileDetail>;
-  resolvePdfPath(path: string): Promise<PdfFileMeta>;
+  readPlainFile(path: string): Promise<PlainFileDto>;
+  resolvePdfPath(path: string): Promise<PdfMetaDto>;
   writePlainFile(path: string, body: string): Promise<void>;
   writeRawNote(path: string, content: string): Promise<void>;
   moveNote(oldPath: string, newPath: string): Promise<{ new_path: string; rewritten_paths: string[] }>;
