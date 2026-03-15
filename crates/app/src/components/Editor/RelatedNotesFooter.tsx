@@ -20,6 +20,11 @@ export function RelatedNotesFooter() {
   const tooltipCacheRef = useRef<Map<string, NodeSummary>>(new Map());
   const footerRef = useRef<HTMLDivElement>(null);
 
+  // Invalidate tooltip cache when graph data changes (e.g. after frontmatter edit)
+  useEffect(() => {
+    tooltipCacheRef.current.clear();
+  }, [nodes]);
+
   // Reset per-group expansion when the active note changes
   useEffect(() => {
     setExpandedGroups(new Set());

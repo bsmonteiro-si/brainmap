@@ -1917,7 +1917,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 13px;
+  font-size: var(--tooltip-font-size);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   box-shadow: 0 4px 16px rgba(0,0,0,0.25);
@@ -1927,23 +1927,23 @@ body {
   border: 1px solid var(--glass-border-strong);
 }
 .tooltip-rel-pill {
-  font-size: 11px;
+  font-size: var(--tooltip-tag-size);
   color: var(--text-muted);
   white-space: nowrap;
 }
 .tooltip-status {
-  font-size: 11px;
+  font-size: var(--tooltip-tag-size);
   color: var(--text-muted);
   text-transform: capitalize;
 }
 .related-note-tooltip .tooltip-type-pill {
-  font-size: 11px;
+  font-size: var(--tooltip-pill-size);
 }
 .related-note-tooltip .tooltip-summary {
-  font-size: 12px;
+  font-size: var(--tooltip-summary-size);
 }
 .related-note-tooltip .tooltip-tag {
-  font-size: 11px;
+  font-size: var(--tooltip-tag-size);
 }
 
 /* ── Graph Legend ─────────────────────────────────────────── */

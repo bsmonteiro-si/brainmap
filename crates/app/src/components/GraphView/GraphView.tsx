@@ -221,6 +221,11 @@ export function GraphView() {
   } | null>(null);
   const tooltipCacheRef = useRef<Map<string, NodeSummary>>(new Map());
 
+  // Invalidate tooltip cache when graph data changes (e.g. after frontmatter edit)
+  useEffect(() => {
+    tooltipCacheRef.current.clear();
+  }, [nodes]);
+
   // Graph node context menu state
   const [ctxMenu, setCtxMenu] = useState<{
     x: number;
