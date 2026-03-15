@@ -18,7 +18,6 @@ vi.mock("../../api/bridge", () => ({
 }));
 
 // Mock stores
-const mockApplyEvent = vi.fn();
 const mockRefreshActiveNote = vi.fn();
 
 vi.mock("../../stores/graphStore", () => ({
@@ -31,7 +30,7 @@ vi.mock("../../stores/graphStore", () => ({
           ["Concepts/Confounding.md", { title: "Confounding", note_type: "concept" }],
         ]),
       }),
-    { getState: () => ({ applyEvent: mockApplyEvent }) },
+    { getState: () => ({}) },
   ),
 }));
 
@@ -90,22 +89,18 @@ describe("LinksEditor", () => {
     });
   });
 
-  it("updates graph store after removing a link", async () => {
+  it("refreshes active note after removing a link", async () => {
     render(<LinksEditor notePath="Notes/Test.md" links={LINKS} />);
 
     const removeButtons = screen.getAllByText("×");
     fireEvent.click(removeButtons[0]);
 
     await waitFor(() => {
-      expect(mockApplyEvent).toHaveBeenCalledWith({
-        type: "edge-deleted",
-        edge: {
-          source: "Notes/Test.md",
-          target: "Concepts/SCM.md",
-          rel: "supports",
-          kind: "Explicit",
-        },
-      });
+      expect(mockDeleteLink).toHaveBeenCalledWith(
+        "Notes/Test.md",
+        "Concepts/SCM.md",
+        "supports",
+      );
       expect(mockRefreshActiveNote).toHaveBeenCalled();
     });
   });
@@ -145,7 +140,7 @@ describe("LinksEditor", () => {
     });
   });
 
-  it("updates graph store after adding a link", async () => {
+  it("refreshes active note after adding a link", async () => {
     render(<LinksEditor notePath="Notes/Test.md" links={[]} />);
 
     const input = screen.getByPlaceholderText("Target note…");
@@ -153,15 +148,11 @@ describe("LinksEditor", () => {
     fireEvent.click(screen.getByText("+"));
 
     await waitFor(() => {
-      expect(mockApplyEvent).toHaveBeenCalledWith({
-        type: "edge-created",
-        edge: {
-          source: "Notes/Test.md",
-          target: "Concepts/Confounding.md",
-          rel: "causes",
-          kind: "Explicit",
-        },
-      });
+      expect(mockCreateLink).toHaveBeenCalledWith(
+        "Notes/Test.md",
+        "Concepts/Confounding.md",
+        "causes",
+      );
       expect(mockRefreshActiveNote).toHaveBeenCalled();
     });
   });

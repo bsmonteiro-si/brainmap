@@ -20,6 +20,10 @@ export function TabBar() {
     if (tab.kind === "untitled") {
       useGraphStore.getState().selectNode(null);
       useEditorStore.getState().activateUntitledTab(path);
+    } else if (tab.kind === "pdf") {
+      useGraphStore.getState().selectNode(null);
+      useTabStore.getState().activateTab(path);
+      useEditorStore.getState().clearForPdfTab();
     } else if (tab.kind === "note") {
       useGraphStore.getState().selectNode(path);
       useEditorStore.getState().openNote(path);
@@ -54,6 +58,12 @@ export function TabBar() {
         }
         // action === "discard" — fall through to close
       }
+      closeTabAndNavigateNext(id);
+      return;
+    }
+
+    // PDF tabs are never dirty — just close
+    if (tab && tab.kind === "pdf") {
       closeTabAndNavigateNext(id);
       return;
     }

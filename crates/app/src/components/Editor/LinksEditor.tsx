@@ -83,15 +83,7 @@ export function LinksEditor({ notePath, links }: Props) {
     try {
       const api = await getAPI();
       await api.deleteLink(notePath, link.target, link.rel);
-      useGraphStore.getState().applyEvent({
-        type: "edge-deleted",
-        edge: {
-          source: notePath,
-          target: link.target,
-          rel: link.rel,
-          kind: "Explicit",
-        },
-      });
+      // Backend emits topology event for the removed edge
       await useEditorStore.getState().refreshActiveNote();
     } catch (e) {
       log.error("components::LinksEditor", "failed to delete link", { notePath, target: link.target, error: String(e) });
@@ -108,15 +100,7 @@ export function LinksEditor({ notePath, links }: Props) {
     try {
       const api = await getAPI();
       await api.createLink(notePath, resolvedTarget, newRel);
-      useGraphStore.getState().applyEvent({
-        type: "edge-created",
-        edge: {
-          source: notePath,
-          target: resolvedTarget,
-          rel: newRel,
-          kind: "Explicit",
-        },
-      });
+      // Backend emits topology event for the new edge
       await useEditorStore.getState().refreshActiveNote();
       setNewTarget("");
     } catch (e) {

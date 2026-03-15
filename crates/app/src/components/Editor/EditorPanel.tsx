@@ -7,6 +7,7 @@ import { MarkdownPreview } from "./MarkdownPreview";
 import { FrontmatterForm } from "./FrontmatterForm";
 import { RelatedNotesFooter } from "./RelatedNotesFooter";
 import { EditorToolbar } from "./EditorToolbar";
+import { PdfViewer } from "./PdfViewer";
 import { getNodeColor } from "../GraphView/graphStyles";
 import type { EditorView } from "@codemirror/view";
 
@@ -59,6 +60,16 @@ export function EditorPanel() {
       }
     };
   }, [activePath]);
+
+  // PDF tab — self-contained viewer component, no editorStore state needed
+  const activeTab = activeTabId ? tabs.find((t) => t.id === activeTabId) : null;
+  if (activeTab?.kind === "pdf") {
+    return (
+      <div className="editor-panel-container">
+        <PdfViewer path={activeTab.path} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

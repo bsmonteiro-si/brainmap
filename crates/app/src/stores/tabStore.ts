@@ -13,9 +13,9 @@ export function isUntitledTab(id: string): boolean {
 export interface TabState {
   id: string; // file path — one tab per file (or synthetic ID for untitled tabs)
   path: string;
-  kind: "note" | "plain-file" | "untitled";
+  kind: "note" | "plain-file" | "untitled" | "pdf";
   title: string;
-  noteType: string | null; // null for plain files and untitled tabs
+  noteType: string | null; // null for plain files, untitled tabs, and PDFs
   // Per-tab editor state (swapped in/out of editorStore)
   editedBody: string | null;
   editedFrontmatter: FmSnapshot;
@@ -33,7 +33,7 @@ interface TabStoreState {
   activeTabId: string | null;
   _untitledCounter: number;
 
-  openTab: (path: string, kind: "note" | "plain-file", title: string, noteType: string | null) => void;
+  openTab: (path: string, kind: "note" | "plain-file" | "pdf", title: string, noteType: string | null) => void;
   createUntitledTab: () => string;
   closeTab: (id: string) => void;
   closeActiveTab: () => void;
@@ -47,7 +47,7 @@ interface TabStoreState {
   reset: () => void;
 }
 
-function createFreshTab(path: string, kind: "note" | "plain-file" | "untitled", title: string, noteType: string | null): TabState {
+function createFreshTab(path: string, kind: "note" | "plain-file" | "untitled" | "pdf", title: string, noteType: string | null): TabState {
   return {
     id: path,
     path,

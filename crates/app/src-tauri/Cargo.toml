@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 brainmap-core = { path = "../../core", features = ["logging"] }
-tauri = { version = "2", features = ["devtools"] }
+tauri = { version = "2", features = ["protocol-asset", "devtools"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-shell = "2"
 serde = { version = "1", features = ["derive"] }

@@ -277,7 +277,7 @@ describe("parseMarkdownTable", () => {
       "| a \\| b | true |",
     ]);
     expect(result).not.toBeNull();
-    expect(result!.rows[0]).toEqual(["a | b", "true"]);
+    expect(result!.rows[0]).toEqual(["a \\| b", "true"]);
   });
 
   it("rejects invalid delimiter row", () => {

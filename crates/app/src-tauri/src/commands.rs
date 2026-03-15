@@ -131,30 +131,22 @@ pub fn create_node(
     let abs_path = state.with_slot(&root, |slot| Ok(slot.workspace.root.join(&params.path)))?;
     state.register_expected_write(&root, abs_path);
 
-    // Collect folder nodes before creation to detect new ones from ensure_folder_nodes
-    let folder_nodes_before: HashSet<String> = state.with_slot(&root, |slot| {
-        Ok(slot.workspace.graph.all_nodes()
+    // Collect folder nodes before, create note, and read back state — all in one lock
+    let (created_path, added_nodes, added_edges) = state.with_slot_mut(&root, |slot| {
+        let folder_nodes_before: HashSet<String> = slot.workspace.graph.all_nodes()
             .filter(|(_, nd)| nd.is_folder())
             .map(|(rp, _)| rp.as_str().to_string())
-            .collect())
-    })?;
+            .collect();
 
-    let created_path = state.with_slot_mut(&root, |slot| {
-        handlers::handle_create_note(&mut slot.workspace, params)
-    })?;
+        let created_path = handlers::handle_create_note(&mut slot.workspace, params)?;
 
-    // Read back the created node + edges + any new folder nodes
-    let (added_nodes, added_edges) = state.with_slot(&root, |slot| {
         let rp = RelativePath::new(&created_path);
         let mut nodes = Vec::new();
         let mut edges = Vec::new();
 
-        // The created note node
         if let Some(nd) = slot.workspace.graph.get_node(&rp) {
             nodes.push(node_to_payload(nd));
         }
-
-        // Edges for the new node (includes contains from parent folder)
         for e in slot.workspace.graph.edges_for(&rp, &Direction::Both) {
             edges.push(edge_to_payload(e));
         }
@@ -163,14 +155,13 @@ pub fn create_node(
         for (fp, fnd) in slot.workspace.graph.all_nodes() {
             if fnd.is_folder() && !folder_nodes_before.contains(fp.as_str()) {
                 nodes.push(node_to_payload(fnd));
-                // Folder's own edges (contains edges to children, part-of to parent)
                 for e in slot.workspace.graph.edges_for(fp, &Direction::Both) {
                     edges.push(edge_to_payload(e));
                 }
             }
         }
 
-        Ok((nodes, edges))
+        Ok((created_path, nodes, edges))
     })?;
 
     emit_topology_event(&app, &root, added_nodes, vec![], added_edges, vec![]);
@@ -219,16 +210,20 @@ pub fn delete_node(
         let rp = RelativePath::new(&path);
 
         // Collect all edges touching this node before deletion
-        let edges: Vec<_> = slot.workspace.graph.edges_for(&rp, &Direction::Both)
+        let mut edges: Vec<_> = slot.workspace.graph.edges_for(&rp, &Direction::Both)
             .into_iter().cloned().collect();
 
-        // Collect ancestor folder node paths that might get pruned
+        // Collect ancestor folder node paths and their edges (they may get pruned)
         let mut folder_ancestors: Vec<String> = Vec::new();
         if let Some(parent_rp) = rp.parent() {
             let mut current = Some(parent_rp);
             while let Some(dir_rp) = current {
                 if slot.workspace.graph.get_node(&dir_rp).map_or(false, |n| n.is_folder()) {
                     folder_ancestors.push(dir_rp.as_str().to_string());
+                    // Collect folder edges before deletion might prune them
+                    for e in slot.workspace.graph.edges_for(&dir_rp, &Direction::Both) {
+                        edges.push(e.clone());
+                    }
                 }
                 current = dir_rp.parent();
             }
@@ -247,7 +242,7 @@ pub fn delete_node(
 
     let mut removed_nodes = vec![path];
     // Also collect edges for removed folder nodes
-    let mut all_removed_edges: Vec<_> = edges_before.iter().map(edge_to_payload).collect();
+    let all_removed_edges: Vec<_> = edges_before.iter().map(edge_to_payload).collect();
     for folder_path in &removed_folder_nodes {
         removed_nodes.push(folder_path.clone());
     }
@@ -384,7 +379,7 @@ pub fn create_link(
             source,
             target,
             rel,
-            kind: "explicit".to_string(),
+            kind: "Explicit".to_string(),
         }],
         vec![],
     );
@@ -409,7 +404,7 @@ pub fn delete_link(
         source: source.clone(),
         target: target.clone(),
         rel: rel.clone(),
-        kind: "explicit".to_string(),
+        kind: "Explicit".to_string(),
     };
 
     state.with_slot_mut(&root, |slot| handlers::handle_delete_link(&mut slot.workspace, &source, &target, &rel))?;
@@ -586,6 +581,11 @@ pub fn create_plain_file(
 #[tauri::command]
 pub fn read_plain_file(state: State<'_, AppState>, path: String) -> Result<PlainFileDto, String> {
     state.with_active(|ws| handlers::handle_read_plain_file(ws, &path))
+}
+
+#[tauri::command]
+pub fn resolve_pdf_path(state: State<'_, AppState>, path: String) -> Result<PdfMetaDto, String> {
+    state.with_active(|ws| handlers::handle_resolve_pdf_path(ws, &path))
 }
 
 #[tauri::command]

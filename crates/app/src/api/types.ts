@@ -12,6 +12,7 @@ export interface NodeDto {
   path: string;
   title: string;
   note_type: string;
+  tags?: string[];
 }
 
 export interface EdgeDto {
@@ -51,6 +52,12 @@ export interface PlainFileDetail {
   path: string;
   body: string;
   binary: boolean;
+}
+
+export interface PdfFileMeta {
+  path: string;
+  absolute_path: string;
+  size_bytes: number;
 }
 
 export interface NodeSummary {
@@ -143,6 +150,7 @@ export interface BrainMapAPI {
   listWorkspaceFiles(): Promise<string[]>;
   createPlainFile(path: string, body?: string): Promise<string>;
   readPlainFile(path: string): Promise<PlainFileDetail>;
+  resolvePdfPath(path: string): Promise<PdfFileMeta>;
   writePlainFile(path: string, body: string): Promise<void>;
   writeRawNote(path: string, content: string): Promise<void>;
   moveNote(oldPath: string, newPath: string): Promise<{ new_path: string; rewritten_paths: string[] }>;

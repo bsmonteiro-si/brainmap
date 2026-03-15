@@ -11,11 +11,13 @@ import {
   EditorView,
   Decoration,
   WidgetType,
+  ViewPlugin,
   type DecorationSet,
 } from "@codemirror/view";
 import { RangeSetBuilder, StateField, type Text, type Extension } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
 import type { EditorState } from "@codemirror/state";
+import { formatTable, isTableFormatted, parseCells, parseAlignment, DELIM_CELL_RE, type Alignment } from "./tableFormatter";
 
 // ---------------------------------------------------------------------------
 // Shared utility: scan fenced code blocks
@@ -125,40 +127,12 @@ export function classifyLines(doc: Text): LineClassification {
 // ---------------------------------------------------------------------------
 // Table parsing
 // ---------------------------------------------------------------------------
-export type TableAlignment = "left" | "center" | "right";
-
 export interface TableData {
   headerCells: string[];
-  alignments: TableAlignment[];
+  alignments: Alignment[];
   rows: string[][];
   sourceText: string;
-}
-
-function parseCells(line: string): string[] {
-  // Split by unescaped |, handling \| as literal pipe
-  const cells: string[] = [];
-  let current = "";
-  let escaped = false;
-  for (const ch of line) {
-    if (escaped) { current += ch; escaped = false; continue; }
-    if (ch === "\\") { escaped = true; continue; }
-    if (ch === "|") { cells.push(current.trim()); current = ""; continue; }
-    current += ch;
-  }
-  cells.push(current.trim());
-  // Remove empty first/last entries from leading/trailing pipes
-  if (cells.length > 0 && cells[0] === "") cells.shift();
-  if (cells.length > 0 && cells[cells.length - 1] === "") cells.pop();
-  return cells;
-}
-
-function parseAlignment(cell: string): TableAlignment {
-  const trimmed = cell.trim().replace(/\s/g, "");
-  const left = trimmed.startsWith(":");
-  const right = trimmed.endsWith(":");
-  if (left && right) return "center";
-  if (right) return "right";
-  return "left";
+  isFormatted: boolean;
 }
 
 export function parseMarkdownTable(lines: string[]): TableData | null {
@@ -168,23 +142,20 @@ export function parseMarkdownTable(lines: string[]): TableData | null {
 
   // Parse and validate delimiter row
   const delimCells = parseCells(lines[1]);
-  const DELIM_CELL_RE = /^:?-+:?$/;
   if (!delimCells.every((cell) => DELIM_CELL_RE.test(cell.trim()))) return null;
-  const alignments: TableAlignment[] = delimCells.map(parseAlignment);
-  // Pad alignments to match header column count
+  const alignments: Alignment[] = delimCells.map(parseAlignment);
   while (alignments.length < headerCells.length) alignments.push("left");
 
   // Parse data rows
   const rows: string[][] = [];
   for (let i = 2; i < lines.length; i++) {
     const cells = parseCells(lines[i]);
-    // Pad or trim to match column count
     while (cells.length < headerCells.length) cells.push("");
     if (cells.length > headerCells.length) cells.length = headerCells.length;
     rows.push(cells);
   }
 
-  return { headerCells, alignments, rows, sourceText: lines.join("\n") };
+  return { headerCells, alignments, rows, sourceText: lines.join("\n"), isFormatted: isTableFormatted(lines) };
 }
 
 // ---------------------------------------------------------------------------
@@ -216,6 +187,9 @@ class TableWidget extends WidgetType {
   }
 
   toDOM(): HTMLElement {
+    const wrapper = document.createElement("div");
+    wrapper.className = "cm-table-widget-wrapper";
+
     const table = document.createElement("table");
     table.className = "cm-table-widget";
 
@@ -247,7 +221,17 @@ class TableWidget extends WidgetType {
       table.appendChild(tbody);
     }
 
-    return table;
+    wrapper.appendChild(table);
+
+    // "Format Table" button when table is not properly formatted
+    if (!this.data.isFormatted) {
+      const btn = document.createElement("button");
+      btn.className = "cm-table-format-btn";
+      btn.textContent = "Format Table";
+      wrapper.appendChild(btn);
+    }
+
+    return wrapper;
   }
 
   get estimatedHeight(): number {
@@ -364,9 +348,11 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
           }
           const tableData = parseMarkdownTable(lines);
           if (tableData) {
+            const from = doc.line(tableStartLine).from;
+            const to = doc.line(tableEndLine).to;
             decos.push({
-              from: doc.line(tableStartLine).from,
-              to: doc.line(tableEndLine).to,
+              from,
+              to,
               deco: Decoration.replace({ widget: new TableWidget(tableData), block: true }),
             });
           }
@@ -425,8 +411,134 @@ const markdownDecoField = StateField.define<{ cursorLine: number; cls: LineClass
 });
 
 // ---------------------------------------------------------------------------
+// Table range detection + format helpers
+// ---------------------------------------------------------------------------
+
+/** Find the line range of a table containing the given line number. Returns null if not in a table. */
+function findTableRange(doc: Text, lineNum: number): { start: number; end: number } | null {
+  if (!doc.line(lineNum).text.trimStart().startsWith("|")) return null;
+  let start = lineNum;
+  while (start > 1 && doc.line(start - 1).text.trimStart().startsWith("|")) start--;
+  let end = lineNum;
+  while (end < doc.lines && doc.line(end + 1).text.trimStart().startsWith("|")) end++;
+  return { start, end };
+}
+
+/** Format the table at the given line range in the editor. */
+function formatTableInView(view: EditorView, range: { start: number; end: number }): boolean {
+  const doc = view.state.doc;
+  const from = doc.line(range.start).from;
+  const to = doc.line(range.end).to;
+  const rawText = doc.sliceString(from, to);
+  const lines = rawText.split("\n");
+  const formatted = formatTable(lines);
+  const formattedText = formatted.join("\n");
+  if (formattedText !== rawText) {
+    view.dispatch({ changes: { from, to, insert: formattedText } });
+    return true;
+  }
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Format Table click handler (widget button)
+// ---------------------------------------------------------------------------
+const tableFormatClickHandler = EditorView.domEventHandlers({
+  mousedown(event, view) {
+    const target = event.target as HTMLElement;
+    if (!target.classList.contains("cm-table-format-btn")) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    const pos = view.posAtDOM(target);
+    const lineNum = view.state.doc.lineAt(pos).number;
+    const range = findTableRange(view.state.doc, lineNum);
+    if (range) formatTableInView(view, range);
+    return true;
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Right-click "Format Table" context menu
+// ---------------------------------------------------------------------------
+let ctxMenuEl: HTMLDivElement | null = null;
+let ctxDismiss: (() => void) | null = null;
+
+function removeCtxMenu() {
+  if (ctxDismiss) { ctxDismiss(); ctxDismiss = null; }
+  else if (ctxMenuEl) { ctxMenuEl.remove(); ctxMenuEl = null; }
+}
+
+function showFormatTableMenu(view: EditorView, x: number, y: number, range: { start: number; end: number }) {
+  removeCtxMenu();
+
+  const menu = document.createElement("div");
+  menu.className = "context-menu";
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+
+  const item = document.createElement("div");
+  item.className = "context-menu-item";
+  item.textContent = "Format Table";
+  item.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    formatTableInView(view, range);
+    dismiss();
+  });
+
+  menu.appendChild(item);
+  document.body.appendChild(menu);
+  ctxMenuEl = menu;
+
+  // Clamp to viewport
+  requestAnimationFrame(() => {
+    if (!ctxMenuEl) return;
+    const rect = ctxMenuEl.getBoundingClientRect();
+    if (rect.right > window.innerWidth) ctxMenuEl.style.left = `${window.innerWidth - rect.width - 4}px`;
+    if (rect.bottom > window.innerHeight) ctxMenuEl.style.top = `${window.innerHeight - rect.height - 4}px`;
+  });
+
+  const dismiss = () => {
+    if (ctxMenuEl) { ctxMenuEl.remove(); ctxMenuEl = null; }
+    ctxDismiss = null;
+    document.removeEventListener("mousedown", onOutside);
+    document.removeEventListener("keydown", onEsc);
+    view.scrollDOM.removeEventListener("scroll", dismiss);
+  };
+  ctxDismiss = dismiss;
+
+  const onOutside = (e: MouseEvent) => { if (ctxMenuEl && !ctxMenuEl.contains(e.target as Node)) dismiss(); };
+  const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") dismiss(); };
+
+  requestAnimationFrame(() => {
+    document.addEventListener("mousedown", onOutside);
+    document.addEventListener("keydown", onEsc);
+    view.scrollDOM.addEventListener("scroll", dismiss, { once: true });
+  });
+}
+
+const tableContextMenu = EditorView.domEventHandlers({
+  contextmenu(event: MouseEvent, view: EditorView) {
+    // Skip when text is selected — let copyReferenceMenu handle it
+    const sel = view.state.selection.main;
+    if (sel.from !== sel.to) { removeCtxMenu(); return false; }
+
+    const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+    if (pos === null) { removeCtxMenu(); return false; }
+    const lineNum = view.state.doc.lineAt(pos).number;
+    const range = findTableRange(view.state.doc, lineNum);
+    if (!range) { removeCtxMenu(); return false; }
+    event.preventDefault();
+    showFormatTableMenu(view, event.clientX, event.clientY, range);
+    return true;
+  },
+});
+
+const tableCtxCleanup = ViewPlugin.define(() => ({ destroy() { removeCtxMenu(); } }));
+
+// ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 export function markdownDecorations(): Extension {
-  return markdownDecoField;
+  return [markdownDecoField, tableFormatClickHandler, tableContextMenu, tableCtxCleanup];
 }

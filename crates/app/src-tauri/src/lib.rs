@@ -46,6 +46,7 @@ pub fn run() {
             commands::list_workspace_files,
             commands::create_plain_file,
             commands::read_plain_file,
+            commands::resolve_pdf_path,
             commands::write_plain_file,
             commands::write_raw_note,
             commands::write_log,

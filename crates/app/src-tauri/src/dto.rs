@@ -291,6 +291,15 @@ pub struct PlainFileDto {
     pub binary: bool,
 }
 
+// ── PDF DTOs ─────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct PdfMetaDto {
+    pub path: String,
+    pub absolute_path: String,
+    pub size_bytes: u64,
+}
+
 // ── Helpers ────────────────────────────────────────────────────────
 
 /// Convert serde_yaml::Value map to serde_json::Value map for IPC boundary.

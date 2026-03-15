@@ -149,6 +149,96 @@ describe("applyTopologyDiff", () => {
     });
   });
 
+  describe("topology-changed edge dedup", () => {
+    it("deduplicates edges after merging added edges", () => {
+      const edges = [makeEdge("A.md", "B.md", "causes")];
+      const state = makeState(makeNodes(["A.md", "A", "concept"], ["B.md", "B", "concept"]), edges);
+
+      // Simulate command + watcher both emitting the same edge
+      const event: WorkspaceEvent = {
+        type: "topology-changed",
+        added_nodes: [],
+        removed_nodes: [],
+        added_edges: [makeEdge("A.md", "B.md", "causes")], // duplicate
+        removed_edges: [],
+      };
+      const result = applyTopologyDiff(state, event);
+      expect(result.edges).toHaveLength(1);
+    });
+  });
+
+  describe("topology-changed idempotency", () => {
+    it("applying the same event twice yields correct state", () => {
+      const state = makeState(makeNodes(["A.md", "A", "concept"]));
+      const event: WorkspaceEvent = {
+        type: "topology-changed",
+        added_nodes: [{ path: "B.md", title: "B", note_type: "concept" }],
+        removed_nodes: [],
+        added_edges: [makeEdge("A.md", "B.md", "related-to")],
+        removed_edges: [],
+      };
+
+      const result1 = applyTopologyDiff(state, event);
+      // Apply again — nodes upsert, edges should not duplicate
+      const result2 = applyTopologyDiff(
+        { nodes: new Map(result1.nodes), edges: [...result1.edges], workspaceFiles: [...result1.workspaceFiles] },
+        event,
+      );
+      expect(result2.nodes.size).toBe(2);
+      expect(result2.edges).toHaveLength(1);
+      expect(result2.workspaceFiles.filter((f) => f === "B.md")).toHaveLength(1);
+    });
+  });
+
+  describe("files-changed", () => {
+    it("adds new files to workspaceFiles", () => {
+      const state = makeState(new Map(), [], ["A.md"]);
+      const event: WorkspaceEvent = {
+        type: "files-changed",
+        added_files: ["readme.txt", "data.json"],
+        removed_files: [],
+      };
+      const result = applyTopologyDiff(state, event);
+      expect(result.workspaceFiles).toEqual(["A.md", "readme.txt", "data.json"]);
+    });
+
+    it("removes files from workspaceFiles", () => {
+      const state = makeState(new Map(), [], ["A.md", "readme.txt", "data.json"]);
+      const event: WorkspaceEvent = {
+        type: "files-changed",
+        added_files: [],
+        removed_files: ["readme.txt"],
+      };
+      const result = applyTopologyDiff(state, event);
+      expect(result.workspaceFiles).toEqual(["A.md", "data.json"]);
+    });
+
+    it("does not duplicate files already present", () => {
+      const state = makeState(new Map(), [], ["readme.txt"]);
+      const event: WorkspaceEvent = {
+        type: "files-changed",
+        added_files: ["readme.txt"],
+        removed_files: [],
+      };
+      const result = applyTopologyDiff(state, event);
+      expect(result.workspaceFiles).toEqual(["readme.txt"]);
+    });
+
+    it("does not modify nodes or edges", () => {
+      const nodes = makeNodes(["A.md", "A", "concept"]);
+      const edges = [makeEdge("A.md", "B.md", "causes")];
+      const state = makeState(nodes, edges, ["A.md"]);
+      const event: WorkspaceEvent = {
+        type: "files-changed",
+        added_files: ["data.json"],
+        removed_files: [],
+      };
+      const result = applyTopologyDiff(state, event);
+      expect(result.nodes.size).toBe(1);
+      expect(result.edges).toHaveLength(1);
+    });
+  });
+
   describe("unknown event type", () => {
     it("returns state unchanged", () => {
       const state = makeState(makeNodes(["A.md", "A", "concept"]));

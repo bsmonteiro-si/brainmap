@@ -1,10 +1,10 @@
 import { create } from "zustand";
 import type { NoteDetail, PlainFileDetail } from "../api/types";
 import { getAPI } from "../api/bridge";
-import { useGraphStore } from "./graphStore";
 import { useNavigationStore } from "./navigationStore";
 import { useTabStore, isUntitledTab } from "./tabStore";
 import { log } from "../utils/logger";
+import { formatMarkdownTables } from "../components/Editor/tableFormatter";
 
 export type EditableFrontmatter = Pick<NoteDetail, 'title' | 'note_type' | 'tags' | 'status' | 'source' | 'summary' | 'extra'>;
 
@@ -47,6 +47,7 @@ interface EditorState {
   resolveConflict: (action: "keep-mine" | "accept-theirs") => Promise<void>;
   setViewMode: (mode: "edit" | "preview" | "raw") => void;
   setScrollCursor: (scrollTop: number, cursorPos: number) => void;
+  clearForPdfTab: () => void;
   clear: () => void;
 }
 
@@ -449,13 +450,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         await api.writeRawNote(activeNote.path, savingRaw);
         const refreshed = await api.readNote(activeNote.path);
 
-        if (refreshed.title !== activeNote.title || refreshed.note_type !== activeNote.note_type) {
-          useGraphStore.getState().applyEvent({
-            type: "node-updated",
-            path: activeNote.path,
-            node: { path: refreshed.path, title: refreshed.title, note_type: refreshed.note_type },
-          });
-        }
+        // Backend emits topology event for node updates via write_raw_note
 
         const current = get();
         const stillDirty = current.rawContent !== savingRaw;
@@ -520,7 +515,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     if (editedFrontmatter?.title !== undefined && editedFrontmatter.title.trim() === "") return;
 
-    const savingBody = editedBody;
+    // Auto-format tables in body before save; track original for post-save comparison
+    const originalBody = editedBody;
+    const savingBody = editedBody !== null ? formatMarkdownTables(editedBody) : null;
     const savingFrontmatter = editedFrontmatter;
 
     try {
@@ -543,16 +540,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
       const refreshed = await api.readNote(activeNote.path);
 
-      if (savingFrontmatter?.title !== undefined || savingFrontmatter?.note_type !== undefined) {
-        useGraphStore.getState().applyEvent({
-          type: "node-updated",
-          path: activeNote.path,
-          node: { path: refreshed.path, title: refreshed.title, note_type: refreshed.note_type },
-        });
-      }
+      // Backend emits topology event for node updates via update_node
 
       const current = get();
-      const newBody = current.editedBody === savingBody ? null : current.editedBody;
+      // Compare against originalBody (pre-format), not savingBody (formatted).
+      // If user hasn't typed more during save, clear editedBody so the
+      // refreshed activeNote.body (formatted version) is displayed.
+      const newBody = current.editedBody === originalBody ? null : current.editedBody;
       const newFm = current.editedFrontmatter === savingFrontmatter ? null : current.editedFrontmatter;
       const newIsDirty = newBody !== null || newFm !== null;
 
@@ -700,6 +694,22 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ scrollTop, cursorPos });
     const tabId = useTabStore.getState().activeTabId;
     if (tabId) useTabStore.getState().updateTabState(tabId, { scrollTop, cursorPos });
+  },
+
+  clearForPdfTab: () => {
+    snapshotToActiveTab();
+    set({
+      activeNote: null,
+      activePlainFile: null,
+      isUntitledTab: false,
+      isLoading: false,
+      editedBody: null,
+      editedFrontmatter: null,
+      isDirty: false,
+      conflictState: "none",
+      rawContent: null,
+      _rawDirty: false,
+    });
   },
 
   clear: () => {

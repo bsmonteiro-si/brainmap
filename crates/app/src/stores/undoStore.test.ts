@@ -17,8 +17,6 @@ vi.mock("../api/bridge", () => ({
 
 // Mock graphStore
 const mockGraphStore = {
-  applyEvent: vi.fn(),
-  createNote: vi.fn(),
   selectNode: vi.fn(),
 };
 vi.mock("./graphStore", () => ({
@@ -152,7 +150,6 @@ describe("undo create-note", () => {
 
     expect(mockApi.readNote).toHaveBeenCalledWith("Concepts/Test.md");
     expect(mockApi.deleteNote).toHaveBeenCalledWith("Concepts/Test.md", true);
-    expect(mockGraphStore.applyEvent).toHaveBeenCalledWith({ type: "node-deleted", path: "Concepts/Test.md" });
 
     const state = useUndoStore.getState();
     expect(state.undoStack).toHaveLength(0);
@@ -200,11 +197,7 @@ describe("undo delete-note", () => {
       tags: ["test"],
       body: "# Test\nSome body",
     }));
-    expect(mockGraphStore.createNote).toHaveBeenCalledWith("Concepts/Test.md", "Test Note", "concept");
     expect(mockApi.createLink).toHaveBeenCalledWith("Concepts/Test.md", "Concepts/Other.md", "related-to", undefined);
-    expect(mockGraphStore.applyEvent).toHaveBeenCalledWith(expect.objectContaining({
-      type: "edge-created",
-    }));
 
     const state = useUndoStore.getState();
     expect(state.undoStack).toHaveLength(0);
@@ -315,7 +308,6 @@ describe("redo delete-note", () => {
 
     expect(mockApi.readNote).toHaveBeenCalledWith("Concepts/Test.md");
     expect(mockApi.deleteNote).toHaveBeenCalledWith("Concepts/Test.md", true);
-    expect(mockGraphStore.applyEvent).toHaveBeenCalledWith({ type: "node-deleted", path: "Concepts/Test.md" });
 
     const state = useUndoStore.getState();
     expect(state.redoStack).toHaveLength(0);
@@ -351,8 +343,6 @@ describe("redo delete-folder", () => {
     await useUndoStore.getState().redo();
 
     expect(mockApi.deleteFolder).toHaveBeenCalledWith("Dir", true);
-    expect(mockGraphStore.applyEvent).toHaveBeenCalledWith({ type: "node-deleted", path: "Dir/A.md" });
-    expect(mockGraphStore.applyEvent).toHaveBeenCalledWith({ type: "node-deleted", path: "Dir/B.md" });
 
     const state = useUndoStore.getState();
     expect(state.redoStack).toHaveLength(0);
@@ -392,12 +382,8 @@ describe("partial link restoration", () => {
 
     // Note was created
     expect(mockApi.createNote).toHaveBeenCalled();
-    expect(mockGraphStore.createNote).toHaveBeenCalledWith("Concepts/Test.md", "Test Note", "concept");
     // First link created, second silently skipped
     expect(mockApi.createLink).toHaveBeenCalledTimes(2);
-    expect(mockGraphStore.applyEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "edge-created", edge: expect.objectContaining({ target: "Concepts/Good.md" }) })
-    );
     // Action pushed to redo despite partial link failure
     expect(useUndoStore.getState().redoStack).toHaveLength(1);
   });

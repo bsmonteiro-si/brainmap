@@ -106,9 +106,9 @@ pub(crate) fn edge_to_payload(e: &Edge) -> EdgeDtoPayload {
         target: e.target.as_str().to_string(),
         rel: e.rel.clone(),
         kind: match e.kind {
-            EdgeKind::Explicit => "explicit".to_string(),
-            EdgeKind::Implicit => "implicit".to_string(),
-            EdgeKind::Inline => "inline".to_string(),
+            EdgeKind::Explicit => "Explicit".to_string(),
+            EdgeKind::Implicit => "Implicit".to_string(),
+            EdgeKind::Inline => "Inline".to_string(),
         },
     }
 }

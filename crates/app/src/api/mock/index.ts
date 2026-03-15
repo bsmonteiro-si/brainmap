@@ -4,6 +4,7 @@ import type {
   GraphTopology,
   NodeSummary,
   NoteDetail,
+  PdfFileMeta,
   PlainFileDetail,
   SearchFilters,
   SearchResult,
@@ -297,6 +298,10 @@ export class MockBridge implements BrainMapAPI {
 
   async readPlainFile(path: string): Promise<PlainFileDetail> {
     return { path, body: `(mock plain file: ${path})`, binary: false };
+  }
+
+  async resolvePdfPath(path: string): Promise<PdfFileMeta> {
+    return { path, absolute_path: `/mock/seed/${path}`, size_bytes: 0 };
   }
 
   async writePlainFile(_path: string, _body: string): Promise<void> {

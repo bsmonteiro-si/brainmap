@@ -17,8 +17,7 @@ vi.mock("../../api/bridge", () => ({
 }));
 
 // Mock stores
-const mockCreateNoteInGraph = vi.fn();
-const mockApplyEvent = vi.fn();
+const mockSelectNode = vi.fn();
 const mockOpenNote = vi.fn();
 const mockOpenPlainFile = vi.fn();
 const mockRefreshActiveNote = vi.fn();
@@ -26,8 +25,7 @@ const mockRefreshActiveNote = vi.fn();
 vi.mock("../../stores/graphStore", () => ({
   useGraphStore: {
     getState: () => ({
-      createNote: mockCreateNoteInGraph,
-      applyEvent: mockApplyEvent,
+      selectNode: mockSelectNode,
     }),
   },
 }));

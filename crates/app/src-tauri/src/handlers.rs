@@ -387,6 +387,36 @@ pub fn handle_read_plain_file(ws: &Workspace, path: &str) -> Result<PlainFileDto
     }
 }
 
+/// Resolve a PDF file path and return metadata for asset protocol loading.
+/// Does NOT read file content — the frontend loads via Tauri's asset:// URL.
+pub fn handle_resolve_pdf_path(ws: &Workspace, path: &str) -> Result<PdfMetaDto, String> {
+    let abs = validate_relative_path(&ws.root, path)?;
+    if !abs.exists() {
+        return Err(format!("File not found: {}", path));
+    }
+    let ext = abs.extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase());
+    if ext.as_deref() != Some("pdf") {
+        return Err(format!("Not a PDF file: {}", path));
+    }
+    let meta = std::fs::metadata(&abs)
+        .map_err(|e| format!("Failed to read file metadata: {}", e))?;
+    let size = meta.len();
+    const MAX_PDF_SIZE: u64 = 50 * 1024 * 1024; // 50 MB
+    if size > MAX_PDF_SIZE {
+        return Err(format!(
+            "PDF file too large ({:.1} MB). Maximum supported size is 50 MB.",
+            size as f64 / (1024.0 * 1024.0)
+        ));
+    }
+    Ok(PdfMetaDto {
+        path: path.to_string(),
+        absolute_path: abs.to_string_lossy().to_string(),
+        size_bytes: size,
+    })
+}
+
 /// Create a new plain (non-BrainMap) file on disk.
 /// Creates parent directories if needed. Rejects if the file already exists.
 pub fn handle_create_plain_file(ws: &Workspace, path: &str, body: Option<&str>) -> Result<String, String> {

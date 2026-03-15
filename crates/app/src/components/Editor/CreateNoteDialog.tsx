@@ -121,8 +121,8 @@ export function CreateNoteDialog() {
           body: body || undefined,
         });
 
-        // Optimistic update: add to graph store
-        useGraphStore.getState().createNote(createdPath, title.trim(), noteType);
+        // Backend emits topology event — no manual graph update needed
+        useGraphStore.getState().selectNode(createdPath);
         useUndoStore.getState().pushAction({ kind: "create-note", path: createdPath });
 
         // Clean up empty folder tracking — the folder is no longer empty
@@ -142,15 +142,7 @@ export function CreateNoteDialog() {
         } else if (isCreateAndLink && linkSource) {
           try {
             await api.createLink(linkSource.notePath, createdPath, linkSource.rel);
-            useGraphStore.getState().applyEvent({
-              type: "edge-created",
-              edge: {
-                source: linkSource.notePath,
-                target: createdPath,
-                rel: linkSource.rel,
-                kind: "Explicit",
-              },
-            });
+            // Backend emits topology event for the new edge
             await useEditorStore.getState().refreshActiveNote();
           } catch (linkErr) {
             log.warn("components::CreateNoteDialog", "note created but linking failed", { error: String(linkErr) });

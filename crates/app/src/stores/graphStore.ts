@@ -16,7 +16,6 @@ interface GraphState {
   selectNode: (path: string | null) => void;
   expandNode: (path: string) => Promise<void>;
   applyEvent: (event: WorkspaceEvent) => void;
-  createNote: (path: string, title: string, note_type: string) => void;
   reset: () => void;
 }
 
@@ -86,14 +85,6 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     } catch (e) {
       log.error("stores::graph", "failed to expand node", { path, error: String(e) });
     }
-  },
-
-  createNote: (path: string, title: string, note_type: string) => {
-    const { nodes } = get();
-    const node: NodeDto = { path, title, note_type };
-    const newNodes = new Map(nodes);
-    newNodes.set(path, node);
-    set({ nodes: newNodes, selectedNodePath: path });
   },
 
   reset: () => set({

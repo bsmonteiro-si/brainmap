@@ -6,6 +6,7 @@ import type {
   GraphTopology,
   NodeSummary,
   NoteDetail,
+  PdfFileMeta,
   PlainFileDetail,
   SearchFilters,
   SearchResult,
@@ -122,6 +123,10 @@ export class TauriBridge implements BrainMapAPI {
 
   async readPlainFile(path: string): Promise<PlainFileDetail> {
     return invoke<PlainFileDetail>("read_plain_file", { path });
+  }
+
+  async resolvePdfPath(path: string): Promise<PdfFileMeta> {
+    return invoke<PdfFileMeta>("resolve_pdf_path", { path });
   }
 
   async writePlainFile(path: string, body: string): Promise<void> {

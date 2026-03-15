@@ -566,6 +566,12 @@ function FileTreeNode({
     : node.title;
 
   const handleClick = () => {
+    if (node.fullPath.toLowerCase().endsWith(".pdf")) {
+      const fileName = node.fullPath.split("/").pop() ?? node.fullPath;
+      useTabStore.getState().openTab(node.fullPath, "pdf", fileName, null);
+      useEditorStore.getState().clearForPdfTab();
+      return;
+    }
     if (isBrainMapNote) {
       useGraphStore.getState().selectNode(node.fullPath);
       useEditorStore.getState().openNote(node.fullPath);
@@ -841,13 +847,17 @@ export function FileTreePanel() {
   const executeRenameItem = useCallback(async (oldPath: string, newName: string, isFolder: boolean) => {
     const trimmed = newName.trim();
 
-    // Build set of existing paths for duplicate checking
+    // Build set of existing paths for duplicate checking.
+    // Read directly from stores (not closure) to get the freshest state,
+    // avoiding stale data after rapid renames.
+    const currentNodes = useGraphStore.getState().nodes;
+    const currentEmptyFolders = useUIStore.getState().emptyFolders;
+    const currentWorkspaceFiles = useGraphStore.getState().workspaceFiles;
+
     const existingPaths = new Set<string>();
-    for (const [p] of nodes) existingPaths.add(p);
-    for (const f of emptyFolders) existingPaths.add(f);
-    if (workspaceFiles) {
-      for (const f of workspaceFiles) existingPaths.add(f);
-    }
+    for (const [p] of currentNodes) existingPaths.add(p);
+    for (const f of currentEmptyFolders) existingPaths.add(f);
+    for (const f of currentWorkspaceFiles) existingPaths.add(f);
 
     const error = validateRenameName(trimmed, oldPath, isFolder, existingPaths);
 
@@ -927,7 +937,7 @@ export function FileTreePanel() {
     }
 
     setRenamingPath(null);
-  }, [nodes, emptyFolders, workspaceFiles, executeMoveOrRename]);
+  }, [executeMoveOrRename]);
 
   const handleFolderDrop = useCallback((e: React.DragEvent, folderPath: string) => {
     e.preventDefault();
@@ -1077,13 +1087,9 @@ export function FileTreePanel() {
           .filter((r): r is PromiseFulfilledResult<import("../../api/types").NoteDetail> => r.status === "fulfilled")
           .map((r) => r.value);
 
-        // 4. Delete folder
+        // 4. Delete folder — backend emits topology event for all deleted nodes
         const result = await api.deleteFolder(deleteTarget.fullPath, force);
-        // 5. Update graph for each deleted path
-        for (const path of result.deleted_paths) {
-          useGraphStore.getState().applyEvent({ type: "node-deleted", path });
-        }
-        // 6. Remove tracked empty folders within deleted scope (single state update)
+        // 5. Remove tracked empty folders within deleted scope (single state update)
         const { emptyFolders } = useUIStore.getState();
         const prefix = deleteTarget.fullPath + "/";
         const nextFolders = new Set<string>();
@@ -1100,11 +1106,9 @@ export function FileTreePanel() {
       } else {
         // 3. Snapshot note for undo
         const undoSnapshot = await api.readNote(deleteTarget.fullPath);
-        // 4. Delete note
+        // 4. Delete note — backend emits topology event
         await api.deleteNote(deleteTarget.fullPath, force);
-        // 5. Update graph
-        useGraphStore.getState().applyEvent({ type: "node-deleted", path: deleteTarget.fullPath });
-        // 6. Push undo action
+        // 5. Push undo action
         useUndoStore.getState().pushAction({ kind: "delete-note", path: deleteTarget.fullPath, snapshot: undoSnapshot });
       }
     } catch (e) {
@@ -1115,10 +1119,8 @@ export function FileTreePanel() {
         const colonIdx = rest.indexOf(":");
         if (colonIdx >= 0) {
           try {
-            const deletedPaths = JSON.parse(rest.slice(0, colonIdx)) as string[];
-            for (const path of deletedPaths) {
-              useGraphStore.getState().applyEvent({ type: "node-deleted", path });
-            }
+            // Backend already emitted topology events for partially deleted paths
+            JSON.parse(rest.slice(0, colonIdx)); // validate JSON
           } catch {
             // Couldn't parse partial results
           }

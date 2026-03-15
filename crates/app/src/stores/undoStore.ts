@@ -126,7 +126,7 @@ async function restoreNote(snapshot: NoteDetail): Promise<string> {
     extra: Object.keys(snapshot.extra).length > 0 ? snapshot.extra : undefined,
     body: snapshot.body || undefined,
   });
-  useGraphStore.getState().createNote(createdPath, snapshot.title, snapshot.note_type);
+  // Backend emits topology event for the created note
   return createdPath;
 }
 
@@ -136,10 +136,7 @@ async function restoreLinks(snapshot: NoteDetail) {
   for (const link of snapshot.links) {
     try {
       await api.createLink(snapshot.path, link.target, link.rel, link.annotation);
-      useGraphStore.getState().applyEvent({
-        type: "edge-created",
-        edge: { source: snapshot.path, target: link.target, rel: link.rel, kind: "Explicit" },
-      });
+      // Backend emits topology event for the new edge
     } catch {
       // Target may not exist or link may already exist — skip silently
     }
@@ -152,7 +149,7 @@ async function deleteNoteWithCleanup(path: string) {
   clearEditorIfActive(path);
   clearFocusIfTargeted(path, false);
   await api.deleteNote(path, true);
-  useGraphStore.getState().applyEvent({ type: "node-deleted", path });
+  // Backend emits topology event for the deleted node
 }
 
 export const useUndoStore = create<UndoState>((set, get) => ({
@@ -398,9 +395,7 @@ export const useUndoStore = create<UndoState>((set, get) => ({
           clearFocusIfTargeted(action.folderPath, true);
 
           const result = await api.deleteFolder(action.folderPath, true);
-          for (const path of result.deleted_paths) {
-            useGraphStore.getState().applyEvent({ type: "node-deleted", path });
-          }
+          // Backend emits topology event for all deleted nodes
           // Remove folder and child folders from emptyFolders tracking
           const { emptyFolders } = useUIStore.getState();
           const prefix = action.folderPath + "/";
