@@ -1102,6 +1102,24 @@ body {
   border-radius: 3px;
   padding: 1px 4px;
 }
+.editor-body .cm-editor .cm-table-line {
+  font-family: ui-monospace, 'Menlo', 'Monaco', 'Consolas', monospace;
+  font-size: 0.92em;
+}
+.editor-body .cm-editor .cm-table-header {
+  background: var(--bg-secondary);
+  font-weight: 600;
+}
+.editor-body .cm-editor .cm-table-delimiter {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+.editor-body .cm-editor .cm-table-row {
+  background: color-mix(in srgb, var(--bg-secondary) 30%, transparent);
+}
+.editor-body .cm-editor .cm-table-row-even {
+  background: var(--bg-secondary);
+}
 .editor-body .cm-editor .cm-image-url { opacity: 0.4; font-size: 0.85em; }
 .editor-body .cm-editor .cm-link-dim { opacity: 0.4; }
 .editor-body .cm-editor .cm-checkbox-widget {

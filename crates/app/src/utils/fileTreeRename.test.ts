@@ -47,6 +47,16 @@ describe("computeRenamePath", () => {
       "A/B/C/shallow.md",
     );
   });
+
+  it("does not double-append extension when user types it for plain files", () => {
+    expect(computeRenamePath("data/config.json", "settings.json", false)).toBe(
+      "data/settings.json",
+    );
+  });
+
+  it("does not double-append .txt extension", () => {
+    expect(computeRenamePath("readme.txt", "notes.txt", false)).toBe("notes.txt");
+  });
 });
 
 describe("validateRenameName", () => {
@@ -114,5 +124,11 @@ describe("validateRenameName", () => {
     expect(
       validateRenameName("  newname  ", "Concepts/causation.md", false, existing),
     ).toBeNull();
+  });
+
+  it("returns error for duplicate when user types .md extension", () => {
+    expect(
+      validateRenameName("correlation.md", "Concepts/causation.md", false, existing),
+    ).toBe("A file with this name already exists");
   });
 });

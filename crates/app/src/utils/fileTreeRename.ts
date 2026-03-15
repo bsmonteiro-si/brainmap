@@ -23,11 +23,12 @@ export function computeRenamePath(
     const stem = newName.endsWith(".md") ? newName.slice(0, -3) : newName;
     parts[parts.length - 1] = stem + ".md";
   } else {
-    // Plain file — preserve original extension
+    // Plain file — preserve original extension, strip if user typed it
     const oldName = parts[parts.length - 1];
     const dotIdx = oldName.lastIndexOf(".");
     const ext = dotIdx >= 0 ? oldName.slice(dotIdx) : "";
-    parts[parts.length - 1] = newName + ext;
+    const stem = ext && newName.endsWith(ext) ? newName.slice(0, -ext.length) : newName;
+    parts[parts.length - 1] = stem + ext;
   }
 
   return parts.join("/");

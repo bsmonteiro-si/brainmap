@@ -845,16 +845,13 @@ export function FileTreePanel() {
     const existingPaths = new Set<string>();
     for (const [p] of nodes) existingPaths.add(p);
     for (const f of emptyFolders) existingPaths.add(f);
-
-    const error = validateRenameName(trimmed, oldPath, isFolder, existingPaths);
-    const newPath = computeRenamePath(oldPath, trimmed, isFolder);
-
-    if (newPath === oldPath) {
-      // No change — cancel silently
-      setRenamingPath(null);
-      return;
+    if (workspaceFiles) {
+      for (const f of workspaceFiles) existingPaths.add(f);
     }
 
+    const error = validateRenameName(trimmed, oldPath, isFolder, existingPaths);
+
+    // Check validation error first, then no-op
     if (error) {
       useUndoStore.setState((prev) => ({
         toastMessage: `Rename failed: ${error}`,
@@ -864,12 +861,20 @@ export function FileTreePanel() {
       return;
     }
 
+    const newPath = computeRenamePath(oldPath, trimmed, isFolder);
+    if (newPath === oldPath) {
+      // No change — cancel silently
+      setRenamingPath(null);
+      return;
+    }
+
     const success = await executeMoveOrRename(oldPath, newPath, isFolder);
 
     if (success && isFolder) {
+      const prefix = oldPath + "/";
+
       // Update treeExpandedFolders: replace oldPath and any descendants
       const expandedFolders = useUIStore.getState().treeExpandedFolders;
-      const prefix = oldPath + "/";
       const nextExpanded = new Set<string>();
       let changed = false;
       for (const f of expandedFolders) {
@@ -884,6 +889,24 @@ export function FileTreePanel() {
         }
       }
       if (changed) useUIStore.setState({ treeExpandedFolders: nextExpanded });
+
+      // Update hasBeenExpanded: same prefix-based replacement
+      setHasBeenExpanded((prev) => {
+        const next = new Set<string>();
+        let hbeChanged = false;
+        for (const f of prev) {
+          if (f === oldPath) {
+            next.add(newPath);
+            hbeChanged = true;
+          } else if (f.startsWith(prefix)) {
+            next.add(newPath + "/" + f.slice(prefix.length));
+            hbeChanged = true;
+          } else {
+            next.add(f);
+          }
+        }
+        return hbeChanged ? next : prev;
+      });
 
       // Update emptyFolders: same prefix-based replacement
       const ef = useUIStore.getState().emptyFolders;
@@ -904,7 +927,7 @@ export function FileTreePanel() {
     }
 
     setRenamingPath(null);
-  }, [nodes, emptyFolders, executeMoveOrRename]);
+  }, [nodes, emptyFolders, workspaceFiles, executeMoveOrRename]);
 
   const handleFolderDrop = useCallback((e: React.DragEvent, folderPath: string) => {
     e.preventDefault();

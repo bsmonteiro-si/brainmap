@@ -149,4 +149,22 @@ describe("classifyLines", () => {
       expect(cls.fencedBlocks).toEqual([{ startLine: 1, endLine: 3 }]);
     });
   });
+
+  describe("table non-interference", () => {
+    it("does not classify table delimiter row as HR", () => {
+      // Table delimiter rows contain `---` but should NOT be classified as HR
+      // because they are inside a table (handled by tree walk, not regex).
+      // However, classifyLines only uses regex and doesn't know about tables,
+      // so the `|---|---|` pattern won't match HR regex (has leading `|`).
+      const d = doc("| a | b |\n|---|---|\n| 1 | 2 |");
+      const cls = classifyLines(d);
+      expect(cls.hr).toEqual([]);
+    });
+
+    it("does not classify pipe-only lines as blockquotes", () => {
+      const d = doc("| col1 | col2 |\n|------|------|\n| val  | val  |");
+      const cls = classifyLines(d);
+      expect(cls.blockquote).toEqual([]);
+    });
+  });
 });
