@@ -9,7 +9,7 @@ tags:
 - do-calculus
 status: review
 created: 2026-01-20
-modified: 2026-03-13
+modified: 2026-03-15
 source: The Book of Why, Introduction
 summary: Introduces causal inference as the science studying cause-and-effect using causal models, formal language, and data. Presents the do-operator and the key distinction between seeing and doing.
 links:
@@ -25,8 +25,8 @@ links:
   type: contains
 - target: ../../Questions/Can Machines Think Causally.md
   type: leads-to
-chapter: Introduction
 page-range: 1-38
+chapter: Introduction
 ---
 
 # Introduction - Mind Over Data

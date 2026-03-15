@@ -267,6 +267,21 @@ pub struct ExternalBacklinkDto {
     pub rel: String,
 }
 
+// ── Move DTOs ─────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct MoveNoteResultDto {
+    pub new_path: String,
+    pub rewritten_paths: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct MoveFolderResultDto {
+    pub new_folder: String,
+    pub moved_notes: Vec<(String, String)>,
+    pub rewritten_paths: Vec<String>,
+}
+
 // ── Plain File DTOs ───────────────────────────────────────────────
 
 #[derive(Debug, Serialize)]

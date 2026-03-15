@@ -9,7 +9,7 @@ tags:
 - formalization
 status: review
 created: 2026-02-18
-modified: 2026-03-14
+modified: 2026-03-15
 source: The Book of Why
 summary: Pearl's decades-long research program to formalize causal inference, resulting in causal diagrams, do-calculus, structural causal models, and the counterfactual framework.
 links:
@@ -23,9 +23,9 @@ links:
   type: related-to
 - target: ../Concepts/Bayesian Networks.md
   type: related-to
+project-status: completed
 start-year: 1988
 end-year: null
-project-status: completed
 ---
 
 # The Causal Revolution

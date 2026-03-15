@@ -216,6 +216,37 @@ fn remove_empty_dirs_recursive(dir: &std::path::Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Move a note to a new path.
+pub fn handle_move_note(
+    ws: &mut Workspace,
+    old_path: &str,
+    new_path: &str,
+) -> Result<MoveNoteResultDto, String> {
+    let rewritten = ws
+        .move_note(old_path, new_path)
+        .map_err(|e| e.to_string())?;
+    Ok(MoveNoteResultDto {
+        new_path: new_path.to_string(),
+        rewritten_paths: rewritten,
+    })
+}
+
+/// Move a folder and all its contents to a new location.
+pub fn handle_move_folder(
+    ws: &mut Workspace,
+    old_folder: &str,
+    new_folder: &str,
+) -> Result<MoveFolderResultDto, String> {
+    let result = ws
+        .move_folder(old_folder, new_folder)
+        .map_err(|e| e.to_string())?;
+    Ok(MoveFolderResultDto {
+        new_folder: result.new_folder,
+        moved_notes: result.moved_notes,
+        rewritten_paths: result.rewritten_paths,
+    })
+}
+
 /// List nodes with optional filters.
 pub fn handle_list_nodes(ws: &Workspace, params: ListNodesParams) -> Vec<NodeSummaryDto> {
     ws.list_nodes(

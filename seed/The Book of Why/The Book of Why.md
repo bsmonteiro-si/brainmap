@@ -7,16 +7,16 @@ tags:
 - book
 status: review
 created: 2026-01-15
-modified: 2026-03-14
+modified: 2026-03-15
 source: Pearl, J. & Mackenzie, D. (2018). The Book of Why. Basic Books.
 summary: A non-mathematical introduction to the Causal Revolution, covering the history, theory, and implications of causal inference.
 links:
 - target: ../People/Judea Pearl.md
   type: authored-by
-publisher: Basic Books
-isbn: 978-0-465-09760-9
 year: 2018
 book-title: 'The Book of Why: The New Science of Cause and Effect'
+publisher: Basic Books
+isbn: 978-0-465-09760-9
 ---
 
 # The Book of Why - The New Science of Cause and Effect
@@ -36,6 +36,14 @@ The book presents three main missions:
 - [Ch7 - The Conquest of Mount Intervention](./Ch7 - The Conquest of Mount Intervention/Ch7 - The Conquest of Mount Intervention.md)
 - [Ch8 - Counterfactuals](./Ch8 - Counterfactuals/Ch8 - Counterfactuals.md)
 - [Ch10 - Big Data AI and the Big Questions](./Ch10 - Big Data AI and the Big Questions/Ch10 - Big Data AI and the Big Questions.md)
+
+[!key-insight] {
+
+}
+
+[!question] {
+
+}
 
 [!ai-answer] {
 

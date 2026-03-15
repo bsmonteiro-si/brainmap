@@ -42,6 +42,8 @@ interface TabStoreState {
   activateTab: (id: string) => void;
   updateTabState: (id: string, partial: Partial<TabState>) => void;
   getTab: (id: string) => TabState | undefined;
+  renamePath: (oldPath: string, newPath: string, newTitle?: string) => void;
+  renamePathPrefix: (oldPrefix: string, newPrefix: string) => void;
   reset: () => void;
 }
 
@@ -151,6 +153,34 @@ export const useTabStore = create<TabStoreState>((set, get) => ({
 
   getTab: (id) => {
     return get().tabs.find((t) => t.id === id);
+  },
+
+  renamePath: (oldPath, newPath, newTitle?) => {
+    const { tabs, activeTabId } = get();
+    const title = newTitle ?? newPath.split("/").pop()?.replace(/\.md$/, "") ?? newPath;
+    set({
+      tabs: tabs.map((t) =>
+        t.id === oldPath ? { ...t, id: newPath, path: newPath, title } : t
+      ),
+      activeTabId: activeTabId === oldPath ? newPath : activeTabId,
+    });
+  },
+
+  renamePathPrefix: (oldPrefix, newPrefix) => {
+    const { tabs, activeTabId } = get();
+    const prefix = oldPrefix.endsWith("/") ? oldPrefix : oldPrefix + "/";
+    const replacement = newPrefix.endsWith("/") ? newPrefix : newPrefix + "/";
+    let newActiveId = activeTabId;
+    const newTabs = tabs.map((t) => {
+      if (t.path.startsWith(prefix)) {
+        const newPath = replacement + t.path.slice(prefix.length);
+        const title = newPath.split("/").pop()?.replace(/\.md$/, "") ?? newPath;
+        if (activeTabId === t.id) newActiveId = newPath;
+        return { ...t, id: newPath, path: newPath, title };
+      }
+      return t;
+    });
+    set({ tabs: newTabs, activeTabId: newActiveId });
   },
 
   reset: () => {

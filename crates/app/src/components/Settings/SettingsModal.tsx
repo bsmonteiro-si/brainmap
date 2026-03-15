@@ -73,6 +73,13 @@ export function SettingsModal() {
   const setTooltipSummarySize = useUIStore((s) => s.setTooltipSummarySize);
   const setTooltipTagSize = useUIStore((s) => s.setTooltipTagSize);
   const resetTooltipPrefs = useUIStore((s) => s.resetTooltipPrefs);
+  const nodeLabelSize = useUIStore((s) => s.nodeLabelSize);
+  const nodeIconSize = useUIStore((s) => s.nodeIconSize);
+  const nodeLabelBgPadding = useUIStore((s) => s.nodeLabelBgPadding);
+  const setNodeOverallSize = useUIStore((s) => s.setNodeOverallSize);
+  const setNodeLabelSize = useUIStore((s) => s.setNodeLabelSize);
+  const setNodeLabelBgPadding = useUIStore((s) => s.setNodeLabelBgPadding);
+  const resetNodePrefs = useUIStore((s) => s.resetNodePrefs);
   const setDefaultTabSize = useUIStore((s) => s.setDefaultTabSize);
   const resetLayoutPrefs = useUIStore((s) => s.resetLayoutPrefs);
   const panelSizes = useUIStore((s) => s.panelSizes);
@@ -221,6 +228,41 @@ export function SettingsModal() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* ── Graph Nodes ── */}
+          <div className="settings-section">
+            <div className="settings-section-title">Graph Nodes</div>
+            <div className="settings-row">
+              <span className="settings-label">Overall</span>
+              <div className="settings-control">
+                <div className="settings-size-row">
+                  <input type="range" min={8} max={40} step={1} value={nodeIconSize} onChange={(e) => setNodeOverallSize(Number(e.target.value))} />
+                  <span className="settings-size-value">{nodeIconSize}px</span>
+                </div>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Label size</span>
+              <div className="settings-control">
+                <div className="settings-size-row">
+                  <input type="range" min={6} max={24} step={1} value={nodeLabelSize} onChange={(e) => setNodeLabelSize(Number(e.target.value))} />
+                  <span className="settings-size-value">{nodeLabelSize}px</span>
+                </div>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Label padding</span>
+              <div className="settings-control">
+                <div className="settings-size-row">
+                  <input type="range" min={0} max={12} step={1} value={nodeLabelBgPadding} onChange={(e) => setNodeLabelBgPadding(Number(e.target.value))} />
+                  <span className="settings-size-value">{nodeLabelBgPadding}px</span>
+                </div>
+              </div>
+            </div>
+            <button className="settings-reset" onClick={resetNodePrefs}>
+              Reset node defaults
+            </button>
           </div>
 
           {/* ── Graph Tooltip ── */}

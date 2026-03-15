@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useLayoutEffect, useRef } from "react";
+import { useState, useMemo, useCallback, useLayoutEffect, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { MoreHorizontal } from "lucide-react";
 import { useGraphStore } from "../../stores/graphStore";
@@ -12,6 +12,7 @@ import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 import { ChevronIcon, FolderTreeIcon, NoteTypeIcon } from "./fileTreeIcons";
 import { fuzzyMatch, highlightFuzzyMatch } from "../../utils/fuzzyMatch";
 import { log } from "../../utils/logger";
+import { computeNewPath, isValidDrop } from "../../utils/fileTreeDnd";
 
 interface TreeNode {
   name: string;
@@ -353,6 +354,14 @@ function FileTreeNode({
   onActionsClick,
   hasBeenExpanded,
   onExpand,
+  draggedPath,
+  dragOverPath,
+  onDragStart,
+  onDragEnd,
+  onFolderDragOver,
+  onFolderDragEnter,
+  onFolderDragLeave,
+  onFolderDrop,
 }: {
   node: TreeNode;
   depth: number;
@@ -360,6 +369,14 @@ function FileTreeNode({
   onActionsClick: (rect: DOMRect, node: TreeNode) => void;
   hasBeenExpanded: Set<string>;
   onExpand: (path: string) => void;
+  draggedPath: string | null;
+  dragOverPath: string | null;
+  onDragStart: (e: React.DragEvent, node: TreeNode) => void;
+  onDragEnd: () => void;
+  onFolderDragOver: (e: React.DragEvent, folderPath: string) => void;
+  onFolderDragEnter: (e: React.DragEvent, folderPath: string) => void;
+  onFolderDragLeave: (e: React.DragEvent) => void;
+  onFolderDrop: (e: React.DragEvent, folderPath: string) => void;
 }) {
   const selectedNodePath = useGraphStore((s) => s.selectedNodePath);
   const treeExpandedFolders = useUIStore((s) => s.treeExpandedFolders);
@@ -384,16 +401,26 @@ function FileTreeNode({
       toggleFolder(node.fullPath);
     };
 
+    const isDragging = draggedPath === node.fullPath;
+    const isDragOver = dragOverPath === node.fullPath;
+
     return (
       <div>
         <div
           role="button"
           tabIndex={0}
-          className="tree-item tree-folder"
+          className={`tree-item tree-folder${isDragging ? " dragging" : ""}${isDragOver ? " drag-over" : ""}`}
           style={{ paddingLeft: 8 }}
+          draggable
           onClick={handleToggle}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleToggle(); } }}
           onContextMenu={(e) => onContextMenu(e, node)}
+          onDragStart={(e) => onDragStart(e, node)}
+          onDragEnd={onDragEnd}
+          onDragOver={(e) => onFolderDragOver(e, node.fullPath)}
+          onDragEnter={(e) => onFolderDragEnter(e, node.fullPath)}
+          onDragLeave={onFolderDragLeave}
+          onDrop={(e) => onFolderDrop(e, node.fullPath)}
         >
           <IndentGuides depth={depth} />
           <ChevronIcon isOpen={isExpanded} />
@@ -422,6 +449,14 @@ function FileTreeNode({
                   onActionsClick={onActionsClick}
                   hasBeenExpanded={hasBeenExpanded}
                   onExpand={onExpand}
+                  draggedPath={draggedPath}
+                  dragOverPath={dragOverPath}
+                  onDragStart={onDragStart}
+                  onDragEnd={onDragEnd}
+                  onFolderDragOver={onFolderDragOver}
+                  onFolderDragEnter={onFolderDragEnter}
+                  onFolderDragLeave={onFolderDragLeave}
+                  onFolderDrop={onFolderDrop}
                 />
               ))}
           </div>
@@ -447,12 +482,15 @@ function FileTreeNode({
     }
   };
 
+  const isDragging = draggedPath === node.fullPath;
+
   return (
     <div
       role="button"
       tabIndex={0}
-      className={`tree-item tree-file${isActive ? " active" : ""}${!isBrainMapNote ? " tree-file--plain" : ""}`}
+      className={`tree-item tree-file${isActive ? " active" : ""}${!isBrainMapNote ? " tree-file--plain" : ""}${isDragging ? " dragging" : ""}`}
       style={{ paddingLeft: 8 }}
+      draggable
       onClick={handleClick}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -461,6 +499,8 @@ function FileTreeNode({
         }
       }}
       onContextMenu={(e) => onContextMenu(e, node)}
+      onDragStart={(e) => onDragStart(e, node)}
+      onDragEnd={onDragEnd}
     >
       <IndentGuides depth={depth} />
       <NoteTypeIcon noteType={node.note_type} />
@@ -487,6 +527,21 @@ export function FileTreePanel() {
   const [deleteTarget, setDeleteTarget] = useState<TreeNode | null>(null);
   const [hasBeenExpanded, setHasBeenExpanded] = useState<Set<string>>(() => new Set());
 
+  // ── Drag-and-drop state ──
+  const [draggedPath, setDraggedPath] = useState<string | null>(null);
+  const [draggedIsFolder, setDraggedIsFolder] = useState(false);
+  const [dragOverPath, setDragOverPath] = useState<string | null>(null);
+  const [rootDragOver, setRootDragOver] = useState(false);
+  const rootDragEnterCounterRef = useRef(0);
+  const autoExpandTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup auto-expand timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoExpandTimerRef.current) clearTimeout(autoExpandTimerRef.current);
+    };
+  }, []);
+
   const emptyFolders = useUIStore((s) => s.emptyFolders);
   const workspaceFiles = useGraphStore((s) => s.workspaceFiles);
   const tree = useMemo(() => buildTree(nodes, emptyFolders, workspaceFiles), [nodes, emptyFolders, workspaceFiles]);
@@ -504,6 +559,219 @@ export function FileTreePanel() {
       return next;
     });
   }, []);
+
+  // ── DnD handlers ──
+
+  const handleDragStart = useCallback((e: React.DragEvent, node: TreeNode) => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("application/brainmap-path", node.fullPath);
+    e.dataTransfer.setData("application/brainmap-is-folder", node.isFolder ? "1" : "0");
+    setDraggedPath(node.fullPath);
+    setDraggedIsFolder(node.isFolder);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedPath(null);
+    setDraggedIsFolder(false);
+    setDragOverPath(null);
+    setRootDragOver(false);
+    rootDragEnterCounterRef.current = 0;
+    if (autoExpandTimerRef.current) {
+      clearTimeout(autoExpandTimerRef.current);
+      autoExpandTimerRef.current = null;
+    }
+  }, []);
+
+  const handleFolderDragOver = useCallback((e: React.DragEvent, folderPath: string) => {
+    if (!draggedPath) return;
+    if (!isValidDrop(draggedPath, draggedIsFolder, folderPath)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, [draggedPath, draggedIsFolder]);
+
+  const handleFolderDragEnter = useCallback((e: React.DragEvent, folderPath: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!draggedPath || !isValidDrop(draggedPath, draggedIsFolder, folderPath)) return;
+    setDragOverPath(folderPath);
+
+    // Auto-expand collapsed folders after 600ms hover
+    if (autoExpandTimerRef.current) clearTimeout(autoExpandTimerRef.current);
+    const expandedFolders = useUIStore.getState().treeExpandedFolders;
+    if (!expandedFolders.has(folderPath)) {
+      autoExpandTimerRef.current = setTimeout(() => {
+        useUIStore.getState().toggleFolder(folderPath);
+        setHasBeenExpanded((prev) => {
+          if (prev.has(folderPath)) return prev;
+          const next = new Set(prev);
+          next.add(folderPath);
+          return next;
+        });
+      }, 600);
+    }
+  }, [draggedPath, draggedIsFolder]);
+
+  const handleFolderDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only clear if leaving the folder's own element (not entering a child)
+    const related = e.relatedTarget as Node | null;
+    if (related && (e.currentTarget as Node).contains(related)) return;
+    setDragOverPath(null);
+    if (autoExpandTimerRef.current) {
+      clearTimeout(autoExpandTimerRef.current);
+      autoExpandTimerRef.current = null;
+    }
+  }, []);
+
+  const executeMoveItem = useCallback(async (oldPath: string, targetFolder: string, isFolder: boolean) => {
+    const newPath = computeNewPath(oldPath, targetFolder, isFolder);
+    if (newPath === oldPath) return;
+
+    const api = await getAPI();
+    const editorState = useEditorStore.getState();
+    const tabStore = useTabStore.getState();
+
+    try {
+      if (isFolder) {
+        // For folder moves, compute old and new folder paths
+        const folderName = oldPath.split("/").pop()!;
+        const newFolder = targetFolder === "" ? folderName : `${targetFolder}/${folderName}`;
+
+        const prefix = oldPath + "/";
+
+        // Save the active note if it's inside the folder and dirty
+        if (editorState.activeNote?.path.startsWith(prefix) && editorState.isDirty) {
+          await editorState.saveNote();
+        }
+
+        // Check for other dirty tabs inside the folder (non-active)
+        const otherDirtyTabs = useTabStore.getState().tabs.filter(
+          (t) => t.path.startsWith(prefix) && t.isDirty && t.path !== editorState.activeNote?.path
+        );
+        if (otherDirtyTabs.length > 0) {
+          useUndoStore.setState((prev) => ({
+            toastMessage: `Cannot move: ${otherDirtyTabs.length} unsaved file(s) in folder. Save them first.`,
+            toastKey: prev.toastKey + 1,
+          }));
+          return;
+        }
+
+        await api.moveFolder(oldPath, newFolder);
+        await useGraphStore.getState().loadTopology();
+
+        // Update tabs
+        useTabStore.getState().renamePathPrefix(oldPath, newFolder);
+
+        // Update editor if active note was inside the folder
+        const activeNote = useEditorStore.getState().activeNote;
+        if (activeNote && activeNote.path.startsWith(prefix)) {
+          const newActivePath = newFolder + "/" + activeNote.path.slice(prefix.length);
+          useEditorStore.getState().openNote(newActivePath);
+        }
+
+        // Update UI state
+        const ui = useUIStore.getState();
+        if (ui.graphFocusPath?.startsWith(prefix) || ui.graphFocusPath === oldPath) {
+          ui.clearGraphFocus();
+        }
+        if (ui.homeNotePath?.startsWith(prefix)) {
+          ui.setHomeNote(newFolder + "/" + ui.homeNotePath.slice(prefix.length));
+        }
+
+        useUndoStore.getState().pushAction({ kind: "move-folder", oldFolder: oldPath, newFolder });
+      } else {
+        // Save dirty note before moving
+        if (editorState.activeNote?.path === oldPath && editorState.isDirty) {
+          await editorState.saveNote();
+        }
+
+        await api.moveNote(oldPath, newPath);
+        await useGraphStore.getState().loadTopology();
+
+        // Update tab
+        useTabStore.getState().renamePath(oldPath, newPath);
+
+        // Update editor if active note was moved
+        if (useEditorStore.getState().activeNote?.path === oldPath) {
+          useEditorStore.getState().openNote(newPath);
+          useGraphStore.getState().selectNode(newPath);
+        }
+
+        // Update UI state
+        const ui = useUIStore.getState();
+        if (ui.graphFocusPath === oldPath) {
+          ui.setGraphFocus(newPath, "note");
+        }
+        if (ui.homeNotePath === oldPath) {
+          ui.setHomeNote(newPath);
+        }
+
+        useUndoStore.getState().pushAction({ kind: "move-note", oldPath, newPath });
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      log.error("components::FileTreePanel", "move failed", { message: msg });
+      // Show error as toast via undo store
+      useUndoStore.setState((prev) => ({
+        toastMessage: `Move failed: ${msg}`,
+        toastKey: prev.toastKey + 1,
+      }));
+    }
+  }, []);
+
+  const handleFolderDrop = useCallback((e: React.DragEvent, folderPath: string) => {
+    e.preventDefault();
+    const path = e.dataTransfer.getData("application/brainmap-path");
+    const isFolderStr = e.dataTransfer.getData("application/brainmap-is-folder");
+    const isFolder = isFolderStr === "1";
+
+    handleDragEnd();
+
+    if (path && isValidDrop(path, isFolder, folderPath)) {
+      executeMoveItem(path, folderPath, isFolder);
+    }
+  }, [executeMoveItem, handleDragEnd]);
+
+  // Root drop handlers (drop to workspace root)
+  const handleRootDragOver = useCallback((e: React.DragEvent) => {
+    if (e.target !== e.currentTarget) return;
+    if (!draggedPath) return;
+    if (!isValidDrop(draggedPath, draggedIsFolder, "")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, [draggedPath, draggedIsFolder]);
+
+  const handleRootDragEnter = useCallback((e: React.DragEvent) => {
+    if (e.target !== e.currentTarget) return;
+    rootDragEnterCounterRef.current++;
+    if (draggedPath && isValidDrop(draggedPath, draggedIsFolder, "")) {
+      setRootDragOver(true);
+    }
+  }, [draggedPath, draggedIsFolder]);
+
+  const handleRootDragLeave = useCallback((e: React.DragEvent) => {
+    if (e.target !== e.currentTarget) return;
+    rootDragEnterCounterRef.current--;
+    if (rootDragEnterCounterRef.current <= 0) {
+      rootDragEnterCounterRef.current = 0;
+      setRootDragOver(false);
+    }
+  }, []);
+
+  const handleRootDrop = useCallback((e: React.DragEvent) => {
+    if (e.target !== e.currentTarget) return;
+    e.preventDefault();
+    const path = e.dataTransfer.getData("application/brainmap-path");
+    const isFolderStr = e.dataTransfer.getData("application/brainmap-is-folder");
+    const isFolder = isFolderStr === "1";
+
+    handleDragEnd();
+
+    if (path && isValidDrop(path, isFolder, "")) {
+      executeMoveItem(path, "", isFolder);
+    }
+  }, [executeMoveItem, handleDragEnd]);
 
   const handleContextMenu = (e: React.MouseEvent, node: TreeNode) => {
     e.preventDefault();
@@ -672,7 +940,14 @@ export function FileTreePanel() {
           onChange={(e) => setFilter(e.target.value)}
         />
       </div>
-      <div className="file-tree-content" onContextMenu={handleContentContextMenu}>
+      <div
+        className={`file-tree-content${rootDragOver ? " drag-over-root" : ""}`}
+        onContextMenu={handleContentContextMenu}
+        onDragOver={handleRootDragOver}
+        onDragEnter={handleRootDragEnter}
+        onDragLeave={handleRootDragLeave}
+        onDrop={handleRootDrop}
+      >
         {filtered.map((n) => (
           <FileTreeNode
             key={n.fullPath}
@@ -682,6 +957,14 @@ export function FileTreePanel() {
             onActionsClick={handleActionsClick}
             hasBeenExpanded={hasBeenExpanded}
             onExpand={handleExpand}
+            draggedPath={draggedPath}
+            dragOverPath={dragOverPath}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onFolderDragOver={handleFolderDragOver}
+            onFolderDragEnter={handleFolderDragEnter}
+            onFolderDragLeave={handleFolderDragLeave}
+            onFolderDrop={handleFolderDrop}
           />
         ))}
       </div>

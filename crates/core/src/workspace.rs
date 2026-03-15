@@ -50,6 +50,15 @@ pub struct WorkspaceStats {
     pub orphan_count: usize,
 }
 
+#[derive(Debug, Serialize)]
+pub struct MoveFolderResult {
+    pub new_folder: String,
+    /// Vec of (old_path, new_path) for each moved note.
+    pub moved_notes: Vec<(String, String)>,
+    /// Paths of notes outside the folder whose backlinks were rewritten.
+    pub rewritten_paths: Vec<String>,
+}
+
 impl Workspace {
     pub fn init(path: &Path) -> Result<()> {
         let brainmap_dir = path.join(BRAINMAP_DIR);
@@ -888,6 +897,12 @@ impl Workspace {
             .collect();
 
         let mut note = self.notes.remove(&old_rp).unwrap();
+        // Rewrite the moved note's own outgoing link targets so they resolve
+        // to the same absolute workspace paths from the new location.
+        for link in &mut note.frontmatter.links {
+            let abs_target = old_rp.resolve_relative(&link.target);
+            link.target = compute_relative_target(&new_rp, &abs_target);
+        }
         note.path = new_rp.clone();
         note.frontmatter.modified = Local::now().date_naive();
         let content = parser::serialize_note(&note)?;
@@ -973,6 +988,252 @@ impl Workspace {
 
         info!(old_path = old_path, new_path = new_path, rewritten_count = rewritten.len(), "note moved");
         Ok(rewritten)
+    }
+
+    /// Move a folder (directory) and all its contents to a new location.
+    /// Rewrites backlinks in notes outside the folder, and outgoing links in notes
+    /// inside the folder. Returns a `MoveFolderResult` with all affected paths.
+    pub fn move_folder(&mut self, old_folder: &str, new_folder: &str) -> Result<MoveFolderResult> {
+        let old_dir = self.root.join(old_folder);
+        let new_dir = self.root.join(new_folder);
+
+        if !old_dir.is_dir() {
+            return Err(BrainMapError::FileNotFound(old_folder.to_string()));
+        }
+        if new_dir.exists() {
+            return Err(BrainMapError::DuplicatePath(new_folder.to_string()));
+        }
+        // Ensure parent of target exists
+        if let Some(parent) = new_dir.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        let old_prefix = if old_folder.ends_with('/') {
+            old_folder.to_string()
+        } else {
+            format!("{}/", old_folder)
+        };
+        let new_prefix = if new_folder.ends_with('/') {
+            new_folder.to_string()
+        } else {
+            format!("{}/", new_folder)
+        };
+
+        // Collect all note paths under old folder
+        let note_paths: Vec<RelativePath> = self
+            .notes
+            .keys()
+            .filter(|p| p.as_str().starts_with(&old_prefix))
+            .cloned()
+            .collect();
+
+        // Compute the mapping from old paths to new paths
+        let path_map: HashMap<RelativePath, RelativePath> = note_paths
+            .iter()
+            .map(|old_rp| {
+                let new_path_str = format!("{}{}", new_prefix, &old_rp.as_str()[old_prefix.len()..]);
+                (old_rp.clone(), RelativePath::new(&new_path_str))
+            })
+            .collect();
+
+        // Rename the directory on disk
+        std::fs::rename(&old_dir, &new_dir)?;
+
+        // Find all notes OUTSIDE the folder that reference notes INSIDE the folder
+        let folder_note_set: std::collections::HashSet<&RelativePath> =
+            note_paths.iter().collect();
+        let mut rewritten = Vec::new();
+
+        let referencing: Vec<(RelativePath, Vec<(RelativePath, RelativePath)>)> = self
+            .notes
+            .keys()
+            .filter(|p| !folder_note_set.contains(p))
+            .filter_map(|p| {
+                let note = &self.notes[p];
+                let rewrites: Vec<(RelativePath, RelativePath)> = note
+                    .frontmatter
+                    .links
+                    .iter()
+                    .filter_map(|l| {
+                        let resolved = note.path.resolve_relative(&l.target);
+                        path_map
+                            .get(&resolved)
+                            .map(|new| (resolved, new.clone()))
+                    })
+                    .collect();
+                if rewrites.is_empty() {
+                    None
+                } else {
+                    Some((p.clone(), rewrites))
+                }
+            })
+            .collect();
+
+        // Rewrite backlinks in external notes
+        for (ref_path, rewrites) in &referencing {
+            let note = self.notes.get_mut(ref_path).unwrap();
+            for link in &mut note.frontmatter.links {
+                let resolved = note.path.resolve_relative(&link.target);
+                if let Some((_, new_target)) = rewrites.iter().find(|(r, _)| *r == resolved) {
+                    link.target = compute_relative_target(ref_path, new_target);
+                }
+            }
+            note.frontmatter.modified = Local::now().date_naive();
+            let content = parser::serialize_note(note)?;
+            let file_path = self.root.join(note.path.as_str());
+            std::fs::write(&file_path, &content)?;
+            rewritten.push(ref_path.as_str().to_string());
+        }
+
+        // Collect ALL edges for ALL notes in the folder BEFORE any removals.
+        // This prevents edge loss from sequential remove_node calls.
+        let all_edges: HashMap<RelativePath, (Vec<Edge>, Vec<Edge>)> = path_map
+            .keys()
+            .map(|old_rp| {
+                let outgoing: Vec<Edge> = self
+                    .graph
+                    .edges_for(old_rp, &Direction::Outgoing)
+                    .into_iter()
+                    .cloned()
+                    .collect();
+                let incoming: Vec<Edge> = self
+                    .graph
+                    .edges_for(old_rp, &Direction::Incoming)
+                    .into_iter()
+                    .cloned()
+                    .collect();
+                (old_rp.clone(), (outgoing, incoming))
+            })
+            .collect();
+
+        // Now update each note inside the folder: path, outgoing links, graph, index
+        let mut moved_notes = Vec::new();
+        for (old_rp, new_rp) in &path_map {
+            let (old_outgoing, old_incoming) = all_edges.get(old_rp).cloned().unwrap_or_default();
+
+            let mut note = self.notes.remove(old_rp).unwrap();
+
+            // Rewrite the note's own outgoing link targets
+            for link in &mut note.frontmatter.links {
+                let abs_target = old_rp.resolve_relative(&link.target);
+                // If the target is also inside the folder, use the new target path
+                let effective_target = path_map
+                    .get(&abs_target)
+                    .cloned()
+                    .unwrap_or(abs_target);
+                link.target = compute_relative_target(new_rp, &effective_target);
+            }
+
+            note.path = new_rp.clone();
+            note.frontmatter.modified = Local::now().date_naive();
+            let content = parser::serialize_note(&note)?;
+            let new_file = self.root.join(new_rp.as_str());
+            std::fs::write(&new_file, &content)?;
+
+            // Update graph
+            self.graph.remove_node(old_rp);
+            self.index.remove_note(old_rp)?;
+
+            let mtime = file_mtime(&new_file);
+            self.graph.add_node(
+                new_rp.clone(),
+                NodeData {
+                    title: note.frontmatter.title.clone(),
+                    note_type: note.frontmatter.note_type.clone(),
+                    tags: note.frontmatter.tags.clone(),
+                    path: new_rp.clone(),
+                },
+            );
+            self.index.add_note(&note, mtime)?;
+
+            // Re-add non-implicit edges with updated paths
+            let mut new_edges = Vec::new();
+            for edge in old_outgoing {
+                if edge.kind == EdgeKind::Implicit {
+                    continue;
+                }
+                let new_target = path_map
+                    .get(&edge.target)
+                    .cloned()
+                    .unwrap_or(edge.target);
+                let new_edge = Edge {
+                    source: new_rp.clone(),
+                    target: new_target,
+                    rel: edge.rel,
+                    kind: edge.kind,
+                };
+                self.graph.add_edge(new_edge.clone());
+                new_edges.push(new_edge);
+            }
+
+            for edge in old_incoming {
+                if edge.kind == EdgeKind::Implicit {
+                    continue;
+                }
+                // Skip edges from other notes in the folder (they'll be re-added when we process that note)
+                if folder_note_set.contains(&edge.source) {
+                    continue;
+                }
+                // Skip edges from referencing notes (already handled by backlink rewrite)
+                if referencing.iter().any(|(rp, _)| *rp == edge.source) {
+                    continue;
+                }
+                let new_edge = Edge {
+                    source: edge.source,
+                    target: new_rp.clone(),
+                    rel: edge.rel,
+                    kind: edge.kind,
+                };
+                self.graph.add_edge(new_edge.clone());
+                new_edges.push(new_edge);
+            }
+
+            self.index.add_edges(&new_edges)?;
+            self.notes.insert(new_rp.clone(), note);
+            moved_notes.push((old_rp.as_str().to_string(), new_rp.as_str().to_string()));
+        }
+
+        // Rebuild edges from referencing notes (now point to new targets)
+        for (ref_path, _) in &referencing {
+            let note = &self.notes[ref_path];
+            for link in &note.frontmatter.links {
+                let target = note.path.resolve_relative(&link.target);
+                if path_map.values().any(|new| *new == target) {
+                    let new_edge = Edge {
+                        source: ref_path.clone(),
+                        target,
+                        rel: link.rel.clone(),
+                        kind: EdgeKind::Explicit,
+                    };
+                    self.graph.add_edge(new_edge.clone());
+                    self.index.add_edges(&[new_edge])?;
+                }
+            }
+        }
+
+        // Ensure folder nodes for new paths, prune old folder nodes
+        for new_rp in path_map.values() {
+            self.ensure_folder_nodes(new_rp);
+        }
+        let old_folder_rp = RelativePath::new(old_folder);
+        self.prune_empty_folder_nodes(&old_folder_rp);
+        // Also prune parent folders of the old location
+        if let Some(parent) = old_folder_rp.parent() {
+            self.prune_empty_folder_nodes(&parent);
+        }
+
+        info!(
+            old_folder = old_folder,
+            new_folder = new_folder,
+            notes_moved = moved_notes.len(),
+            rewritten_count = rewritten.len(),
+            "folder moved"
+        );
+        Ok(MoveFolderResult {
+            new_folder: new_folder.to_string(),
+            moved_notes,
+            rewritten_paths: rewritten,
+        })
     }
 
     pub fn reindex(&mut self) -> Result<()> {

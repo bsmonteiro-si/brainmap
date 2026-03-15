@@ -1433,6 +1433,18 @@ body {
   border-left-color: var(--accent);
   color: var(--text-primary);
 }
+/* Drag-and-drop feedback */
+.tree-item.dragging {
+  opacity: 0.4;
+}
+.tree-item.drag-over {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  outline: 1px dashed var(--accent);
+  border-radius: 4px;
+}
+.file-tree-content.drag-over-root {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
 .tree-folder {
   color: var(--text-secondary);
   font-weight: 500;

@@ -31,6 +31,8 @@ pub fn run() {
             commands::create_node,
             commands::update_node,
             commands::delete_node,
+            commands::move_note,
+            commands::move_folder,
             commands::list_nodes,
             commands::search_notes,
             commands::get_neighbors,

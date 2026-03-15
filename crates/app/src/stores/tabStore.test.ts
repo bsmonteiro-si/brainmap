@@ -266,3 +266,75 @@ describe("createUntitledTab", () => {
     expect(id2).toBe("__untitled__/2");
   });
 });
+
+describe("renamePath", () => {
+  it("renames a tab's id, path, and title", () => {
+    useTabStore.getState().openTab("A/Note.md", "note", "Note", "concept");
+    useTabStore.getState().renamePath("A/Note.md", "B/Note.md");
+    const tab = useTabStore.getState().getTab("B/Note.md");
+    expect(tab).toBeDefined();
+    expect(tab!.id).toBe("B/Note.md");
+    expect(tab!.path).toBe("B/Note.md");
+    expect(tab!.title).toBe("Note");
+  });
+
+  it("updates activeTabId when renaming the active tab", () => {
+    useTabStore.getState().openTab("A/Note.md", "note", "Note", "concept");
+    expect(useTabStore.getState().activeTabId).toBe("A/Note.md");
+    useTabStore.getState().renamePath("A/Note.md", "B/Note.md");
+    expect(useTabStore.getState().activeTabId).toBe("B/Note.md");
+  });
+
+  it("does not change other tabs", () => {
+    useTabStore.getState().openTab("a.md", "note", "A", null);
+    useTabStore.getState().openTab("b.md", "note", "B", null);
+    useTabStore.getState().renamePath("a.md", "X/a.md");
+    expect(useTabStore.getState().getTab("b.md")).toBeDefined();
+    expect(useTabStore.getState().getTab("X/a.md")).toBeDefined();
+  });
+
+  it("uses custom title if provided", () => {
+    useTabStore.getState().openTab("a.md", "note", "A", null);
+    useTabStore.getState().renamePath("a.md", "X/a.md", "Custom Title");
+    expect(useTabStore.getState().getTab("X/a.md")!.title).toBe("Custom Title");
+  });
+
+  it("no-op when path not found", () => {
+    useTabStore.getState().openTab("a.md", "note", "A", null);
+    useTabStore.getState().renamePath("nonexistent.md", "x.md");
+    expect(useTabStore.getState().tabs).toHaveLength(1);
+    expect(useTabStore.getState().tabs[0].id).toBe("a.md");
+  });
+});
+
+describe("renamePathPrefix", () => {
+  it("renames all tabs matching the prefix", () => {
+    useTabStore.getState().openTab("A/note1.md", "note", "Note1", null);
+    useTabStore.getState().openTab("A/note2.md", "note", "Note2", null);
+    useTabStore.getState().openTab("B/note3.md", "note", "Note3", null);
+    useTabStore.getState().renamePathPrefix("A", "C/A");
+    const tabs = useTabStore.getState().tabs;
+    expect(tabs[0].id).toBe("C/A/note1.md");
+    expect(tabs[1].id).toBe("C/A/note2.md");
+    expect(tabs[2].id).toBe("B/note3.md");
+  });
+
+  it("updates activeTabId when it matches the prefix", () => {
+    useTabStore.getState().openTab("A/note1.md", "note", "Note1", null);
+    expect(useTabStore.getState().activeTabId).toBe("A/note1.md");
+    useTabStore.getState().renamePathPrefix("A", "B");
+    expect(useTabStore.getState().activeTabId).toBe("B/note1.md");
+  });
+
+  it("does not match prefix collision (A vs A-extra)", () => {
+    useTabStore.getState().openTab("A-extra/note.md", "note", "Note", null);
+    useTabStore.getState().renamePathPrefix("A", "B");
+    expect(useTabStore.getState().tabs[0].id).toBe("A-extra/note.md");
+  });
+
+  it("handles nested folders", () => {
+    useTabStore.getState().openTab("A/B/C/note.md", "note", "Note", null);
+    useTabStore.getState().renamePathPrefix("A", "X");
+    expect(useTabStore.getState().tabs[0].id).toBe("X/B/C/note.md");
+  });
+});

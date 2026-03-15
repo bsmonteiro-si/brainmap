@@ -4,6 +4,7 @@ import { getAPI } from "../api/bridge";
 import { useGraphStore } from "./graphStore";
 import { useEditorStore } from "./editorStore";
 import { useUIStore } from "./uiStore";
+import { useTabStore } from "./tabStore";
 
 const MAX_UNDO_STACK = 20;
 
@@ -11,7 +12,9 @@ export type UndoableAction =
   | { kind: "create-note"; path: string; snapshot?: NoteDetail }
   | { kind: "create-folder"; folderPath: string }
   | { kind: "delete-note"; path: string; snapshot: NoteDetail }
-  | { kind: "delete-folder"; folderPath: string; snapshots: NoteDetail[] };
+  | { kind: "delete-folder"; folderPath: string; snapshots: NoteDetail[] }
+  | { kind: "move-note"; oldPath: string; newPath: string }
+  | { kind: "move-folder"; oldFolder: string; newFolder: string };
 
 interface UndoState {
   undoStack: UndoableAction[];
@@ -41,6 +44,14 @@ function actionLabel(action: UndoableAction): string {
     }
     case "delete-folder":
       return `deleted folder "${action.folderPath}"`;
+    case "move-note": {
+      const name = action.oldPath.split("/").pop()?.replace(/\.md$/, "") ?? action.oldPath;
+      return `moved "${name}"`;
+    }
+    case "move-folder": {
+      const name = action.oldFolder.split("/").pop() ?? action.oldFolder;
+      return `moved folder "${name}"`;
+    }
   }
 }
 
@@ -54,6 +65,38 @@ function clearEditorIfActive(path: string) {
   if (editor.activeNote?.path === path) {
     editor.clear();
     useGraphStore.getState().selectNode(null);
+  }
+}
+
+/** Update editor, graph focus, and home note after a move operation. */
+function postMoveCleanup(oldPath: string, newPath: string, isFolder: boolean) {
+  const editor = useEditorStore.getState();
+  const ui = useUIStore.getState();
+
+  if (isFolder) {
+    const oldPrefix = oldPath + "/";
+    const newPrefix = newPath + "/";
+    if (editor.activeNote?.path.startsWith(oldPrefix)) {
+      const newActive = newPrefix + editor.activeNote.path.slice(oldPrefix.length);
+      editor.openNote(newActive);
+    }
+    if (ui.graphFocusPath?.startsWith(oldPrefix) || ui.graphFocusPath === oldPath) {
+      ui.clearGraphFocus();
+    }
+    if (ui.homeNotePath?.startsWith(oldPrefix)) {
+      ui.setHomeNote(newPrefix + ui.homeNotePath.slice(oldPrefix.length));
+    }
+  } else {
+    if (editor.activeNote?.path === oldPath) {
+      editor.openNote(newPath);
+      useGraphStore.getState().selectNode(newPath);
+    }
+    if (ui.graphFocusPath === oldPath) {
+      ui.setGraphFocus(newPath, "note");
+    }
+    if (ui.homeNotePath === oldPath) {
+      ui.setHomeNote(newPath);
+    }
   }
 }
 
@@ -222,6 +265,54 @@ export const useUndoStore = create<UndoState>((set, get) => ({
           showToast(set, `Undo: ${actionLabel(action)}`);
           break;
         }
+
+        case "move-note": {
+          try {
+            await api.moveNote(action.newPath, action.oldPath);
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (msg.includes("DuplicatePath") || msg.includes("already exists")) {
+              showToast(set, "Cannot undo: a file already exists at the original location");
+            } else {
+              showToast(set, `Undo failed: ${msg}`);
+            }
+            set({ isProcessing: false });
+            return;
+          }
+          await useGraphStore.getState().loadTopology();
+          useTabStore.getState().renamePath(action.newPath, action.oldPath);
+          postMoveCleanup(action.newPath, action.oldPath, false);
+          set((state) => ({
+            redoStack: [action, ...state.redoStack],
+            isProcessing: false,
+          }));
+          showToast(set, `Undo: ${actionLabel(action)}`);
+          break;
+        }
+
+        case "move-folder": {
+          try {
+            await api.moveFolder(action.newFolder, action.oldFolder);
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (msg.includes("DuplicatePath") || msg.includes("already exists")) {
+              showToast(set, "Cannot undo: a folder already exists at the original location");
+            } else {
+              showToast(set, `Undo failed: ${msg}`);
+            }
+            set({ isProcessing: false });
+            return;
+          }
+          await useGraphStore.getState().loadTopology();
+          useTabStore.getState().renamePathPrefix(action.newFolder, action.oldFolder);
+          postMoveCleanup(action.newFolder, action.oldFolder, true);
+          set((state) => ({
+            redoStack: [action, ...state.redoStack],
+            isProcessing: false,
+          }));
+          showToast(set, `Undo: ${actionLabel(action)}`);
+          break;
+        }
       }
     } catch (e) {
       console.error("Undo failed:", e);
@@ -325,6 +416,46 @@ export const useUndoStore = create<UndoState>((set, get) => ({
 
           set((state) => ({
             undoStack: [{ kind: "delete-folder", folderPath: action.folderPath, snapshots }, ...state.undoStack].slice(0, MAX_UNDO_STACK),
+            isProcessing: false,
+          }));
+          showToast(set, `Redo: ${actionLabel(action)}`);
+          break;
+        }
+
+        case "move-note": {
+          try {
+            await api.moveNote(action.oldPath, action.newPath);
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            showToast(set, `Redo failed: ${msg}`);
+            set({ isProcessing: false });
+            return;
+          }
+          await useGraphStore.getState().loadTopology();
+          useTabStore.getState().renamePath(action.oldPath, action.newPath);
+          postMoveCleanup(action.oldPath, action.newPath, false);
+          set((state) => ({
+            undoStack: [action, ...state.undoStack].slice(0, MAX_UNDO_STACK),
+            isProcessing: false,
+          }));
+          showToast(set, `Redo: ${actionLabel(action)}`);
+          break;
+        }
+
+        case "move-folder": {
+          try {
+            await api.moveFolder(action.oldFolder, action.newFolder);
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            showToast(set, `Redo failed: ${msg}`);
+            set({ isProcessing: false });
+            return;
+          }
+          await useGraphStore.getState().loadTopology();
+          useTabStore.getState().renamePathPrefix(action.oldFolder, action.newFolder);
+          postMoveCleanup(action.oldFolder, action.newFolder, true);
+          set((state) => ({
+            undoStack: [action, ...state.undoStack].slice(0, MAX_UNDO_STACK),
             isProcessing: false,
           }));
           showToast(set, `Redo: ${actionLabel(action)}`);

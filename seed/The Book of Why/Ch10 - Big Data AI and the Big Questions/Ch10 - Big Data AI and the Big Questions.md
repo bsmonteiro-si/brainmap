@@ -1,21 +1,23 @@
 ---
-id: "a0000001-0000-0000-0000-00000000000a"
-title: "Ch10 - Big Data AI and the Big Questions"
+id: a0000001-0000-0000-0000-00000000000a
+title: Ch10 - Big Data AI and the Big Questions
 type: book-note
-tags: [causality, ai, machine-learning, big-data, future]
+tags:
+- causality
+- ai
+- machine-learning
+- big-data
+- future
 status: draft
 created: 2026-02-20
-modified: 2026-03-01
-source: "The Book of Why, Chapter 10"
-summary: >-
-  Examines the limitations of data-driven approaches to AI and argues
-  that genuine artificial intelligence requires causal reasoning capabilities
-  that go beyond pattern recognition in large datasets.
+modified: 2026-03-15
+source: The Book of Why, Chapter 10
+summary: Examines the limitations of data-driven approaches to AI and argues that genuine artificial intelligence requires causal reasoning capabilities that go beyond pattern recognition in large datasets.
 links:
-  - target: "../../Questions/Can Machines Think Causally.md"
-    type: contains
-chapter: "10"
-page-range: "349-370"
+- target: ../../Questions/Can Machines Think Causally.md
+  type: contains
+chapter: '10'
+page-range: 349-370
 ---
 
 # Ch10 - Big Data AI and the Big Questions

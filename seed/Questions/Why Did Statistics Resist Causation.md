@@ -1,24 +1,26 @@
 ---
-id: "a0000001-0000-0000-0000-000000000034"
-title: "Why Did Statistics Resist Causation?"
+id: a0000001-0000-0000-0000-000000000034
+title: Why Did Statistics Resist Causation?
 type: question
-tags: [history, statistics, causality, philosophy-of-science]
+tags:
+- history
+- statistics
+- causality
+- philosophy-of-science
 status: draft
 created: 2026-02-01
-modified: 2026-02-20
-source: "The Book of Why, Introduction + Ch2"
-summary: >-
-  Why did the statistical establishment actively prohibit causal language
-  for most of the 20th century, and what were the consequences?
+modified: 2026-03-15
+source: The Book of Why, Introduction + Ch2
+summary: Why did the statistical establishment actively prohibit causal language for most of the 20th century, and what were the consequences?
 links:
-  - target: "../People/Ronald Fisher.md"
-    type: related-to
-  - target: "../People/Karl Pearson.md"
-    type: related-to
-  - target: "../Concepts/Causal Inference.md"
-    type: related-to
-  - target: "../People/Sewall Wright.md"
-    type: related-to
+- target: ../People/Ronald Fisher.md
+  type: related-to
+- target: ../People/Karl Pearson.md
+  type: related-to
+- target: ../Concepts/Causal Inference.md
+  type: related-to
+- target: ../People/Sewall Wright.md
+  type: related-to
 answered: false
 answer-in: null
 ---

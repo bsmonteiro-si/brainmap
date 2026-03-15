@@ -154,6 +154,83 @@ pub fn delete_node(
 }
 
 #[tauri::command]
+pub fn move_note(
+    state: State<'_, AppState>,
+    old_path: String,
+    new_path: String,
+) -> Result<crate::dto::MoveNoteResultDto, String> {
+    let root = state.resolve_root(None)?;
+    // Validate both paths stay within workspace root
+    let old_abs = state.with_slot(&root, |slot| {
+        handlers::validate_relative_path(&slot.workspace.root, &old_path)
+    })?;
+    let new_abs = state.with_slot(&root, |slot| {
+        handlers::validate_relative_path(&slot.workspace.root, &new_path)
+    })?;
+    state.register_expected_write(&root, old_abs);
+    state.register_expected_write(&root, new_abs);
+
+    let result = state.with_slot_mut(&root, |slot| {
+        handlers::handle_move_note(&mut slot.workspace, &old_path, &new_path)
+    })?;
+
+    // Register expected writes for rewritten backlink files (written by move_note)
+    for rp in &result.rewritten_paths {
+        let abs = state.with_slot(&root, |slot| Ok(slot.workspace.root.join(rp)))?;
+        state.register_expected_write(&root, abs);
+    }
+
+    Ok(result)
+}
+
+#[tauri::command]
+pub fn move_folder(
+    state: State<'_, AppState>,
+    old_folder: String,
+    new_folder: String,
+) -> Result<crate::dto::MoveFolderResultDto, String> {
+    let root = state.resolve_root(None)?;
+
+    // Validate both folder paths stay within workspace root
+    let old_dir_abs = state.with_slot(&root, |slot| {
+        handlers::validate_relative_path(&slot.workspace.root, &old_folder)
+    })?;
+    let new_dir_abs = state.with_slot(&root, |slot| {
+        handlers::validate_relative_path(&slot.workspace.root, &new_folder)
+    })?;
+
+    // Register expected writes for all notes under the old folder
+    let old_prefix = if old_folder.ends_with('/') { old_folder.clone() } else { format!("{}/", old_folder) };
+    let note_paths: Vec<std::path::PathBuf> = state.with_slot(&root, |slot| {
+        Ok(slot.workspace.notes.keys()
+            .filter(|p| p.as_str().starts_with(&old_prefix))
+            .map(|p| slot.workspace.root.join(p.as_str()))
+            .collect())
+    })?;
+    for abs in &note_paths {
+        state.register_expected_write(&root, abs.clone());
+    }
+    state.register_expected_write(&root, old_dir_abs);
+    state.register_expected_write(&root, new_dir_abs);
+
+    let result = state.with_slot_mut(&root, |slot| {
+        handlers::handle_move_folder(&mut slot.workspace, &old_folder, &new_folder)
+    })?;
+
+    // Register expected writes for moved notes at new paths and rewritten backlinks
+    for (_, new_path) in &result.moved_notes {
+        let abs = state.with_slot(&root, |slot| Ok(slot.workspace.root.join(new_path)))?;
+        state.register_expected_write(&root, abs);
+    }
+    for rp in &result.rewritten_paths {
+        let abs = state.with_slot(&root, |slot| Ok(slot.workspace.root.join(rp)))?;
+        state.register_expected_write(&root, abs);
+    }
+
+    Ok(result)
+}
+
+#[tauri::command]
 pub fn list_nodes(
     state: State<'_, AppState>,
     params: ListNodesParams,

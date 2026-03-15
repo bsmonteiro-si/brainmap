@@ -11,10 +11,9 @@ import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { getAPI } from "../../api/bridge";
 import type { NodeSummary } from "../../api/types";
 import type { GraphLayout } from "../../stores/uiStore";
-import { graphStylesheet, getNodeColor, getNodeShape } from "./graphStyles";
+import { graphStylesheet, buildGraphStylesheet, getNodeColor, getNodeShape } from "./graphStyles";
 import { getNodeIconSvg, getNodeIconSvgWhite } from "./graphIcons";
 
-const BASE_NODE_SIZE = 18;
 import { filterGraphByFocus } from "./graphFocusFilter";
 import { computeHulls, drawCachedHulls, type CachedHull } from "./graphHulls";
 import { startParticleAnimation } from "./graphParticles";
@@ -184,6 +183,9 @@ export function GraphView() {
   const showMinimap = useUIStore((s) => s.showMinimap);
   const showClusterHulls = useUIStore((s) => s.showClusterHulls);
   const showEdgeParticles = useUIStore((s) => s.showEdgeParticles);
+  const nodeLabelSize = useUIStore((s) => s.nodeLabelSize);
+  const nodeIconSize = useUIStore((s) => s.nodeIconSize);
+  const nodeLabelBgPadding = useUIStore((s) => s.nodeLabelBgPadding);
   const stats = useWorkspaceStore((s) => s.stats);
   const showEdgeLabelsRef = useRef(showEdgeLabels);
   const graphLayoutRef = useRef(graphLayout);
@@ -225,6 +227,21 @@ export function GraphView() {
   useEffect(() => {
     tooltipCacheRef.current.clear();
   }, [nodes]);
+
+  // Re-apply Cytoscape stylesheet and node sizes when settings change
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.style().fromJson(buildGraphStylesheet({
+      labelSize: nodeLabelSize,
+      bgPadding: nodeLabelBgPadding,
+      baseNodeSize: nodeIconSize,
+    })).update();
+    // Update node data(size) without full graph rebuild
+    cy.nodes().forEach((n) => {
+      n.data("size", Math.max(nodeIconSize, nodeIconSize + n.indegree(false) * 2));
+    });
+  }, [nodeLabelSize, nodeLabelBgPadding, nodeIconSize]);
 
   // Graph node context menu state
   const [ctxMenu, setCtxMenu] = useState<{
@@ -281,9 +298,10 @@ export function GraphView() {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const uiState = useUIStore.getState();
     const cy = cytoscape({
       container: containerRef.current,
-      style: graphStylesheet,
+      style: buildGraphStylesheet({ labelSize: uiState.nodeLabelSize, bgPadding: uiState.nodeLabelBgPadding, baseNodeSize: uiState.nodeIconSize }),
       layout: { name: "preset" },
       minZoom: 0.1,
       maxZoom: 5,
@@ -445,7 +463,7 @@ export function GraphView() {
         shape: getNodeShape(n.note_type),
         iconSvg: getNodeIconSvg(n.note_type, getNodeColor(n.note_type)),
         iconSvgWhite: getNodeIconSvgWhite(n.note_type),
-        size: BASE_NODE_SIZE,
+        size: nodeIconSize,
       },
     }));
 
@@ -478,7 +496,7 @@ export function GraphView() {
 
     // Store size as data so stylesheet selectors (node:selected, node.highlighted) can override
     cy.nodes().forEach((n) => {
-      n.data("size", Math.max(BASE_NODE_SIZE, BASE_NODE_SIZE + n.indegree(false) * 2));
+      n.data("size", Math.max(nodeIconSize, nodeIconSize + n.indegree(false) * 2));
     });
 
     // Apply edge gradient colors imperatively (data() mappers don't work inside gradient arrays)

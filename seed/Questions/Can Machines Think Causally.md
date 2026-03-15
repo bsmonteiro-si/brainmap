@@ -10,7 +10,7 @@ tags:
 - pearl
 status: draft
 created: 2026-02-25
-modified: 2026-03-14
+modified: 2026-03-15
 source: The Book of Why, Introduction + Ch10
 summary: Can artificial intelligence achieve genuine causal understanding, or is it fundamentally limited to pattern recognition? Pearl argues that causal reasoning requires explicit causal models, not just more data.
 links:
