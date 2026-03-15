@@ -35,6 +35,15 @@ Add PDF viewing, highlighting, and annotation capabilities to BrainMap's desktop
 - `crates/app/src/declarations.d.ts` — worker URL type declaration
 - `crates/app/src/App.css` — PDF toolbar and viewer styles
 
+**UX improvements (2026-03-15):**
+- Continuous vertical scroll — all pages rendered in a scrollable container (replaces single-page view)
+- Lazy rendering — only pages within ±2 of the viewport are rendered (performance for large PDFs)
+- Fit-to-width — scale computed from `containerWidth / naturalPageWidth`, zoom is relative to fit
+- Auto-refit on resize — `ResizeObserver` recalculates fitScale; `fitScale` is reactive state (not a ref) so changes trigger re-renders
+- fitScale deferred to `setupPages` effect (after DOM mount) to account for scrollbar width — fixes initial left-offset bug
+- `IntersectionObserver` tracks current page during scroll, updates toolbar page indicator
+- Page input jumps to page via `scrollIntoView()`
+
 **Lessons learned:**
 - `pdfjs-dist` v5.x uses `Map.prototype.getOrInsertComputed` (TC39 Stage 3) — unavailable in Tauri's WebKit WebView. Must use v4.x.
 - Asset protocol (`convertFileSrc`) avoids base64 IPC memory amplification (~4x for large PDFs)
@@ -42,6 +51,8 @@ Add PDF viewing, highlighting, and annotation capabilities to BrainMap's desktop
 - `clearForPdfTab` must auto-save before clearing editor state (same pattern as all other tab-switch paths)
 - `openUntitledTab()` must be used (not `createUntitledTab()`) to properly transition editorStore to untitled mode
 - Render queue pattern needed to prevent dropped renders on rapid page/zoom changes
+- `fitScale` must be `useState` (not `useRef`) — ref updates don't trigger re-renders, causing stale scale on resize
+- Compute `fitScale` after pages mount (in `setupPages` effect), not during `loadPdf` — the scroll container has no scrollbar during loading, giving a wider `clientWidth` than the final layout
 
 **Known gaps (deferred to Phase 2+):**
 - PDF files renamed/deleted while tab is open — tab becomes stale (no conflict detection)
