@@ -36,6 +36,7 @@ export function PdfViewer({ path }: PdfViewerProps) {
   const [hasSelection, setHasSelection] = useState(false);
 
   const renderingRef = useRef(false);
+  const pendingRenderRef = useRef<{ page: number; scale: number } | null>(null);
   const pageInputRef = useRef<HTMLInputElement>(null);
 
   // Load PDF on mount
@@ -96,12 +97,17 @@ export function PdfViewer({ path }: PdfViewerProps) {
   // Render current page
   useEffect(() => {
     if (!pdfDocRef.current || numPages === 0) return;
-    if (renderingRef.current) return;
+
+    // If a render is in progress, queue this one for when it finishes
+    if (renderingRef.current) {
+      pendingRenderRef.current = { page: currentPage, scale };
+      return;
+    }
 
     let cancelled = false;
     renderingRef.current = true;
 
-    async function renderPage() {
+    async function renderPage(pageNum: number, pageScale: number) {
       const doc = pdfDocRef.current;
       if (!doc || cancelled) {
         renderingRef.current = false;
@@ -109,13 +115,13 @@ export function PdfViewer({ path }: PdfViewerProps) {
       }
 
       try {
-        const page: PDFPageProxy = await doc.getPage(currentPage);
+        const page: PDFPageProxy = await doc.getPage(pageNum);
         if (cancelled) {
           renderingRef.current = false;
           return;
         }
 
-        const viewport = page.getViewport({ scale });
+        const viewport = page.getViewport({ scale: pageScale });
         const canvas = canvasRef.current;
         const textDiv = textLayerRef.current;
         if (!canvas || !textDiv) {
@@ -124,7 +130,11 @@ export function PdfViewer({ path }: PdfViewerProps) {
         }
 
         // Render canvas
-        const ctx = canvas.getContext("2d")!;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          renderingRef.current = false;
+          return;
+        }
         const dpr = window.devicePixelRatio || 1;
         canvas.width = viewport.width * dpr;
         canvas.height = viewport.height * dpr;
@@ -140,7 +150,7 @@ export function PdfViewer({ path }: PdfViewerProps) {
         }
 
         // Render text layer for selection
-        textDiv.innerHTML = "";
+        textDiv.replaceChildren();
         textDiv.style.width = `${viewport.width}px`;
         textDiv.style.height = `${viewport.height}px`;
 
@@ -159,16 +169,23 @@ export function PdfViewer({ path }: PdfViewerProps) {
       } catch (e) {
         if (!cancelled) {
           log.error("pdf-viewer", "Failed to render page", {
-            page: currentPage,
+            page: pageNum,
             error: e instanceof Error ? e.message : String(e),
           });
         }
       }
 
       renderingRef.current = false;
+
+      // Process any queued render request
+      const pending = pendingRenderRef.current;
+      if (pending && !cancelled) {
+        pendingRenderRef.current = null;
+        renderPage(pending.page, pending.scale);
+      }
     }
 
-    renderPage();
+    renderPage(currentPage, scale);
 
     return () => {
       cancelled = true;
@@ -231,7 +248,7 @@ export function PdfViewer({ path }: PdfViewerProps) {
   );
 
   // Copy selection to new note
-  const copyToNote = useCallback(() => {
+  const copyToNote = useCallback(async () => {
     const sel = window.getSelection();
     if (
       !sel ||
@@ -245,14 +262,13 @@ export function PdfViewer({ path }: PdfViewerProps) {
     const fileName = path.split("/").pop() ?? path;
     const body = `${selectedText}\n\n> Source: [${fileName}](${path})`;
 
-    // Create untitled tab with the selected text
-    const tabId = useTabStore.getState().createUntitledTab();
-    // Pre-fill the body via editorStore
+    // Create untitled tab and transition editorStore to untitled mode
+    await useEditorStore.getState().openUntitledTab();
+    // Pre-fill the body after the tab is ready
     useEditorStore.getState().updateContent(body);
 
     log.info("pdf-viewer", "Copied selection to new note", {
       path,
-      tabId,
       chars: selectedText.length,
     });
   }, [path]);

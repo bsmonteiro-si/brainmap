@@ -47,7 +47,7 @@ interface EditorState {
   resolveConflict: (action: "keep-mine" | "accept-theirs") => Promise<void>;
   setViewMode: (mode: "edit" | "preview" | "raw") => void;
   setScrollCursor: (scrollTop: number, cursorPos: number) => void;
-  clearForPdfTab: () => void;
+  clearForPdfTab: () => Promise<void>;
   clear: () => void;
 }
 
@@ -696,8 +696,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (tabId) useTabStore.getState().updateTabState(tabId, { scrollTop, cursorPos });
   },
 
-  clearForPdfTab: () => {
+  clearForPdfTab: async () => {
+    // 1. Snapshot current tab state
     snapshotToActiveTab();
+
+    // 2. Auto-save if dirty (skip for untitled tabs)
+    const tabStore = useTabStore.getState();
+    const currentTabId = tabStore.activeTabId;
+    const { isDirty, savingInProgress } = get();
+    if (isDirty && !savingInProgress && !(currentTabId && isUntitledTab(currentTabId))) {
+      await get().saveNote();
+    }
+
+    // 3. Clear editor state — PDF viewer manages its own state
     set({
       activeNote: null,
       activePlainFile: null,

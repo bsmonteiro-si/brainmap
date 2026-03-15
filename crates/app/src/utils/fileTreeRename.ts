@@ -35,6 +35,19 @@ export function computeRenamePath(
 }
 
 /**
+ * Validate rename name format only (no duplicate check).
+ * Returns error message or null if valid.
+ */
+export function validateRenameNameFormat(name: string): string | null {
+  const trimmed = name.trim();
+  if (!trimmed) return "Name cannot be empty";
+  if (trimmed.includes("/") || trimmed.includes("\\"))
+    return "Name cannot contain path separators";
+  if (trimmed.startsWith(".")) return "Name cannot start with a dot";
+  return null;
+}
+
+/**
  * Validate a rename name. Returns error message or null if valid.
  * Returns null for no-op (same name) — caller should treat as cancel.
  */
@@ -44,12 +57,10 @@ export function validateRenameName(
   isFolder: boolean,
   existingPaths: Set<string>,
 ): string | null {
-  const trimmed = name.trim();
-  if (!trimmed) return "Name cannot be empty";
-  if (trimmed.includes("/") || trimmed.includes("\\"))
-    return "Name cannot contain path separators";
-  if (trimmed.startsWith(".")) return "Name cannot start with a dot";
+  const formatError = validateRenameNameFormat(name);
+  if (formatError) return formatError;
 
+  const trimmed = name.trim();
   const newPath = computeRenamePath(oldPath, trimmed, isFolder);
   if (newPath === oldPath) return null; // no-op
   if (existingPaths.has(newPath)) return "A file with this name already exists";

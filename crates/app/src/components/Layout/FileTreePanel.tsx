@@ -13,7 +13,7 @@ import { ChevronIcon, FolderTreeIcon, NoteTypeIcon } from "./fileTreeIcons";
 import { fuzzyMatch, highlightFuzzyMatch } from "../../utils/fuzzyMatch";
 import { log } from "../../utils/logger";
 import { computeNewPath, isValidDrop } from "../../utils/fileTreeDnd";
-import { computeRenamePath, validateRenameName } from "../../utils/fileTreeRename";
+import { computeRenamePath, validateRenameNameFormat } from "../../utils/fileTreeRename";
 
 interface TreeNode {
   name: string;
@@ -847,24 +847,12 @@ export function FileTreePanel() {
   const executeRenameItem = useCallback(async (oldPath: string, newName: string, isFolder: boolean) => {
     const trimmed = newName.trim();
 
-    // Build set of existing paths for duplicate checking.
-    // Read directly from stores (not closure) to get the freshest state,
-    // avoiding stale data after rapid renames.
-    const currentNodes = useGraphStore.getState().nodes;
-    const currentEmptyFolders = useUIStore.getState().emptyFolders;
-    const currentWorkspaceFiles = useGraphStore.getState().workspaceFiles;
-
-    const existingPaths = new Set<string>();
-    for (const [p] of currentNodes) existingPaths.add(p);
-    for (const f of currentEmptyFolders) existingPaths.add(f);
-    for (const f of currentWorkspaceFiles) existingPaths.add(f);
-
-    const error = validateRenameName(trimmed, oldPath, isFolder, existingPaths);
-
-    // Check validation error first, then no-op
-    if (error) {
+    // Validate name format only (empty, separators, dot-prefix).
+    // Duplicate detection is left to the backend which checks the actual filesystem.
+    const formatError = validateRenameNameFormat(trimmed);
+    if (formatError) {
       useUndoStore.setState((prev) => ({
-        toastMessage: `Rename failed: ${error}`,
+        toastMessage: `Rename failed: ${formatError}`,
         toastKey: prev.toastKey + 1,
       }));
       setRenamingPath(null);
