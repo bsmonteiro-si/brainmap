@@ -68,6 +68,7 @@ export const DEFAULT_TOOLTIP_TAG_SIZE = 14;
 export const DEFAULT_NODE_LABEL_SIZE = 11;
 export const DEFAULT_NODE_ICON_SIZE = 18;
 export const DEFAULT_NODE_LABEL_BG_PADDING = 3;
+export const DEFAULT_EDGE_LABEL_SIZE = 8;
 
 export type LeftTab = "files" | "graph" | "search";
 
@@ -127,6 +128,7 @@ interface PersistedPrefs {
   nodeLabelSize?: number;
   nodeIconSize?: number;
   nodeLabelBgPadding?: number;
+  edgeLabelSize?: number;
 }
 
 type CreateNoteMode = "default" | "create-and-link";
@@ -194,6 +196,7 @@ interface UIState {
   nodeLabelSize: number;
   nodeIconSize: number;
   nodeLabelBgPadding: number;
+  edgeLabelSize: number;
   emptyFolders: Set<string>;
   homeNotePath: string | null;
 
@@ -244,6 +247,7 @@ interface UIState {
   setNodeLabelSize: (v: number) => void;
   setNodeIconSize: (v: number) => void;
   setNodeLabelBgPadding: (v: number) => void;
+  setEdgeLabelSize: (v: number) => void;
   resetNodePrefs: () => void;
   resetFontPrefs: () => void;
   setDefaultTabSize: (tab: LeftTab, content: number) => void;
@@ -401,6 +405,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   nodeLabelSize: storedPrefs.nodeLabelSize ?? DEFAULT_NODE_LABEL_SIZE,
   nodeIconSize: storedPrefs.nodeIconSize ?? DEFAULT_NODE_ICON_SIZE,
   nodeLabelBgPadding: storedPrefs.nodeLabelBgPadding ?? DEFAULT_NODE_LABEL_BG_PADDING,
+  edgeLabelSize: storedPrefs.edgeLabelSize ?? DEFAULT_EDGE_LABEL_SIZE,
   emptyFolders: new Set<string>(),
   homeNotePath: null,
 
@@ -575,8 +580,9 @@ export const useUIStore = create<UIState>((set, get) => ({
     const scale = v / DEFAULT_NODE_ICON_SIZE;
     const label = Math.max(6, Math.round(DEFAULT_NODE_LABEL_SIZE * scale));
     const bgPad = Math.max(0, Math.round(DEFAULT_NODE_LABEL_BG_PADDING * scale));
-    set({ nodeIconSize: v, nodeLabelSize: label, nodeLabelBgPadding: bgPad });
-    savePrefs({ nodeIconSize: v, nodeLabelSize: label, nodeLabelBgPadding: bgPad });
+    const edgeLabel = Math.max(4, Math.round(DEFAULT_EDGE_LABEL_SIZE * scale));
+    set({ nodeIconSize: v, nodeLabelSize: label, nodeLabelBgPadding: bgPad, edgeLabelSize: edgeLabel });
+    savePrefs({ nodeIconSize: v, nodeLabelSize: label, nodeLabelBgPadding: bgPad, edgeLabelSize: edgeLabel });
   },
   setNodeLabelSize: (v: number) => {
     set({ nodeLabelSize: v });
@@ -590,9 +596,13 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ nodeLabelBgPadding: v });
     savePrefs({ nodeLabelBgPadding: v });
   },
+  setEdgeLabelSize: (v: number) => {
+    set({ edgeLabelSize: v });
+    savePrefs({ edgeLabelSize: v });
+  },
   resetNodePrefs: () => {
-    set({ nodeLabelSize: DEFAULT_NODE_LABEL_SIZE, nodeIconSize: DEFAULT_NODE_ICON_SIZE, nodeLabelBgPadding: DEFAULT_NODE_LABEL_BG_PADDING });
-    savePrefs({ nodeLabelSize: DEFAULT_NODE_LABEL_SIZE, nodeIconSize: DEFAULT_NODE_ICON_SIZE, nodeLabelBgPadding: DEFAULT_NODE_LABEL_BG_PADDING });
+    set({ nodeLabelSize: DEFAULT_NODE_LABEL_SIZE, nodeIconSize: DEFAULT_NODE_ICON_SIZE, nodeLabelBgPadding: DEFAULT_NODE_LABEL_BG_PADDING, edgeLabelSize: DEFAULT_EDGE_LABEL_SIZE });
+    savePrefs({ nodeLabelSize: DEFAULT_NODE_LABEL_SIZE, nodeIconSize: DEFAULT_NODE_ICON_SIZE, nodeLabelBgPadding: DEFAULT_NODE_LABEL_BG_PADDING, edgeLabelSize: DEFAULT_EDGE_LABEL_SIZE });
   },
 
   resetWorkspaceState: () => set({
@@ -608,8 +618,8 @@ export const useUIStore = create<UIState>((set, get) => ({
 
   resetFontPrefs: () => {
     const { theme, effectiveTheme, uiZoom } = get();
-    set({ uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, showLineNumbers: false, filesTheme: "inherit", editorTheme: "inherit", effectiveFilesTheme: effectiveTheme, effectiveEditorTheme: effectiveTheme, tooltipFontSize: DEFAULT_TOOLTIP_SIZE, tooltipPillSize: DEFAULT_TOOLTIP_PILL_SIZE, tooltipConnectionsSize: DEFAULT_TOOLTIP_CONNECTIONS_SIZE, tooltipSummarySize: DEFAULT_TOOLTIP_SUMMARY_SIZE, tooltipTagSize: DEFAULT_TOOLTIP_TAG_SIZE, nodeLabelSize: DEFAULT_NODE_LABEL_SIZE, nodeIconSize: DEFAULT_NODE_ICON_SIZE, nodeLabelBgPadding: DEFAULT_NODE_LABEL_BG_PADDING });
-    savePrefs({ theme, uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, editorLineNumbers: false, uiZoom, filesTheme: "inherit", editorTheme: "inherit", tooltipFontSize: DEFAULT_TOOLTIP_SIZE, tooltipPillSize: DEFAULT_TOOLTIP_PILL_SIZE, tooltipConnectionsSize: DEFAULT_TOOLTIP_CONNECTIONS_SIZE, tooltipSummarySize: DEFAULT_TOOLTIP_SUMMARY_SIZE, tooltipTagSize: DEFAULT_TOOLTIP_TAG_SIZE, nodeLabelSize: DEFAULT_NODE_LABEL_SIZE, nodeIconSize: DEFAULT_NODE_ICON_SIZE, nodeLabelBgPadding: DEFAULT_NODE_LABEL_BG_PADDING });
+    set({ uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, showLineNumbers: false, filesTheme: "inherit", editorTheme: "inherit", effectiveFilesTheme: effectiveTheme, effectiveEditorTheme: effectiveTheme, tooltipFontSize: DEFAULT_TOOLTIP_SIZE, tooltipPillSize: DEFAULT_TOOLTIP_PILL_SIZE, tooltipConnectionsSize: DEFAULT_TOOLTIP_CONNECTIONS_SIZE, tooltipSummarySize: DEFAULT_TOOLTIP_SUMMARY_SIZE, tooltipTagSize: DEFAULT_TOOLTIP_TAG_SIZE, nodeLabelSize: DEFAULT_NODE_LABEL_SIZE, nodeIconSize: DEFAULT_NODE_ICON_SIZE, nodeLabelBgPadding: DEFAULT_NODE_LABEL_BG_PADDING, edgeLabelSize: DEFAULT_EDGE_LABEL_SIZE });
+    savePrefs({ theme, uiFontFamily: DEFAULT_UI_FONT, uiFontSize: DEFAULT_UI_SIZE, editorFontFamily: DEFAULT_EDITOR_FONT, editorFontSize: DEFAULT_EDITOR_SIZE, editorLineNumbers: false, uiZoom, filesTheme: "inherit", editorTheme: "inherit", tooltipFontSize: DEFAULT_TOOLTIP_SIZE, tooltipPillSize: DEFAULT_TOOLTIP_PILL_SIZE, tooltipConnectionsSize: DEFAULT_TOOLTIP_CONNECTIONS_SIZE, tooltipSummarySize: DEFAULT_TOOLTIP_SUMMARY_SIZE, tooltipTagSize: DEFAULT_TOOLTIP_TAG_SIZE, nodeLabelSize: DEFAULT_NODE_LABEL_SIZE, nodeIconSize: DEFAULT_NODE_ICON_SIZE, nodeLabelBgPadding: DEFAULT_NODE_LABEL_BG_PADDING, edgeLabelSize: DEFAULT_EDGE_LABEL_SIZE });
   },
 
   setDefaultTabSize: (tab: LeftTab, content: number) => {

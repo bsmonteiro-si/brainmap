@@ -79,6 +79,8 @@ export function SettingsModal() {
   const setNodeOverallSize = useUIStore((s) => s.setNodeOverallSize);
   const setNodeLabelSize = useUIStore((s) => s.setNodeLabelSize);
   const setNodeLabelBgPadding = useUIStore((s) => s.setNodeLabelBgPadding);
+  const edgeLabelSize = useUIStore((s) => s.edgeLabelSize);
+  const setEdgeLabelSize = useUIStore((s) => s.setEdgeLabelSize);
   const resetNodePrefs = useUIStore((s) => s.resetNodePrefs);
   const setDefaultTabSize = useUIStore((s) => s.setDefaultTabSize);
   const resetLayoutPrefs = useUIStore((s) => s.resetLayoutPrefs);
@@ -257,6 +259,15 @@ export function SettingsModal() {
                 <div className="settings-size-row">
                   <input type="range" min={0} max={12} step={1} value={nodeLabelBgPadding} onChange={(e) => setNodeLabelBgPadding(Number(e.target.value))} />
                   <span className="settings-size-value">{nodeLabelBgPadding}px</span>
+                </div>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Edge labels</span>
+              <div className="settings-control">
+                <div className="settings-size-row">
+                  <input type="range" min={4} max={16} step={1} value={edgeLabelSize} onChange={(e) => setEdgeLabelSize(Number(e.target.value))} />
+                  <span className="settings-size-value">{edgeLabelSize}px</span>
                 </div>
               </div>
             </div>

@@ -186,6 +186,7 @@ export function GraphView() {
   const nodeLabelSize = useUIStore((s) => s.nodeLabelSize);
   const nodeIconSize = useUIStore((s) => s.nodeIconSize);
   const nodeLabelBgPadding = useUIStore((s) => s.nodeLabelBgPadding);
+  const edgeLabelSize = useUIStore((s) => s.edgeLabelSize);
   const stats = useWorkspaceStore((s) => s.stats);
   const showEdgeLabelsRef = useRef(showEdgeLabels);
   const graphLayoutRef = useRef(graphLayout);
@@ -236,12 +237,13 @@ export function GraphView() {
       labelSize: nodeLabelSize,
       bgPadding: nodeLabelBgPadding,
       baseNodeSize: nodeIconSize,
+      edgeLabelSize,
     })).update();
     // Update node data(size) without full graph rebuild
     cy.nodes().forEach((n) => {
       n.data("size", Math.max(nodeIconSize, nodeIconSize + n.indegree(false) * 2));
     });
-  }, [nodeLabelSize, nodeLabelBgPadding, nodeIconSize]);
+  }, [nodeLabelSize, nodeLabelBgPadding, nodeIconSize, edgeLabelSize]);
 
   // Graph node context menu state
   const [ctxMenu, setCtxMenu] = useState<{
@@ -301,7 +303,7 @@ export function GraphView() {
     const uiState = useUIStore.getState();
     const cy = cytoscape({
       container: containerRef.current,
-      style: buildGraphStylesheet({ labelSize: uiState.nodeLabelSize, bgPadding: uiState.nodeLabelBgPadding, baseNodeSize: uiState.nodeIconSize }),
+      style: buildGraphStylesheet({ labelSize: uiState.nodeLabelSize, bgPadding: uiState.nodeLabelBgPadding, baseNodeSize: uiState.nodeIconSize, edgeLabelSize: uiState.edgeLabelSize }),
       layout: { name: "preset" },
       minZoom: 0.1,
       maxZoom: 5,

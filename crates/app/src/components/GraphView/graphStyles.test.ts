@@ -28,7 +28,7 @@ describe("getNodeShape", () => {
 
 describe("buildGraphStylesheet", () => {
   it("uses provided label size and bg padding in node selector", () => {
-    const styles = buildGraphStylesheet({ labelSize: 14, bgPadding: 5, baseNodeSize: 18 });
+    const styles = buildGraphStylesheet({ labelSize: 14, bgPadding: 5, baseNodeSize: 18, edgeLabelSize: 8 });
     const nodeStyle = styles.find((s: { selector: string }) => s.selector === "node")?.style;
     expect(nodeStyle["font-size"]).toBe("14px");
     expect(nodeStyle["text-background-padding"]).toBe("5px");
@@ -36,7 +36,7 @@ describe("buildGraphStylesheet", () => {
   });
 
   it("scales special state selectors proportionally to baseNodeSize", () => {
-    const styles = buildGraphStylesheet({ labelSize: 11, bgPadding: 3, baseNodeSize: 36 });
+    const styles = buildGraphStylesheet({ labelSize: 11, bgPadding: 3, baseNodeSize: 36, edgeLabelSize: 8 });
     const scale = 36 / 18; // 2x
     const selected = styles.find((s: { selector: string }) => s.selector === "node:selected")?.style;
     expect(selected.width).toBe(Math.round(28 * scale));
@@ -45,8 +45,14 @@ describe("buildGraphStylesheet", () => {
     expect(focus.width).toBe(Math.round(32 * scale));
   });
 
+  it("uses provided edge label size in edge selector", () => {
+    const styles = buildGraphStylesheet({ labelSize: 11, bgPadding: 3, baseNodeSize: 18, edgeLabelSize: 12 });
+    const edgeStyle = styles.find((s: { selector: string }) => s.selector === "edge")?.style;
+    expect(edgeStyle["font-size"]).toBe("12px");
+  });
+
   it("returns default sizes when given default opts", () => {
-    const styles = buildGraphStylesheet({ labelSize: 11, bgPadding: 3, baseNodeSize: 18 });
+    const styles = buildGraphStylesheet({ labelSize: 11, bgPadding: 3, baseNodeSize: 18, edgeLabelSize: 8 });
     const nodeStyle = styles.find((s: { selector: string }) => s.selector === "node")?.style;
     expect(nodeStyle["font-size"]).toBe("11px");
     expect(nodeStyle["text-background-padding"]).toBe("3px");

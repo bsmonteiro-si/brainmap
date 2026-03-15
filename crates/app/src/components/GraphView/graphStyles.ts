@@ -38,14 +38,15 @@ export function getNodeShape(noteType: string): string {
 }
 
 export interface GraphStyleOpts {
-  labelSize: number;    // default 11
-  bgPadding: number;    // default 3
-  baseNodeSize: number; // default 18
+  labelSize: number;      // default 11
+  bgPadding: number;      // default 3
+  baseNodeSize: number;   // default 18
+  edgeLabelSize: number;  // default 8
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function buildGraphStylesheet(opts: GraphStyleOpts): any[] {
-  const { labelSize, bgPadding, baseNodeSize } = opts;
+  const { labelSize, bgPadding, baseNodeSize, edgeLabelSize } = opts;
   const scale = baseNodeSize / 18;
   return [
     {
@@ -115,7 +116,7 @@ export function buildGraphStylesheet(opts: GraphStyleOpts): any[] {
         "target-arrow-color": "#aaaaaa",
         "arrow-scale": 0.6,
         "curve-style": "bezier",
-        "font-size": "8px",
+        "font-size": `${edgeLabelSize}px`,
         color: "#aaaaaa",
         "text-rotation": "autorotate",
         "text-margin-y": -8,
@@ -226,4 +227,5 @@ export const graphStylesheet = buildGraphStylesheet({
   labelSize: 11,
   bgPadding: 3,
   baseNodeSize: 18,
+  edgeLabelSize: 8,
 });
