@@ -13,6 +13,7 @@ import { ChevronIcon, FolderTreeIcon, NoteTypeIcon } from "./fileTreeIcons";
 import { fuzzyMatch, highlightFuzzyMatch } from "../../utils/fuzzyMatch";
 import { log } from "../../utils/logger";
 import { computeNewPath, isValidDrop } from "../../utils/fileTreeDnd";
+import { computeRenamePath, validateRenameName } from "../../utils/fileTreeRename";
 
 interface TreeNode {
   name: string;
@@ -187,10 +188,12 @@ function ContextMenu({
   state,
   onClose,
   onDelete,
+  onRename,
 }: {
   state: ContextMenuState;
   onClose: () => void;
   onDelete: (node: TreeNode) => void;
+  onRename: (node: TreeNode) => void;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [clampedPos, setClampedPos] = useState(() => ({
@@ -259,6 +262,12 @@ function ContextMenu({
     onDelete(state.node);
   };
 
+  const handleRename = () => {
+    if (!state.node) return;
+    onClose();
+    onRename(state.node);
+  };
+
   // Determine label for the file-level "new note" item
   const isRootLevelFile =
     state.node !== null &&
@@ -289,6 +298,9 @@ function ContextMenu({
           <div className="context-menu-item" onClick={handleFocusInGraph}>
             Focus in Graph
           </div>
+          <div className="context-menu-item" onClick={handleRename}>
+            Rename
+          </div>
           <div className="context-menu-separator" />
           <div className="context-menu-item context-menu-item--danger" onClick={handleDelete}>
             Delete Folder
@@ -317,6 +329,9 @@ function ContextMenu({
           >
             {useUIStore.getState().homeNotePath === state.node!.fullPath ? "Unset Home Note" : "Set as Home Note"}
           </div>
+          <div className="context-menu-item" onClick={handleRename}>
+            Rename
+          </div>
           <div className="context-menu-separator" />
           <div className="context-menu-item context-menu-item--danger" onClick={handleDelete}>
             Delete
@@ -326,6 +341,9 @@ function ContextMenu({
         <>
           <div className="context-menu-item" onClick={handleNewNoteHere}>
             {isRootLevelFile ? "New Note at Root" : "New Note in Folder"}
+          </div>
+          <div className="context-menu-item" onClick={handleRename}>
+            Rename
           </div>
         </>
       )}
@@ -347,6 +365,61 @@ function IndentGuides({ depth }: { depth: number }) {
   );
 }
 
+function InlineRenameInput({
+  initialName,
+  onConfirm,
+  onCancel,
+}: {
+  initialName: string;
+  onConfirm: (newName: string) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(initialName);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const resolvedRef = useRef(false);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation();
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (!resolvedRef.current) {
+        resolvedRef.current = true;
+        onConfirm(value);
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      if (!resolvedRef.current) {
+        resolvedRef.current = true;
+        onCancel();
+      }
+    }
+  };
+
+  const handleBlur = () => {
+    if (!resolvedRef.current) {
+      resolvedRef.current = true;
+      onConfirm(value);
+    }
+  };
+
+  return (
+    <input
+      ref={inputRef}
+      className="tree-item-rename-input"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onKeyDown={handleKeyDown}
+      onBlur={handleBlur}
+      onClick={(e) => e.stopPropagation()}
+    />
+  );
+}
+
 function FileTreeNode({
   node,
   depth,
@@ -362,6 +435,9 @@ function FileTreeNode({
   onFolderDragEnter,
   onFolderDragLeave,
   onFolderDrop,
+  renamingPath,
+  onRenameConfirm,
+  onRenameCancel,
 }: {
   node: TreeNode;
   depth: number;
@@ -377,6 +453,9 @@ function FileTreeNode({
   onFolderDragEnter: (e: React.DragEvent, folderPath: string) => void;
   onFolderDragLeave: (e: React.DragEvent) => void;
   onFolderDrop: (e: React.DragEvent, folderPath: string) => void;
+  renamingPath: string | null;
+  onRenameConfirm: (oldPath: string, newName: string, isFolder: boolean) => void;
+  onRenameCancel: () => void;
 }) {
   const selectedNodePath = useGraphStore((s) => s.selectedNodePath);
   const treeExpandedFolders = useUIStore((s) => s.treeExpandedFolders);
@@ -403,6 +482,7 @@ function FileTreeNode({
 
     const isDragging = draggedPath === node.fullPath;
     const isDragOver = dragOverPath === node.fullPath;
+    const isRenaming = renamingPath === node.fullPath;
 
     return (
       <div>
@@ -411,31 +491,41 @@ function FileTreeNode({
           tabIndex={0}
           className={`tree-item tree-folder${isDragging ? " dragging" : ""}${isDragOver ? " drag-over" : ""}`}
           style={{ paddingLeft: 8 }}
-          draggable
-          onClick={handleToggle}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleToggle(); } }}
-          onContextMenu={(e) => onContextMenu(e, node)}
-          onDragStart={(e) => onDragStart(e, node)}
-          onDragEnd={onDragEnd}
-          onDragOver={(e) => onFolderDragOver(e, node.fullPath)}
-          onDragEnter={(e) => onFolderDragEnter(e, node.fullPath)}
-          onDragLeave={onFolderDragLeave}
-          onDrop={(e) => onFolderDrop(e, node.fullPath)}
+          draggable={!isRenaming}
+          onClick={isRenaming ? undefined : handleToggle}
+          onKeyDown={isRenaming ? undefined : (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleToggle(); } }}
+          onContextMenu={isRenaming ? undefined : (e) => onContextMenu(e, node)}
+          onDragStart={isRenaming ? undefined : (e) => onDragStart(e, node)}
+          onDragEnd={isRenaming ? undefined : onDragEnd}
+          onDragOver={isRenaming ? undefined : (e) => onFolderDragOver(e, node.fullPath)}
+          onDragEnter={isRenaming ? undefined : (e) => onFolderDragEnter(e, node.fullPath)}
+          onDragLeave={isRenaming ? undefined : onFolderDragLeave}
+          onDrop={isRenaming ? undefined : (e) => onFolderDrop(e, node.fullPath)}
         >
           <IndentGuides depth={depth} />
           <ChevronIcon isOpen={isExpanded} />
           <FolderTreeIcon isOpen={isExpanded} />
-          <span className="tree-item-label">{node.name}</span>
-          {node.noteCount ? <span className="tree-folder-count">{node.noteCount}</span> : null}
-          <button
-            ref={actionsRef}
-            className="tree-item-actions"
-            onClick={handleActionsClick}
-            tabIndex={-1}
-            aria-label="Actions"
-          >
-            <MoreHorizontal size={14} />
-          </button>
+          {isRenaming ? (
+            <InlineRenameInput
+              initialName={node.name}
+              onConfirm={(newName) => onRenameConfirm(node.fullPath, newName, true)}
+              onCancel={onRenameCancel}
+            />
+          ) : (
+            <span className="tree-item-label">{node.name}</span>
+          )}
+          {!isRenaming && node.noteCount ? <span className="tree-folder-count">{node.noteCount}</span> : null}
+          {!isRenaming && (
+            <button
+              ref={actionsRef}
+              className="tree-item-actions"
+              onClick={handleActionsClick}
+              tabIndex={-1}
+              aria-label="Actions"
+            >
+              <MoreHorizontal size={14} />
+            </button>
+          )}
         </div>
         <div className={`tree-children-anim${isExpanded ? " tree-children-anim--open" : ""}`}>
           <div className="tree-children-anim-inner">
@@ -457,6 +547,9 @@ function FileTreeNode({
                   onFolderDragEnter={onFolderDragEnter}
                   onFolderDragLeave={onFolderDragLeave}
                   onFolderDrop={onFolderDrop}
+                  renamingPath={renamingPath}
+                  onRenameConfirm={onRenameConfirm}
+                  onRenameCancel={onRenameCancel}
                 />
               ))}
           </div>
@@ -483,6 +576,7 @@ function FileTreeNode({
   };
 
   const isDragging = draggedPath === node.fullPath;
+  const isRenaming = renamingPath === node.fullPath;
 
   return (
     <div
@@ -490,30 +584,40 @@ function FileTreeNode({
       tabIndex={0}
       className={`tree-item tree-file${isActive ? " active" : ""}${!isBrainMapNote ? " tree-file--plain" : ""}${isDragging ? " dragging" : ""}`}
       style={{ paddingLeft: 8 }}
-      draggable
-      onClick={handleClick}
-      onKeyDown={(e) => {
+      draggable={!isRenaming}
+      onClick={isRenaming ? undefined : handleClick}
+      onKeyDown={isRenaming ? undefined : (e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           handleClick();
         }
       }}
-      onContextMenu={(e) => onContextMenu(e, node)}
-      onDragStart={(e) => onDragStart(e, node)}
-      onDragEnd={onDragEnd}
+      onContextMenu={isRenaming ? undefined : (e) => onContextMenu(e, node)}
+      onDragStart={isRenaming ? undefined : (e) => onDragStart(e, node)}
+      onDragEnd={isRenaming ? undefined : onDragEnd}
     >
       <IndentGuides depth={depth} />
-      <NoteTypeIcon noteType={node.note_type} />
-      <span className="tree-item-label">{label}</span>
-      <button
-        ref={actionsRef}
-        className="tree-item-actions"
-        onClick={handleActionsClick}
-        tabIndex={-1}
-        aria-label="Actions"
-      >
-        <MoreHorizontal size={14} />
-      </button>
+      <NoteTypeIcon noteType={node.note_type} fileName={node.name} />
+      {isRenaming ? (
+        <InlineRenameInput
+          initialName={node.name}
+          onConfirm={(newName) => onRenameConfirm(node.fullPath, newName, false)}
+          onCancel={onRenameCancel}
+        />
+      ) : (
+        <span className="tree-item-label">{label}</span>
+      )}
+      {!isRenaming && (
+        <button
+          ref={actionsRef}
+          className="tree-item-actions"
+          onClick={handleActionsClick}
+          tabIndex={-1}
+          aria-label="Actions"
+        >
+          <MoreHorizontal size={14} />
+        </button>
+      )}
     </div>
   );
 }
@@ -526,6 +630,9 @@ export function FileTreePanel() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TreeNode | null>(null);
   const [hasBeenExpanded, setHasBeenExpanded] = useState<Set<string>>(() => new Set());
+
+  // ── Rename state ──
+  const [renamingPath, setRenamingPath] = useState<string | null>(null);
 
   // ── Drag-and-drop state ──
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
@@ -624,20 +731,17 @@ export function FileTreePanel() {
     }
   }, []);
 
-  const executeMoveItem = useCallback(async (oldPath: string, targetFolder: string, isFolder: boolean) => {
-    const newPath = computeNewPath(oldPath, targetFolder, isFolder);
-    if (newPath === oldPath) return;
-
+  /**
+   * Shared move/rename orchestration: saves dirty state, calls API,
+   * reloads graph, updates tabs/editor/graph focus/home note, pushes undo.
+   * Returns true on success, false on failure or abort.
+   */
+  const executeMoveOrRename = useCallback(async (oldPath: string, newPath: string, isFolder: boolean): Promise<boolean> => {
     const api = await getAPI();
     const editorState = useEditorStore.getState();
-    const tabStore = useTabStore.getState();
 
     try {
       if (isFolder) {
-        // For folder moves, compute old and new folder paths
-        const folderName = oldPath.split("/").pop()!;
-        const newFolder = targetFolder === "" ? folderName : `${targetFolder}/${folderName}`;
-
         const prefix = oldPath + "/";
 
         // Save the active note if it's inside the folder and dirty
@@ -654,19 +758,19 @@ export function FileTreePanel() {
             toastMessage: `Cannot move: ${otherDirtyTabs.length} unsaved file(s) in folder. Save them first.`,
             toastKey: prev.toastKey + 1,
           }));
-          return;
+          return false;
         }
 
-        await api.moveFolder(oldPath, newFolder);
+        await api.moveFolder(oldPath, newPath);
         await useGraphStore.getState().loadTopology();
 
         // Update tabs
-        useTabStore.getState().renamePathPrefix(oldPath, newFolder);
+        useTabStore.getState().renamePathPrefix(oldPath, newPath);
 
         // Update editor if active note was inside the folder
         const activeNote = useEditorStore.getState().activeNote;
         if (activeNote && activeNote.path.startsWith(prefix)) {
-          const newActivePath = newFolder + "/" + activeNote.path.slice(prefix.length);
+          const newActivePath = newPath + "/" + activeNote.path.slice(prefix.length);
           useEditorStore.getState().openNote(newActivePath);
         }
 
@@ -676,10 +780,10 @@ export function FileTreePanel() {
           ui.clearGraphFocus();
         }
         if (ui.homeNotePath?.startsWith(prefix)) {
-          ui.setHomeNote(newFolder + "/" + ui.homeNotePath.slice(prefix.length));
+          ui.setHomeNote(newPath + "/" + ui.homeNotePath.slice(prefix.length));
         }
 
-        useUndoStore.getState().pushAction({ kind: "move-folder", oldFolder: oldPath, newFolder });
+        useUndoStore.getState().pushAction({ kind: "move-folder", oldFolder: oldPath, newFolder: newPath });
       } else {
         // Save dirty note before moving
         if (editorState.activeNote?.path === oldPath && editorState.isDirty) {
@@ -709,16 +813,98 @@ export function FileTreePanel() {
 
         useUndoStore.getState().pushAction({ kind: "move-note", oldPath, newPath });
       }
+      return true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       log.error("components::FileTreePanel", "move failed", { message: msg });
-      // Show error as toast via undo store
       useUndoStore.setState((prev) => ({
         toastMessage: `Move failed: ${msg}`,
         toastKey: prev.toastKey + 1,
       }));
+      return false;
     }
   }, []);
+
+  const executeMoveItem = useCallback(async (oldPath: string, targetFolder: string, isFolder: boolean) => {
+    const newPath = computeNewPath(oldPath, targetFolder, isFolder);
+    if (newPath === oldPath) return;
+
+    if (isFolder) {
+      const folderName = oldPath.split("/").pop()!;
+      const newFolder = targetFolder === "" ? folderName : `${targetFolder}/${folderName}`;
+      await executeMoveOrRename(oldPath, newFolder, true);
+    } else {
+      await executeMoveOrRename(oldPath, newPath, false);
+    }
+  }, [executeMoveOrRename]);
+
+  const executeRenameItem = useCallback(async (oldPath: string, newName: string, isFolder: boolean) => {
+    const trimmed = newName.trim();
+
+    // Build set of existing paths for duplicate checking
+    const existingPaths = new Set<string>();
+    for (const [p] of nodes) existingPaths.add(p);
+    for (const f of emptyFolders) existingPaths.add(f);
+
+    const error = validateRenameName(trimmed, oldPath, isFolder, existingPaths);
+    const newPath = computeRenamePath(oldPath, trimmed, isFolder);
+
+    if (newPath === oldPath) {
+      // No change — cancel silently
+      setRenamingPath(null);
+      return;
+    }
+
+    if (error) {
+      useUndoStore.setState((prev) => ({
+        toastMessage: `Rename failed: ${error}`,
+        toastKey: prev.toastKey + 1,
+      }));
+      setRenamingPath(null);
+      return;
+    }
+
+    const success = await executeMoveOrRename(oldPath, newPath, isFolder);
+
+    if (success && isFolder) {
+      // Update treeExpandedFolders: replace oldPath and any descendants
+      const expandedFolders = useUIStore.getState().treeExpandedFolders;
+      const prefix = oldPath + "/";
+      const nextExpanded = new Set<string>();
+      let changed = false;
+      for (const f of expandedFolders) {
+        if (f === oldPath) {
+          nextExpanded.add(newPath);
+          changed = true;
+        } else if (f.startsWith(prefix)) {
+          nextExpanded.add(newPath + "/" + f.slice(prefix.length));
+          changed = true;
+        } else {
+          nextExpanded.add(f);
+        }
+      }
+      if (changed) useUIStore.setState({ treeExpandedFolders: nextExpanded });
+
+      // Update emptyFolders: same prefix-based replacement
+      const ef = useUIStore.getState().emptyFolders;
+      const nextEf = new Set<string>();
+      let efChanged = false;
+      for (const f of ef) {
+        if (f === oldPath) {
+          nextEf.add(newPath);
+          efChanged = true;
+        } else if (f.startsWith(prefix)) {
+          nextEf.add(newPath + "/" + f.slice(prefix.length));
+          efChanged = true;
+        } else {
+          nextEf.add(f);
+        }
+      }
+      if (efChanged) useUIStore.setState({ emptyFolders: nextEf });
+    }
+
+    setRenamingPath(null);
+  }, [nodes, emptyFolders, executeMoveOrRename]);
 
   const handleFolderDrop = useCallback((e: React.DragEvent, folderPath: string) => {
     e.preventDefault();
@@ -782,6 +968,17 @@ export function FileTreePanel() {
     setContextMenu({ x: rect.right, y: rect.top, node });
   };
 
+  const handleTreeKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "F2" && !renamingPath) {
+      const selectedPath = useGraphStore.getState().selectedNodePath
+        ?? useEditorStore.getState().activePlainFile?.path;
+      if (selectedPath) {
+        e.preventDefault();
+        setRenamingPath(selectedPath);
+      }
+    }
+  }, [renamingPath]);
+
   const handleContentContextMenu = (e: React.MouseEvent) => {
     // Only fire for clicks directly on the scroll container, not on tree items
     if (e.target !== e.currentTarget) return;
@@ -790,6 +987,7 @@ export function FileTreePanel() {
   };
 
   const handleCloseMenu = useCallback(() => setContextMenu(null), []);
+  const handleRenameCancel = useCallback(() => setRenamingPath(null), []);
 
   const handleDeleteConfirm = useCallback(async (force: boolean) => {
     if (!deleteTarget) return;
@@ -912,7 +1110,7 @@ export function FileTreePanel() {
   }, [deleteTarget, nodes]);
 
   return (
-    <div className="file-tree-panel">
+    <div className="file-tree-panel" onKeyDown={handleTreeKeyDown}>
       {/* Toolbar */}
       <div className="file-tree-toolbar">
         <button
@@ -965,6 +1163,9 @@ export function FileTreePanel() {
             onFolderDragEnter={handleFolderDragEnter}
             onFolderDragLeave={handleFolderDragLeave}
             onFolderDrop={handleFolderDrop}
+            renamingPath={renamingPath}
+            onRenameConfirm={executeRenameItem}
+            onRenameCancel={handleRenameCancel}
           />
         ))}
       </div>
@@ -973,6 +1174,7 @@ export function FileTreePanel() {
           state={contextMenu}
           onClose={handleCloseMenu}
           onDelete={(node) => setDeleteTarget(node)}
+          onRename={(node) => setRenamingPath(node.fullPath)}
         />
       )}
       {deleteTarget && (

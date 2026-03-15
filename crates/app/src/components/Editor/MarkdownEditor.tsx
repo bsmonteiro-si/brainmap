@@ -2,6 +2,7 @@ import { useRef, useEffect } from "react";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { markdown } from "@codemirror/lang-markdown";
+import { GFM } from "@lezer/markdown";
 import { defaultKeymap, history, historyKeymap, redo } from "@codemirror/commands";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
@@ -13,6 +14,8 @@ import { formattingKeymap } from "./cmFormatting";
 import { calloutDecorations } from "./cmCalloutDecorations";
 import { copyReferenceMenu } from "./cmCopyReference";
 import { listSpacing } from "./cmListSpacing";
+import { markdownDecorations } from "./cmMarkdownDecorations";
+import { checkboxDecorations } from "./cmCheckboxDecorations";
 
 const ACCENT = "#4a9eff";
 const ACCENT_DARK = "#5aaeFF";
@@ -26,6 +29,8 @@ function buildMarkdownHighlight(isDark: boolean) {
     { tag: tags.heading4, fontSize: "1.05em", fontWeight: "600", color: accent },
     { tag: tags.emphasis, fontStyle: "italic" },
     { tag: tags.strong, fontWeight: "700" },
+    { tag: tags.strikethrough, textDecoration: "line-through", color: isDark ? "#888" : "#999" },
+    { tag: tags.monospace, fontFamily: "ui-monospace, 'Menlo', 'Monaco', 'Consolas', monospace", fontSize: "0.88em" },
   ]);
 }
 
@@ -86,13 +91,15 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
 
     const isDark = THEME_BASE[effectiveTheme] === "dark";
     const extensions = [
-      markdown(),
+      markdown({ extensions: GFM }),
       EditorView.lineWrapping,
       ...(showLineNumbers ? [lineNumbers()] : []),
       syntaxHighlighting(buildMarkdownHighlight(isDark)),
       linkNavigation(notePath),
       calloutDecorations(),
       listSpacing(),
+      markdownDecorations(),
+      checkboxDecorations(),
       ...(wsRoot ? [copyReferenceMenu(wsRoot.replace(/\/$/, "") + "/" + notePath)] : []),
     ];
 

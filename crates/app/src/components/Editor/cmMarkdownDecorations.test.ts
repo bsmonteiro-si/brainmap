@@ -1,0 +1,152 @@
+import { describe, it, expect } from "vitest";
+import { Text } from "@codemirror/state";
+import { scanFencedBlocks, classifyLines } from "./cmMarkdownDecorations";
+
+function doc(s: string): Text {
+  return Text.of(s.split("\n"));
+}
+
+describe("scanFencedBlocks", () => {
+  it("finds a basic fenced code block with backticks", () => {
+    const d = doc("before\n```\ncode\n```\nafter");
+    const blocks = scanFencedBlocks(d);
+    expect(blocks).toEqual([{ startLine: 2, endLine: 4 }]);
+  });
+
+  it("finds a fenced code block with tildes", () => {
+    const d = doc("~~~\ncode\n~~~");
+    const blocks = scanFencedBlocks(d);
+    expect(blocks).toEqual([{ startLine: 1, endLine: 3 }]);
+  });
+
+  it("finds a fenced code block with language annotation", () => {
+    const d = doc("```typescript\nconst x = 1;\n```");
+    const blocks = scanFencedBlocks(d);
+    expect(blocks).toEqual([{ startLine: 1, endLine: 3 }]);
+  });
+
+  it("handles nested fences with different lengths", () => {
+    const d = doc("````\n```\ninner\n```\n````");
+    const blocks = scanFencedBlocks(d);
+    expect(blocks).toEqual([{ startLine: 1, endLine: 5 }]);
+  });
+
+  it("handles unclosed fence extending to doc end", () => {
+    const d = doc("```\ncode\nmore code");
+    const blocks = scanFencedBlocks(d);
+    expect(blocks).toEqual([{ startLine: 1, endLine: 3 }]);
+  });
+
+  it("finds multiple fenced blocks", () => {
+    const d = doc("```\na\n```\ntext\n~~~\nb\n~~~");
+    const blocks = scanFencedBlocks(d);
+    expect(blocks).toEqual([
+      { startLine: 1, endLine: 3 },
+      { startLine: 5, endLine: 7 },
+    ]);
+  });
+
+  it("does not close backtick fence with tildes", () => {
+    const d = doc("```\ncode\n~~~\nstill code\n```");
+    const blocks = scanFencedBlocks(d);
+    expect(blocks).toEqual([{ startLine: 1, endLine: 5 }]);
+  });
+
+  it("requires closing fence to be at least same length", () => {
+    const d = doc("````\ncode\n```\nstill code\n````");
+    const blocks = scanFencedBlocks(d);
+    expect(blocks).toEqual([{ startLine: 1, endLine: 5 }]);
+  });
+});
+
+describe("classifyLines", () => {
+  describe("horizontal rules", () => {
+    it("detects --- as HR", () => {
+      const d = doc("text\n---\nmore");
+      const cls = classifyLines(d);
+      expect(cls.hr).toEqual([2]);
+    });
+
+    it("detects *** as HR", () => {
+      const d = doc("***");
+      const cls = classifyLines(d);
+      expect(cls.hr).toEqual([1]);
+    });
+
+    it("detects ___ as HR", () => {
+      const d = doc("___");
+      const cls = classifyLines(d);
+      expect(cls.hr).toEqual([1]);
+    });
+
+    it("detects HR with trailing whitespace", () => {
+      const d = doc("---   ");
+      const cls = classifyLines(d);
+      expect(cls.hr).toEqual([1]);
+    });
+
+    it("detects consecutive HRs", () => {
+      const d = doc("---\n---");
+      const cls = classifyLines(d);
+      expect(cls.hr).toEqual([1, 2]);
+    });
+
+    it("does NOT detect HR inside fenced code block", () => {
+      const d = doc("```\n---\n```");
+      const cls = classifyLines(d);
+      expect(cls.hr).toEqual([]);
+    });
+
+    it("does NOT detect --- with leading text", () => {
+      const d = doc("text---");
+      const cls = classifyLines(d);
+      expect(cls.hr).toEqual([]);
+    });
+  });
+
+  describe("blockquotes", () => {
+    it("detects basic blockquote", () => {
+      const d = doc("> hello");
+      const cls = classifyLines(d);
+      expect(cls.blockquote).toEqual([1]);
+    });
+
+    it("detects nested blockquote", () => {
+      const d = doc("> > nested");
+      const cls = classifyLines(d);
+      expect(cls.blockquote).toEqual([1]);
+    });
+
+    it("detects empty blockquote line", () => {
+      const d = doc(">");
+      const cls = classifyLines(d);
+      expect(cls.blockquote).toEqual([1]);
+    });
+
+    it("detects blockquote with checkbox", () => {
+      const d = doc("> - [ ] task");
+      const cls = classifyLines(d);
+      expect(cls.blockquote).toEqual([1]);
+    });
+
+    it("detects multi-line blockquote", () => {
+      const d = doc("> line 1\n> line 2\n> line 3");
+      const cls = classifyLines(d);
+      expect(cls.blockquote).toEqual([1, 2, 3]);
+    });
+
+    it("does NOT detect blockquote inside fenced code", () => {
+      const d = doc("```\n> not a quote\n```");
+      const cls = classifyLines(d);
+      expect(cls.blockquote).toEqual([]);
+    });
+  });
+
+  describe("fenced code blocks", () => {
+    it("passes through to scanFencedBlocks", () => {
+      const d = doc("```\ncode\n```");
+      const cls = classifyLines(d);
+      expect(cls.fencedBlocks).toEqual([{ startLine: 1, endLine: 3 }]);
+    });
+  });
+});

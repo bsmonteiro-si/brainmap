@@ -92,7 +92,7 @@ export function TabBar() {
           onAuxClick={(e) => handleAuxClick(e, tab.id)}
           title={tab.kind === "untitled" ? tab.title : tab.path}
         >
-          <NoteTypeIcon noteType={tab.kind === "untitled" ? undefined : (tab.noteType ?? undefined)} size={14} />
+          <NoteTypeIcon noteType={tab.kind === "untitled" ? undefined : (tab.noteType ?? undefined)} fileName={tab.kind === "untitled" ? undefined : tab.path?.split("/").pop()} size={14} />
           <span className="tab-title">{tab.title}</span>
           {(tab.id === activeTabId ? editorIsDirty : tab.isDirty) && <span className="tab-dirty-dot" />}
           <button
