@@ -5,7 +5,7 @@ import { applyTopologyDiff } from "./graphDiff";
 function makeNodes(...items: [string, string, string][]): Map<string, NodeDto> {
   const m = new Map<string, NodeDto>();
   for (const [path, title, note_type] of items) {
-    m.set(path, { path, title, note_type });
+    m.set(path, { path, title, note_type, tags: null });
   }
   return m;
 }
@@ -29,7 +29,7 @@ describe("applyTopologyDiff", () => {
       const event: WorkspaceEvent = {
         type: "node-created",
         path: "Concepts/A.md",
-        node: { path: "Concepts/A.md", title: "A", note_type: "concept" },
+        node: { path: "Concepts/A.md", title: "A", note_type: "concept", tags: null },
       };
       const result = applyTopologyDiff(state, event);
       expect(result.nodes.has("Concepts/A.md")).toBe(true);
@@ -41,7 +41,7 @@ describe("applyTopologyDiff", () => {
       const event: WorkspaceEvent = {
         type: "node-created",
         path: "Concepts/A.md",
-        node: { path: "Concepts/A.md", title: "A", note_type: "concept" },
+        node: { path: "Concepts/A.md", title: "A", note_type: "concept", tags: null },
       };
       const result = applyTopologyDiff(state, event);
       expect(result.workspaceFiles.filter((f) => f === "Concepts/A.md")).toHaveLength(1);
@@ -54,7 +54,7 @@ describe("applyTopologyDiff", () => {
       const event: WorkspaceEvent = {
         type: "node-updated",
         path: "A.md",
-        node: { path: "A.md", title: "New", note_type: "book-note" },
+        node: { path: "A.md", title: "New", note_type: "book-note", tags: null },
       };
       const result = applyTopologyDiff(state, event);
       expect(result.nodes.get("A.md")?.title).toBe("New");
@@ -117,7 +117,7 @@ describe("applyTopologyDiff", () => {
 
       const event: WorkspaceEvent = {
         type: "topology-changed",
-        added_nodes: [{ path: "C.md", title: "C", note_type: "question" }],
+        added_nodes: [{ path: "C.md", title: "C", note_type: "question", tags: null }],
         removed_nodes: ["B.md"],
         added_edges: [makeEdge("A.md", "C.md", "leads-to")],
         removed_edges: [makeEdge("A.md", "B.md", "related-to")],
@@ -138,7 +138,7 @@ describe("applyTopologyDiff", () => {
       const state = makeState();
       const event: WorkspaceEvent = {
         type: "topology-changed",
-        added_nodes: [{ path: "Concepts", title: "Concepts", note_type: "folder" }],
+        added_nodes: [{ path: "Concepts", title: "Concepts", note_type: "folder", tags: null }],
         removed_nodes: [],
         added_edges: [],
         removed_edges: [],
@@ -172,7 +172,7 @@ describe("applyTopologyDiff", () => {
       const state = makeState(makeNodes(["A.md", "A", "concept"]));
       const event: WorkspaceEvent = {
         type: "topology-changed",
-        added_nodes: [{ path: "B.md", title: "B", note_type: "concept" }],
+        added_nodes: [{ path: "B.md", title: "B", note_type: "concept", tags: null }],
         removed_nodes: [],
         added_edges: [makeEdge("A.md", "B.md", "related-to")],
         removed_edges: [],

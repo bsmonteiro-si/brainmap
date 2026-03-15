@@ -15,6 +15,7 @@ tracing = "0.1"
 notify = "7"
 notify-debouncer-mini = "0.5"
 tokio = { version = "1", features = ["sync", "rt"] }
+ts-rs = { version = "10", features = ["serde-compat"] }
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

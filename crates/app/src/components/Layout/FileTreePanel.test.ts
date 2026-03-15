@@ -3,7 +3,7 @@ import { buildTree, fuzzyFilterTree } from "./FileTreePanel";
 import type { NodeDto } from "../../api/types";
 
 function makeNode(title: string, note_type = "concept"): NodeDto {
-  return { path: "", title, note_type };
+  return { path: "", title, note_type, tags: null };
 }
 
 describe("buildTree with emptyFolders", () => {

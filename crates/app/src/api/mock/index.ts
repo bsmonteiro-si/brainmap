@@ -81,7 +81,7 @@ export class MockBridge implements BrainMapAPI {
       links: note.links.map((l) => ({
         target: l.target,
         rel: l.rel,
-        annotation: l.annotation,
+        annotation: l.annotation ?? null,
       })),
       extra: note.extra,
       body: note.body,
@@ -140,7 +140,7 @@ export class MockBridge implements BrainMapAPI {
     eventBus.emit({
       type: "node-created",
       path: params.path,
-      node: { path: params.path, title: params.title, note_type: params.note_type },
+      node: { path: params.path, title: params.title, note_type: params.note_type, tags: params.tags ?? null },
     });
     return params.path;
   }
@@ -171,7 +171,7 @@ export class MockBridge implements BrainMapAPI {
     eventBus.emit({
       type: "node-updated",
       path: params.path,
-      node: { path: note.path, title: note.title, note_type: note.note_type },
+      node: { path: note.path, title: note.title, note_type: note.note_type, tags: note.tags.length > 0 ? note.tags : null },
     });
   }
 
@@ -312,7 +312,7 @@ export class MockBridge implements BrainMapAPI {
     // No-op in mock
   }
 
-  async deleteFolder(path: string, force?: boolean): Promise<{ deleted_paths: string[] }> {
+  async deleteFolder(path: string, _force?: boolean): Promise<{ deleted_paths: string[] }> {
     await mockDelay("deleteNote");
     const prefix = path.endsWith("/") ? path : path + "/";
     const deleted_paths: string[] = [];

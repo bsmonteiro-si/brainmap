@@ -35,7 +35,7 @@ const MOCK_INFO: WorkspaceInfo = {
 function setupWorkspaceState() {
   useWorkspaceStore.setState({ info: MOCK_INFO, stats: null, isLoading: false, error: null });
   useGraphStore.setState({
-    nodes: new Map([["A.md", { path: "A.md", title: "A", note_type: "concept" }]]),
+    nodes: new Map([["A.md", { path: "A.md", title: "A", note_type: "concept", tags: null }]]),
     edges: [{ source: "A.md", target: "B.md", rel: "related-to", kind: "Explicit" }],
     workspaceFiles: ["A.md", "B.md"],
     selectedNodePath: "A.md",
@@ -278,7 +278,7 @@ describe("applyEventToSnapshot", () => {
     const event: WorkspaceEvent = {
       type: "node-created",
       path: "New.md",
-      node: { path: "New.md", title: "New", note_type: "concept" },
+      node: { path: "New.md", title: "New", note_type: "concept", tags: null },
     };
     applyEventToSnapshot("seg-bg", event);
 
@@ -292,7 +292,7 @@ describe("applyEventToSnapshot", () => {
     applyEventToSnapshot("nonexistent", {
       type: "node-created",
       path: "X.md",
-      node: { path: "X.md", title: "X", note_type: "concept" },
+      node: { path: "X.md", title: "X", note_type: "concept", tags: null },
     });
   });
 
@@ -302,7 +302,7 @@ describe("applyEventToSnapshot", () => {
 
     const event: WorkspaceEvent = {
       type: "topology-changed",
-      added_nodes: [{ path: "C.md", title: "C", note_type: "question" }],
+      added_nodes: [{ path: "C.md", title: "C", note_type: "question", tags: null }],
       removed_nodes: ["A.md"],
       added_edges: [],
       removed_edges: [{ source: "A.md", target: "B.md", rel: "related-to", kind: "Explicit" }],
