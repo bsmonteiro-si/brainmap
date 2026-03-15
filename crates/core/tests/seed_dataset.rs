@@ -134,6 +134,12 @@ fn test_seed_search_works() {
 }
 
 #[test]
+fn test_assert_invariants_passes_on_seed() {
+    let ws = SEED_WORKSPACE.lock().unwrap_or_else(|e| e.into_inner());
+    ws.graph.assert_invariants();
+}
+
+#[test]
 fn test_seed_graph_has_edges() {
     let ws = SEED_WORKSPACE.lock().unwrap_or_else(|e| e.into_inner());
     let stats = ws.stats();

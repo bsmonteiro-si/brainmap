@@ -287,6 +287,148 @@ impl Default for Graph {
     }
 }
 
+impl Graph {
+    /// Validate all structural invariants of the graph.
+    /// Called in debug builds after every mutation to catch bugs immediately.
+    /// Zero-cost in release builds.
+    #[cfg(debug_assertions)]
+    pub fn assert_invariants(&self) {
+        use std::collections::HashSet;
+
+        // 1. Every node has an entry in the outgoing map (guaranteed by add_node).
+        for key in self.nodes.keys() {
+            assert!(
+                self.outgoing.contains_key(key),
+                "invariant violated: node '{}' has no entry in outgoing map",
+                key
+            );
+        }
+
+        // 2. Every key in `incoming` map that was created by add_node exists as a node.
+        // Note: incoming map may also contain keys for broken link targets (nodes that
+        // don't exist), created by add_edge. We only check that every node has an
+        // incoming entry (the reverse of what add_node guarantees).
+        for key in self.nodes.keys() {
+            assert!(
+                self.incoming.contains_key(key),
+                "invariant violated: node '{}' has no entry in incoming map",
+                key
+            );
+        }
+
+        // 3. Every edge in outgoing[source] has edge.source == source
+        for (source, edges) in &self.outgoing {
+            for edge in edges {
+                assert!(
+                    &edge.source == source,
+                    "invariant violated: outgoing edge under '{}' has source '{}'",
+                    source,
+                    edge.source
+                );
+            }
+        }
+
+        // 4. Every edge in incoming[target] has edge.target == target
+        for (target, edges) in &self.incoming {
+            for edge in edges {
+                assert!(
+                    &edge.target == target,
+                    "invariant violated: incoming edge under '{}' has target '{}'",
+                    target,
+                    edge.target
+                );
+            }
+        }
+
+        // 5. Outgoing/incoming are symmetric: every outgoing edge has a matching incoming entry
+        for (source, edges) in &self.outgoing {
+            for edge in edges {
+                let incoming_edges = self.incoming.get(&edge.target);
+                assert!(
+                    incoming_edges.is_some(),
+                    "invariant violated: outgoing edge from '{}' to '{}' (rel '{}') has no incoming entry for target",
+                    source, edge.target, edge.rel
+                );
+                let has_match = incoming_edges.unwrap().iter().any(|ie| {
+                    ie.source == edge.source && ie.target == edge.target && ie.rel == edge.rel && ie.kind == edge.kind
+                });
+                assert!(
+                    has_match,
+                    "invariant violated: outgoing edge from '{}' to '{}' (rel '{}') has no matching incoming edge",
+                    source, edge.target, edge.rel
+                );
+            }
+        }
+        // And vice versa: every incoming edge has a matching outgoing entry
+        for (target, edges) in &self.incoming {
+            for edge in edges {
+                let outgoing_edges = self.outgoing.get(&edge.source);
+                assert!(
+                    outgoing_edges.is_some(),
+                    "invariant violated: incoming edge from '{}' to '{}' (rel '{}') has no outgoing entry for source",
+                    edge.source, target, edge.rel
+                );
+                let has_match = outgoing_edges.unwrap().iter().any(|oe| {
+                    oe.source == edge.source && oe.target == edge.target && oe.rel == edge.rel && oe.kind == edge.kind
+                });
+                assert!(
+                    has_match,
+                    "invariant violated: incoming edge from '{}' to '{}' (rel '{}') has no matching outgoing edge",
+                    edge.source, target, edge.rel
+                );
+            }
+        }
+
+        // 6. Every edge with rel == "contains" has a source node with note_type == "folder"
+        for edges in self.outgoing.values() {
+            for edge in edges {
+                if edge.rel == "contains" {
+                    let source_node = self.nodes.get(&edge.source);
+                    assert!(
+                        source_node.is_some(),
+                        "invariant violated: 'contains' edge from '{}' but source node not found",
+                        edge.source
+                    );
+                    assert!(
+                        source_node.unwrap().note_type == "folder",
+                        "invariant violated: 'contains' edge from '{}' but source is type '{}', not 'folder'",
+                        edge.source,
+                        source_node.unwrap().note_type
+                    );
+                }
+            }
+        }
+
+        // 7. No duplicate edges (same source + target + rel) in any edge list
+        for (source, edges) in &self.outgoing {
+            let mut seen: HashSet<(&str, &str)> = HashSet::new();
+            for edge in edges {
+                let key = (edge.target.as_str(), edge.rel.as_str());
+                assert!(
+                    seen.insert(key),
+                    "invariant violated: duplicate outgoing edge from '{}' to '{}' (rel '{}')",
+                    source, edge.target, edge.rel
+                );
+            }
+        }
+        for (target, edges) in &self.incoming {
+            let mut seen: HashSet<(&str, &str)> = HashSet::new();
+            for edge in edges {
+                let key = (edge.source.as_str(), edge.rel.as_str());
+                assert!(
+                    seen.insert(key),
+                    "invariant violated: duplicate incoming edge to '{}' from '{}' (rel '{}')",
+                    target, edge.source, edge.rel
+                );
+            }
+        }
+    }
+
+    /// No-op in release builds.
+    #[cfg(not(debug_assertions))]
+    pub fn assert_invariants(&self) {}
+}
+
 /// Build folder nodes and containment edges from the directory structure of notes.
 ///
 /// For every directory that contains at least one note (directly or transitively),
