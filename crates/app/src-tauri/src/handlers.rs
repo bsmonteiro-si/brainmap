@@ -417,7 +417,8 @@ pub fn handle_write_plain_file(ws: &Workspace, path: &str, body: &str) -> Result
 
 /// Write raw content (frontmatter + body) for a BrainMap-managed note.
 /// Writes to disk then re-parses via `reload_file` to update graph/index.
-pub fn handle_write_raw_note(ws: &mut Workspace, path: &str, content: &str) -> Result<(), String> {
+/// Returns the `GraphDiff` from reload_file for event emission.
+pub fn handle_write_raw_note(ws: &mut Workspace, path: &str, content: &str) -> Result<brainmap_core::model::GraphDiff, String> {
     let rp = brainmap_core::model::RelativePath::new(path);
     if !ws.notes.contains_key(&rp) {
         return Err("Path is not a BrainMap-managed note".to_string());
@@ -425,9 +426,9 @@ pub fn handle_write_raw_note(ws: &mut Workspace, path: &str, content: &str) -> R
     let abs = validate_relative_path(&ws.root, path)?;
     std::fs::write(&abs, content)
         .map_err(|e| format!("Failed to write file: {}", e))?;
-    ws.reload_file(path)
+    let diff = ws.reload_file(path)
         .map_err(|e| format!("File saved but parse failed: {}", e))?;
-    Ok(())
+    Ok(diff)
 }
 
 /// Validate that a relative path stays within the workspace root.

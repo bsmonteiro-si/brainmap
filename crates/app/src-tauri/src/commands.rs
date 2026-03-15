@@ -2,10 +2,12 @@ use std::collections::HashSet;
 use tauri::State;
 use tracing::{info, warn, error, debug};
 
+use brainmap_core::model::{Direction, RelativePath};
+
 use crate::dto::*;
 use crate::handlers;
 use crate::state::{AppState, WorkspaceSlot, canonicalize_root};
-use crate::watcher;
+use crate::watcher::{self, node_to_payload, edge_to_payload, emit_topology_event, emit_files_changed_event};
 
 /// Build a WorkspaceInfoDto from a slot's workspace.
 fn workspace_info_from_slot(slot: &WorkspaceSlot) -> WorkspaceInfoDto {
@@ -121,28 +123,89 @@ pub fn get_node_content(state: State<'_, AppState>, path: String) -> Result<Note
 
 #[tauri::command]
 pub fn create_node(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     params: CreateNoteParams,
 ) -> Result<String, String> {
     let root = state.resolve_root(None)?;
     let abs_path = state.with_slot(&root, |slot| Ok(slot.workspace.root.join(&params.path)))?;
     state.register_expected_write(&root, abs_path);
-    state.with_slot_mut(&root, |slot| handlers::handle_create_note(&mut slot.workspace, params))
+
+    // Collect folder nodes before creation to detect new ones from ensure_folder_nodes
+    let folder_nodes_before: HashSet<String> = state.with_slot(&root, |slot| {
+        Ok(slot.workspace.graph.all_nodes()
+            .filter(|(_, nd)| nd.is_folder())
+            .map(|(rp, _)| rp.as_str().to_string())
+            .collect())
+    })?;
+
+    let created_path = state.with_slot_mut(&root, |slot| {
+        handlers::handle_create_note(&mut slot.workspace, params)
+    })?;
+
+    // Read back the created node + edges + any new folder nodes
+    let (added_nodes, added_edges) = state.with_slot(&root, |slot| {
+        let rp = RelativePath::new(&created_path);
+        let mut nodes = Vec::new();
+        let mut edges = Vec::new();
+
+        // The created note node
+        if let Some(nd) = slot.workspace.graph.get_node(&rp) {
+            nodes.push(node_to_payload(nd));
+        }
+
+        // Edges for the new node (includes contains from parent folder)
+        for e in slot.workspace.graph.edges_for(&rp, &Direction::Both) {
+            edges.push(edge_to_payload(e));
+        }
+
+        // New folder nodes created by ensure_folder_nodes
+        for (fp, fnd) in slot.workspace.graph.all_nodes() {
+            if fnd.is_folder() && !folder_nodes_before.contains(fp.as_str()) {
+                nodes.push(node_to_payload(fnd));
+                // Folder's own edges (contains edges to children, part-of to parent)
+                for e in slot.workspace.graph.edges_for(fp, &Direction::Both) {
+                    edges.push(edge_to_payload(e));
+                }
+            }
+        }
+
+        Ok((nodes, edges))
+    })?;
+
+    emit_topology_event(&app, &root, added_nodes, vec![], added_edges, vec![]);
+
+    Ok(created_path)
 }
 
 #[tauri::command]
 pub fn update_node(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     params: UpdateNoteParams,
 ) -> Result<(), String> {
     let root = state.resolve_root(None)?;
+    let path = params.path.clone();
     let abs_path = state.with_slot(&root, |slot| Ok(slot.workspace.root.join(&params.path)))?;
     state.register_expected_write(&root, abs_path);
-    state.with_slot_mut(&root, |slot| handlers::handle_update_note(&mut slot.workspace, params))
+
+    // Perform update and read back the node in one lock
+    let updated_node = state.with_slot_mut(&root, |slot| {
+        handlers::handle_update_note(&mut slot.workspace, params)?;
+        let rp = RelativePath::new(&path);
+        Ok(slot.workspace.graph.get_node(&rp).map(node_to_payload))
+    })?;
+
+    if let Some(node) = updated_node {
+        emit_topology_event(&app, &root, vec![node], vec![], vec![], vec![]);
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
 pub fn delete_node(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     path: String,
     force: Option<bool>,
@@ -150,7 +213,48 @@ pub fn delete_node(
     let root = state.resolve_root(None)?;
     let abs_path = state.with_slot(&root, |slot| Ok(slot.workspace.root.join(&path)))?;
     state.register_expected_write(&root, abs_path);
-    state.with_slot_mut(&root, |slot| handlers::handle_delete_note(&mut slot.workspace, &path, force.unwrap_or(false)))
+
+    // Collect edges + perform deletion in a single lock
+    let (edges_before, removed_folder_nodes) = state.with_slot_mut(&root, |slot| {
+        let rp = RelativePath::new(&path);
+
+        // Collect all edges touching this node before deletion
+        let edges: Vec<_> = slot.workspace.graph.edges_for(&rp, &Direction::Both)
+            .into_iter().cloned().collect();
+
+        // Collect ancestor folder node paths that might get pruned
+        let mut folder_ancestors: Vec<String> = Vec::new();
+        if let Some(parent_rp) = rp.parent() {
+            let mut current = Some(parent_rp);
+            while let Some(dir_rp) = current {
+                if slot.workspace.graph.get_node(&dir_rp).map_or(false, |n| n.is_folder()) {
+                    folder_ancestors.push(dir_rp.as_str().to_string());
+                }
+                current = dir_rp.parent();
+            }
+        }
+
+        // Perform deletion
+        handlers::handle_delete_note(&mut slot.workspace, &path, force.unwrap_or(false))?;
+
+        // Check which folder nodes were pruned
+        let removed_folders: Vec<String> = folder_ancestors.into_iter()
+            .filter(|fp| slot.workspace.graph.get_node(&RelativePath::new(fp)).is_none())
+            .collect();
+
+        Ok((edges, removed_folders))
+    })?;
+
+    let mut removed_nodes = vec![path];
+    // Also collect edges for removed folder nodes
+    let mut all_removed_edges: Vec<_> = edges_before.iter().map(edge_to_payload).collect();
+    for folder_path in &removed_folder_nodes {
+        removed_nodes.push(folder_path.clone());
+    }
+
+    emit_topology_event(&app, &root, vec![], removed_nodes, vec![], all_removed_edges);
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -180,6 +284,7 @@ pub fn move_note(
         state.register_expected_write(&root, abs);
     }
 
+    // move_note is complex — frontend uses loadTopology() for now
     Ok(result)
 }
 
@@ -227,6 +332,7 @@ pub fn move_folder(
         state.register_expected_write(&root, abs);
     }
 
+    // move_folder is complex — frontend uses loadTopology() for now
     Ok(result)
 }
 
@@ -256,17 +362,39 @@ pub fn get_neighbors(
 
 #[tauri::command]
 pub fn create_link(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     params: LinkParams,
 ) -> Result<(), String> {
     let root = state.resolve_root(None)?;
+    let source = params.source.clone();
+    let target = params.target.clone();
+    let rel = params.rel.clone();
     let abs_path = state.with_slot(&root, |slot| Ok(slot.workspace.root.join(&params.source)))?;
     state.register_expected_write(&root, abs_path);
-    state.with_slot_mut(&root, |slot| handlers::handle_create_link(&mut slot.workspace, params))
+    state.with_slot_mut(&root, |slot| handlers::handle_create_link(&mut slot.workspace, params))?;
+
+    // Emit the new edge
+    emit_topology_event(
+        &app,
+        &root,
+        vec![],
+        vec![],
+        vec![watcher::EdgeDtoPayload {
+            source,
+            target,
+            rel,
+            kind: "explicit".to_string(),
+        }],
+        vec![],
+    );
+
+    Ok(())
 }
 
 #[tauri::command]
 pub fn delete_link(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     source: String,
     target: String,
@@ -275,7 +403,20 @@ pub fn delete_link(
     let root = state.resolve_root(None)?;
     let abs_path = state.with_slot(&root, |slot| Ok(slot.workspace.root.join(&source)))?;
     state.register_expected_write(&root, abs_path);
-    state.with_slot_mut(&root, |slot| handlers::handle_delete_link(&mut slot.workspace, &source, &target, &rel))
+
+    // Capture edge details before deletion
+    let edge_payload = watcher::EdgeDtoPayload {
+        source: source.clone(),
+        target: target.clone(),
+        rel: rel.clone(),
+        kind: "explicit".to_string(),
+    };
+
+    state.with_slot_mut(&root, |slot| handlers::handle_delete_link(&mut slot.workspace, &source, &target, &rel))?;
+
+    emit_topology_event(&app, &root, vec![], vec![], vec![], vec![edge_payload]);
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -298,6 +439,7 @@ pub fn get_stats(state: State<'_, AppState>) -> Result<StatsDto, String> {
 
 #[tauri::command]
 pub fn delete_folder(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     path: String,
     force: Option<bool>,
@@ -328,20 +470,68 @@ pub fn delete_folder(
 
     // Register expected writes for ALL note files in the folder before deleting
     let prefix = if path.ends_with('/') { path.clone() } else { format!("{}/", path) };
-    let note_paths: Vec<std::path::PathBuf> = state.with_slot(&root, |slot| {
-        Ok(slot.workspace.notes.keys()
+
+    // Collect edges and folder nodes before deletion, then perform deletion in one lock
+    let (result, edges_before, removed_folder_nodes) = state.with_slot_mut(&root, |slot| {
+        // Register expected writes
+        let note_abs_paths: Vec<std::path::PathBuf> = slot.workspace.notes.keys()
             .filter(|p| p.as_str().starts_with(&prefix))
             .map(|p| slot.workspace.root.join(p.as_str()))
-            .collect())
+            .collect();
+
+        // Collect all edges for notes in this folder
+        let mut all_edges = Vec::new();
+        let mut note_paths_in_folder = Vec::new();
+        for rp in slot.workspace.notes.keys() {
+            if rp.as_str().starts_with(&prefix) {
+                note_paths_in_folder.push(rp.as_str().to_string());
+                for e in slot.workspace.graph.edges_for(rp, &Direction::Both) {
+                    all_edges.push(edge_to_payload(e));
+                }
+            }
+        }
+
+        // Collect folder node paths under this prefix
+        let folder_nodes_before: Vec<String> = slot.workspace.graph.all_nodes()
+            .filter(|(_, nd)| nd.is_folder())
+            .filter(|(fp, _)| fp.as_str().starts_with(&prefix) || fp.as_str() == path.trim_end_matches('/'))
+            .map(|(fp, _)| fp.as_str().to_string())
+            .collect();
+
+        // Also collect edges for folder nodes
+        for fp_str in &folder_nodes_before {
+            let fp = RelativePath::new(fp_str);
+            for e in slot.workspace.graph.edges_for(&fp, &Direction::Both) {
+                all_edges.push(edge_to_payload(e));
+            }
+        }
+
+        // Perform deletion
+        let result = handlers::handle_delete_folder(&mut slot.workspace, &path, force.unwrap_or(false))?;
+
+        // Check which folder nodes were removed
+        let removed_folders: Vec<String> = folder_nodes_before.into_iter()
+            .filter(|fp| slot.workspace.graph.get_node(&RelativePath::new(fp)).is_none())
+            .collect();
+
+        // Register expected writes (must be done here while we have the lock)
+        for abs in note_abs_paths {
+            slot.expected_writes.insert(abs);
+        }
+
+        Ok((result, all_edges, removed_folders))
     })?;
 
-    for note_abs_path in &note_paths {
-        state.register_expected_write(&root, note_abs_path.clone());
-    }
-    // Also register the folder itself in case the watcher fires on directory removal
+    // Also register the folder itself
     state.register_expected_write(&root, abs_path);
 
-    state.with_slot_mut(&root, |slot| handlers::handle_delete_folder(&mut slot.workspace, &path, force.unwrap_or(false)))
+    // Emit topology event with all removed nodes and edges
+    let mut removed_nodes: Vec<String> = result.deleted_paths.clone();
+    removed_nodes.extend(removed_folder_nodes);
+
+    emit_topology_event(&app, &root, vec![], removed_nodes, vec![], edges_before);
+
+    Ok(result)
 }
 
 #[tauri::command]
@@ -375,13 +565,22 @@ pub fn create_folder(state: State<'_, AppState>, path: String) -> Result<(), Str
 }
 
 #[tauri::command]
-pub fn create_plain_file(state: State<'_, AppState>, path: String, body: Option<String>) -> Result<String, String> {
+pub fn create_plain_file(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    path: String,
+    body: Option<String>,
+) -> Result<String, String> {
     let root = state.resolve_root(None)?;
     let abs_path = state.with_slot(&root, |slot| {
         handlers::validate_relative_path(&slot.workspace.root, &path)
     })?;
     state.register_expected_write(&root, abs_path);
-    state.with_slot(&root, |slot| handlers::handle_create_plain_file(&slot.workspace, &path, body.as_deref()))
+    let result = state.with_slot(&root, |slot| handlers::handle_create_plain_file(&slot.workspace, &path, body.as_deref()))?;
+
+    emit_files_changed_event(&app, &root, vec![path.clone()], vec![]);
+
+    Ok(result)
 }
 
 #[tauri::command]
@@ -400,13 +599,32 @@ pub fn write_plain_file(state: State<'_, AppState>, path: String, body: String) 
 }
 
 #[tauri::command]
-pub fn write_raw_note(state: State<'_, AppState>, path: String, content: String) -> Result<(), String> {
+pub fn write_raw_note(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    path: String,
+    content: String,
+) -> Result<(), String> {
     let root = state.resolve_root(None)?;
     let abs_path = state.with_slot(&root, |slot| {
         handlers::validate_relative_path(&slot.workspace.root, &path)
     })?;
     state.register_expected_write(&root, abs_path);
-    state.with_slot_mut(&root, |slot| handlers::handle_write_raw_note(&mut slot.workspace, &path, &content))
+
+    let diff = state.with_slot_mut(&root, |slot| {
+        handlers::handle_write_raw_note(&mut slot.workspace, &path, &content)
+    })?;
+
+    emit_topology_event(
+        &app,
+        &root,
+        diff.added_nodes.iter().map(node_to_payload).collect(),
+        diff.removed_nodes.iter().map(|p| p.as_str().to_string()).collect(),
+        diff.added_edges.iter().map(edge_to_payload).collect(),
+        diff.removed_edges.iter().map(edge_to_payload).collect(),
+    );
+
+    Ok(())
 }
 
 #[tauri::command]

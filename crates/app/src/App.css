@@ -1120,6 +1120,34 @@ body {
 .editor-body .cm-editor .cm-table-row-even {
   background: var(--bg-secondary);
 }
+.editor-body .cm-editor .cm-table-widget {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.25em 0;
+  font-size: 0.92em;
+  font-family: var(--ui-font-family);
+}
+.editor-body .cm-editor .cm-table-widget th,
+.editor-body .cm-editor .cm-table-widget td {
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  text-align: left;
+}
+.editor-body .cm-editor .cm-table-widget th {
+  background: var(--bg-secondary);
+  font-weight: 600;
+}
+.editor-body .cm-editor .cm-table-widget tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--bg-secondary) 50%, transparent);
+}
+.editor-body .cm-editor .cm-table-widget code {
+  font-family: ui-monospace, 'Menlo', 'Monaco', 'Consolas', monospace;
+  font-size: 0.88em;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 1px 4px;
+}
 .editor-body .cm-editor .cm-image-url { opacity: 0.4; font-size: 0.85em; }
 .editor-body .cm-editor .cm-link-dim { opacity: 0.4; }
 .editor-body .cm-editor .cm-checkbox-widget {

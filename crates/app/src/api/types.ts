@@ -96,7 +96,8 @@ export type WorkspaceEvent =
   | { type: "node-deleted"; path: string; workspace_root?: string }
   | { type: "edge-created"; edge: EdgeDto; workspace_root?: string }
   | { type: "edge-deleted"; edge: EdgeDto; workspace_root?: string }
-  | { type: "topology-changed"; added_nodes: NodeDto[]; removed_nodes: string[]; added_edges: EdgeDto[]; removed_edges: EdgeDto[]; workspace_root?: string };
+  | { type: "topology-changed"; added_nodes: NodeDto[]; removed_nodes: string[]; added_edges: EdgeDto[]; removed_edges: EdgeDto[]; workspace_root?: string }
+  | { type: "files-changed"; added_files: string[]; removed_files: string[]; workspace_root?: string };
 
 // ── API Interface ──────────────────────────────────────────────────
 

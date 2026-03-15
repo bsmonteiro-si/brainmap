@@ -76,6 +76,15 @@ export function applyTopologyDiff(state: GraphData, event: WorkspaceEvent): Grap
       );
       newEdges = [...newEdges, ...event.added_edges];
 
+      // Deduplicate edges (safety net for double-emit from command + watcher)
+      const edgeKeys = new Set<string>();
+      newEdges = newEdges.filter((e) => {
+        const key = `${e.source}|${e.target}|${e.rel}`;
+        if (edgeKeys.has(key)) return false;
+        edgeKeys.add(key);
+        return true;
+      });
+
       // Update workspaceFiles: remove deleted non-folder nodes, add new non-folder nodes
       const removedSet = new Set(event.removed_nodes);
       let newFiles = workspaceFiles.filter((f) => !removedSet.has(f));
@@ -86,6 +95,17 @@ export function applyTopologyDiff(state: GraphData, event: WorkspaceEvent): Grap
       }
 
       return { nodes, edges: newEdges, workspaceFiles: newFiles };
+    }
+
+    case "files-changed": {
+      const removedSet = new Set(event.removed_files);
+      let newFiles = workspaceFiles.filter((f) => !removedSet.has(f));
+      for (const f of event.added_files) {
+        if (!newFiles.includes(f)) {
+          newFiles.push(f);
+        }
+      }
+      return { nodes, edges, workspaceFiles: newFiles };
     }
 
     default:

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Text } from "@codemirror/state";
-import { scanFencedBlocks, classifyLines } from "./cmMarkdownDecorations";
+import { scanFencedBlocks, classifyLines, parseMarkdownTable, renderInlineMarkdown } from "./cmMarkdownDecorations";
 
 function doc(s: string): Text {
   return Text.of(s.split("\n"));
@@ -166,5 +166,156 @@ describe("classifyLines", () => {
       const cls = classifyLines(d);
       expect(cls.blockquote).toEqual([]);
     });
+  });
+});
+
+describe("parseMarkdownTable", () => {
+  it("parses a basic table", () => {
+    const result = parseMarkdownTable([
+      "| Name | Age |",
+      "|------|-----|",
+      "| Alice | 30 |",
+      "| Bob | 25 |",
+    ]);
+    expect(result).not.toBeNull();
+    expect(result!.headerCells).toEqual(["Name", "Age"]);
+    expect(result!.alignments).toEqual(["left", "left"]);
+    expect(result!.rows).toEqual([["Alice", "30"], ["Bob", "25"]]);
+  });
+
+  it("parses alignment from delimiter row", () => {
+    const result = parseMarkdownTable([
+      "| Left | Center | Right |",
+      "|:-----|:------:|------:|",
+      "| a | b | c |",
+    ]);
+    expect(result).not.toBeNull();
+    expect(result!.alignments).toEqual(["left", "center", "right"]);
+  });
+
+  it("pads rows with fewer cells", () => {
+    const result = parseMarkdownTable([
+      "| A | B | C |",
+      "|---|---|---|",
+      "| 1 |",
+    ]);
+    expect(result).not.toBeNull();
+    expect(result!.rows[0]).toEqual(["1", "", ""]);
+  });
+
+  it("trims rows with extra cells", () => {
+    const result = parseMarkdownTable([
+      "| A | B |",
+      "|---|---|",
+      "| 1 | 2 | 3 | 4 |",
+    ]);
+    expect(result).not.toBeNull();
+    expect(result!.rows[0]).toEqual(["1", "2"]);
+  });
+
+  it("handles table with no data rows", () => {
+    const result = parseMarkdownTable([
+      "| Header |",
+      "|--------|",
+    ]);
+    expect(result).not.toBeNull();
+    expect(result!.headerCells).toEqual(["Header"]);
+    expect(result!.rows).toEqual([]);
+  });
+
+  it("returns null for insufficient lines", () => {
+    expect(parseMarkdownTable(["| A |"])).toBeNull();
+    expect(parseMarkdownTable([])).toBeNull();
+  });
+
+  it("returns null for empty header", () => {
+    expect(parseMarkdownTable(["", "|---|"])).toBeNull();
+  });
+
+  it("handles cells with inline formatting", () => {
+    const result = parseMarkdownTable([
+      "| Name | Score |",
+      "|------|-------|",
+      "| **Bold** | `100` |",
+    ]);
+    expect(result).not.toBeNull();
+    expect(result!.rows[0]).toEqual(["**Bold**", "`100`"]);
+  });
+
+  it("preserves source text for eq comparison", () => {
+    const lines = ["| A | B |", "|---|---|", "| 1 | 2 |"];
+    const result = parseMarkdownTable(lines);
+    expect(result!.sourceText).toBe(lines.join("\n"));
+  });
+
+  it("pads alignments when delimiter has fewer columns", () => {
+    const result = parseMarkdownTable([
+      "| A | B | C |",
+      "|---|",
+      "| 1 | 2 | 3 |",
+    ]);
+    expect(result).not.toBeNull();
+    expect(result!.alignments).toEqual(["left", "left", "left"]);
+  });
+
+  it("handles single-column table", () => {
+    const result = parseMarkdownTable([
+      "| Item |",
+      "|------|",
+      "| Apple |",
+      "| Banana |",
+    ]);
+    expect(result).not.toBeNull();
+    expect(result!.headerCells).toEqual(["Item"]);
+    expect(result!.rows).toEqual([["Apple"], ["Banana"]]);
+  });
+
+  it("handles escaped pipes in cells", () => {
+    const result = parseMarkdownTable([
+      "| Expression | Result |",
+      "|------------|--------|",
+      "| a \\| b | true |",
+    ]);
+    expect(result).not.toBeNull();
+    expect(result!.rows[0]).toEqual(["a | b", "true"]);
+  });
+
+  it("rejects invalid delimiter row", () => {
+    const result = parseMarkdownTable([
+      "| A | B |",
+      "| not a delimiter |",
+      "| 1 | 2 |",
+    ]);
+    expect(result).toBeNull();
+  });
+});
+
+describe("renderInlineMarkdown", () => {
+  it("renders bold", () => {
+    expect(renderInlineMarkdown("**hello**")).toBe("<strong>hello</strong>");
+  });
+
+  it("renders italic", () => {
+    expect(renderInlineMarkdown("*hello*")).toBe("<em>hello</em>");
+  });
+
+  it("renders inline code", () => {
+    expect(renderInlineMarkdown("`code`")).toBe("<code>code</code>");
+  });
+
+  it("escapes HTML entities", () => {
+    expect(renderInlineMarkdown("<script>alert(1)</script>")).toBe(
+      "&lt;script&gt;alert(1)&lt;/script&gt;"
+    );
+  });
+
+  it("escapes HTML before applying inline markdown", () => {
+    expect(renderInlineMarkdown('**<img src=x onerror="alert(1)">**')).toBe(
+      "<strong>&lt;img src=x onerror=&quot;alert(1)&quot;&gt;</strong>"
+    );
+  });
+
+  it("handles plain text without formatting", () => {
+    expect(renderInlineMarkdown("hello world")).toBe("hello world");
   });
 });

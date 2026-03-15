@@ -10,6 +10,7 @@
 import {
   EditorView,
   Decoration,
+  WidgetType,
   type DecorationSet,
 } from "@codemirror/view";
 import { RangeSetBuilder, StateField, type Text, type Extension } from "@codemirror/state";
@@ -122,6 +123,143 @@ export function classifyLines(doc: Text): LineClassification {
 }
 
 // ---------------------------------------------------------------------------
+// Table parsing
+// ---------------------------------------------------------------------------
+export type TableAlignment = "left" | "center" | "right";
+
+export interface TableData {
+  headerCells: string[];
+  alignments: TableAlignment[];
+  rows: string[][];
+  sourceText: string;
+}
+
+function parseCells(line: string): string[] {
+  // Split by unescaped |, handling \| as literal pipe
+  const cells: string[] = [];
+  let current = "";
+  let escaped = false;
+  for (const ch of line) {
+    if (escaped) { current += ch; escaped = false; continue; }
+    if (ch === "\\") { escaped = true; continue; }
+    if (ch === "|") { cells.push(current.trim()); current = ""; continue; }
+    current += ch;
+  }
+  cells.push(current.trim());
+  // Remove empty first/last entries from leading/trailing pipes
+  if (cells.length > 0 && cells[0] === "") cells.shift();
+  if (cells.length > 0 && cells[cells.length - 1] === "") cells.pop();
+  return cells;
+}
+
+function parseAlignment(cell: string): TableAlignment {
+  const trimmed = cell.trim().replace(/\s/g, "");
+  const left = trimmed.startsWith(":");
+  const right = trimmed.endsWith(":");
+  if (left && right) return "center";
+  if (right) return "right";
+  return "left";
+}
+
+export function parseMarkdownTable(lines: string[]): TableData | null {
+  if (lines.length < 2) return null;
+  const headerCells = parseCells(lines[0]);
+  if (headerCells.length === 0) return null;
+
+  // Parse and validate delimiter row
+  const delimCells = parseCells(lines[1]);
+  const DELIM_CELL_RE = /^:?-+:?$/;
+  if (!delimCells.every((cell) => DELIM_CELL_RE.test(cell.trim()))) return null;
+  const alignments: TableAlignment[] = delimCells.map(parseAlignment);
+  // Pad alignments to match header column count
+  while (alignments.length < headerCells.length) alignments.push("left");
+
+  // Parse data rows
+  const rows: string[][] = [];
+  for (let i = 2; i < lines.length; i++) {
+    const cells = parseCells(lines[i]);
+    // Pad or trim to match column count
+    while (cells.length < headerCells.length) cells.push("");
+    if (cells.length > headerCells.length) cells.length = headerCells.length;
+    rows.push(cells);
+  }
+
+  return { headerCells, alignments, rows, sourceText: lines.join("\n") };
+}
+
+// ---------------------------------------------------------------------------
+// Table widget
+// ---------------------------------------------------------------------------
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Render simple inline markdown (bold, italic, code) to HTML, with HTML escaping */
+export function renderInlineMarkdown(text: string): string {
+  return escapeHtml(text)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+}
+
+class TableWidget extends WidgetType {
+  constructor(readonly data: TableData) {
+    super();
+  }
+
+  eq(other: TableWidget): boolean {
+    return this.data.sourceText === other.data.sourceText;
+  }
+
+  toDOM(): HTMLElement {
+    const table = document.createElement("table");
+    table.className = "cm-table-widget";
+
+    // Header
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    for (let i = 0; i < this.data.headerCells.length; i++) {
+      const th = document.createElement("th");
+      th.style.textAlign = this.data.alignments[i] || "left";
+      th.innerHTML = renderInlineMarkdown(this.data.headerCells[i]);
+      headerRow.appendChild(th);
+    }
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // Body
+    if (this.data.rows.length > 0) {
+      const tbody = document.createElement("tbody");
+      for (const row of this.data.rows) {
+        const tr = document.createElement("tr");
+        for (let i = 0; i < row.length; i++) {
+          const td = document.createElement("td");
+          td.style.textAlign = this.data.alignments[i] || "left";
+          td.innerHTML = renderInlineMarkdown(row[i]);
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+    }
+
+    return table;
+  }
+
+  get estimatedHeight(): number {
+    return (this.data.rows.length + 1) * 32;
+  }
+
+  ignoreEvent(): boolean {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Decoration builders
 // ---------------------------------------------------------------------------
 const hrLineDeco = Decoration.line({ class: "cm-hr-line" });
@@ -197,19 +335,40 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
         return false;
       }
 
-      // Table — line decorations for header, delimiter, and data rows
+      // Table — rendered widget when cursor outside, line decos when inside
       if (node.name === "Table") {
-        let rowIndex = 0;
-        const tableNode = node.node;
-        for (let child = tableNode.firstChild; child; child = child.nextSibling) {
-          const line = doc.lineAt(child.from);
-          if (child.name === "TableHeader") {
-            decos.push({ from: line.from, to: line.from, deco: tableHeaderDeco });
-          } else if (child.name === "TableDelimiter") {
-            decos.push({ from: line.from, to: line.from, deco: tableDelimDeco });
-          } else if (child.name === "TableRow") {
-            decos.push({ from: line.from, to: line.from, deco: rowIndex % 2 === 1 ? tableRowEvenDeco : tableRowDeco });
-            rowIndex++;
+        const tableStartLine = doc.lineAt(node.from).number;
+        const tableEndLine = doc.lineAt(node.to).number;
+        const cursorInTable = cursorLine >= tableStartLine && cursorLine <= tableEndLine;
+
+        if (cursorInTable) {
+          // Cursor inside table: show raw markdown with line decorations
+          let rowIndex = 0;
+          const tableNode = node.node;
+          for (let child = tableNode.firstChild; child; child = child.nextSibling) {
+            const line = doc.lineAt(child.from);
+            if (child.name === "TableHeader") {
+              decos.push({ from: line.from, to: line.from, deco: tableHeaderDeco });
+            } else if (child.name === "TableDelimiter") {
+              decos.push({ from: line.from, to: line.from, deco: tableDelimDeco });
+            } else if (child.name === "TableRow") {
+              decos.push({ from: line.from, to: line.from, deco: rowIndex % 2 === 1 ? tableRowEvenDeco : tableRowDeco });
+              rowIndex++;
+            }
+          }
+        } else {
+          // Cursor outside table: replace with rendered HTML table widget
+          const lines: string[] = [];
+          for (let ln = tableStartLine; ln <= tableEndLine; ln++) {
+            lines.push(doc.line(ln).text);
+          }
+          const tableData = parseMarkdownTable(lines);
+          if (tableData) {
+            decos.push({
+              from: doc.line(tableStartLine).from,
+              to: doc.line(tableEndLine).to,
+              deco: Decoration.replace({ widget: new TableWidget(tableData), block: true }),
+            });
           }
         }
         return false;
