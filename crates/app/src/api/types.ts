@@ -140,6 +140,7 @@ export interface BrainMapAPI {
   createFolder(path: string): Promise<void>;
   deleteFolder(path: string, force?: boolean): Promise<{ deleted_paths: string[] }>;
   listWorkspaceFiles(): Promise<string[]>;
+  createPlainFile(path: string, body?: string): Promise<string>;
   readPlainFile(path: string): Promise<PlainFileDetail>;
   writePlainFile(path: string, body: string): Promise<void>;
   writeRawNote(path: string, content: string): Promise<void>;

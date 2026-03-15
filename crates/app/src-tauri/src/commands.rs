@@ -375,6 +375,16 @@ pub fn create_folder(state: State<'_, AppState>, path: String) -> Result<(), Str
 }
 
 #[tauri::command]
+pub fn create_plain_file(state: State<'_, AppState>, path: String, body: Option<String>) -> Result<String, String> {
+    let root = state.resolve_root(None)?;
+    let abs_path = state.with_slot(&root, |slot| {
+        handlers::validate_relative_path(&slot.workspace.root, &path)
+    })?;
+    state.register_expected_write(&root, abs_path);
+    state.with_slot(&root, |slot| handlers::handle_create_plain_file(&slot.workspace, &path, body.as_deref()))
+}
+
+#[tauri::command]
 pub fn read_plain_file(state: State<'_, AppState>, path: String) -> Result<PlainFileDto, String> {
     state.with_active(|ws| handlers::handle_read_plain_file(ws, &path))
 }

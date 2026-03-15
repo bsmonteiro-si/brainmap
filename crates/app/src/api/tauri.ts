@@ -116,6 +116,10 @@ export class TauriBridge implements BrainMapAPI {
     return invoke<string[]>("list_workspace_files");
   }
 
+  async createPlainFile(path: string, body?: string): Promise<string> {
+    return invoke<string>("create_plain_file", { path, body });
+  }
+
   async readPlainFile(path: string): Promise<PlainFileDetail> {
     return invoke<PlainFileDetail>("read_plain_file", { path });
   }

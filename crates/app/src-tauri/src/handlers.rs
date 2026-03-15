@@ -387,6 +387,22 @@ pub fn handle_read_plain_file(ws: &Workspace, path: &str) -> Result<PlainFileDto
     }
 }
 
+/// Create a new plain (non-BrainMap) file on disk.
+/// Creates parent directories if needed. Rejects if the file already exists.
+pub fn handle_create_plain_file(ws: &Workspace, path: &str, body: Option<&str>) -> Result<String, String> {
+    let abs = validate_relative_path(&ws.root, path)?;
+    if abs.exists() {
+        return Err(format!("File already exists: {}", path));
+    }
+    if let Some(parent) = abs.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create directories: {}", e))?;
+    }
+    std::fs::write(&abs, body.unwrap_or(""))
+        .map_err(|e| format!("Failed to create file: {}", e))?;
+    Ok(path.to_string())
+}
+
 /// Write a plain (non-BrainMap) file's raw content.
 /// Rejects writes to files tracked in the BrainMap graph (use `update_note` instead).
 pub fn handle_write_plain_file(ws: &Workspace, path: &str, body: &str) -> Result<(), String> {

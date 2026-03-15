@@ -291,6 +291,10 @@ export class MockBridge implements BrainMapAPI {
     return Array.from(mockState.notes.keys());
   }
 
+  async createPlainFile(path: string, _body?: string): Promise<string> {
+    return path;
+  }
+
   async readPlainFile(path: string): Promise<PlainFileDetail> {
     return { path, body: `(mock plain file: ${path})`, binary: false };
   }

@@ -160,6 +160,7 @@ interface UIState {
   createNoteInitialPath: string | null;
   createNoteInitialTitle: string | null;
   createNoteMode: CreateNoteMode;
+  createFileKind: "note" | "file";
   createAndLinkSource: CreateAndLinkSource | null;
   createNoteSaveAsBody: string | null;
   createNoteSaveAsTabId: string | null;
@@ -369,6 +370,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   createNoteInitialPath: null,
   createNoteInitialTitle: null,
   createNoteMode: "default",
+  createFileKind: "note",
   createAndLinkSource: null,
   createNoteSaveAsBody: null,
   createNoteSaveAsTabId: null,
@@ -460,20 +462,21 @@ export const useUIStore = create<UIState>((set, get) => ({
   closeCommandPalette: () => set({ commandPaletteOpen: false }),
   openCreateNoteDialog: (pathOrOpts?: string | CreateNoteDialogOpts) => {
     if (typeof pathOrOpts === "string" || pathOrOpts === undefined) {
-      set({ createNoteDialogOpen: true, createNoteInitialPath: pathOrOpts ?? null, createNoteInitialTitle: null, createNoteMode: "default", createAndLinkSource: null, createNoteSaveAsBody: null, createNoteSaveAsTabId: null });
+      set({ createNoteDialogOpen: true, createNoteInitialPath: pathOrOpts ?? null, createNoteInitialTitle: null, createNoteMode: "default", createFileKind: "note", createAndLinkSource: null, createNoteSaveAsBody: null, createNoteSaveAsTabId: null });
     } else {
       set({
         createNoteDialogOpen: true,
         createNoteInitialPath: pathOrOpts.initialPath ?? null,
         createNoteInitialTitle: pathOrOpts.initialTitle ?? null,
         createNoteMode: pathOrOpts.mode ?? "default",
+        createFileKind: "note",
         createAndLinkSource: pathOrOpts.linkSource ?? null,
         createNoteSaveAsBody: pathOrOpts.saveAsBody ?? null,
         createNoteSaveAsTabId: pathOrOpts.saveAsTabId ?? null,
       });
     }
   },
-  closeCreateNoteDialog: () => set({ createNoteDialogOpen: false, createNoteInitialPath: null, createNoteInitialTitle: null, createNoteMode: "default", createAndLinkSource: null, createNoteSaveAsBody: null, createNoteSaveAsTabId: null }),
+  closeCreateNoteDialog: () => set({ createNoteDialogOpen: false, createNoteInitialPath: null, createNoteInitialTitle: null, createNoteMode: "default", createFileKind: "note", createAndLinkSource: null, createNoteSaveAsBody: null, createNoteSaveAsTabId: null }),
   openUnsavedChangesDialog: (tabId: string) => set({ unsavedChangesDialogOpen: true, unsavedChangesTabId: tabId }),
   closeUnsavedChangesDialog: () => set({ unsavedChangesDialogOpen: false, unsavedChangesTabId: null }),
   openCreateFolderDialog: (initialPath?: string) => set({ createFolderDialogOpen: true, createFolderInitialPath: initialPath ?? null }),

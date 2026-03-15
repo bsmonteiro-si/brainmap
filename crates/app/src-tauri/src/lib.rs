@@ -44,6 +44,7 @@ pub fn run() {
             commands::create_folder,
             commands::delete_folder,
             commands::list_workspace_files,
+            commands::create_plain_file,
             commands::read_plain_file,
             commands::write_plain_file,
             commands::write_raw_note,

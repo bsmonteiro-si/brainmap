@@ -21,6 +21,10 @@ export function CreateNoteDialog() {
   const initialPath = useUIStore((s) => s.createNoteInitialPath);
   const initialTitle = useUIStore((s) => s.createNoteInitialTitle);
   const createNoteMode = useUIStore((s) => s.createNoteMode);
+  const fileKind = useUIStore((s) => s.createFileKind);
+  const setFileKind = useCallback((kind: "note" | "file") => {
+    useUIStore.setState({ createFileKind: kind });
+  }, []);
   const linkSource = useUIStore((s) => s.createAndLinkSource);
   const saveAsBody = useUIStore((s) => s.createNoteSaveAsBody);
   const saveAsTabId = useUIStore((s) => s.createNoteSaveAsTabId);
@@ -28,6 +32,9 @@ export function CreateNoteDialog() {
 
   const isCreateAndLink = createNoteMode === "create-and-link" && linkSource !== null;
   const isSaveAs = saveAsBody != null && saveAsTabId != null;
+  const isNoteMode = fileKind === "note";
+  // Special modes always force note mode
+  const showModeToggle = !isCreateAndLink && !isSaveAs;
 
   const [path, setPath] = useState(initialPath ?? "");
   // Auto-populate title from initialTitle (create-and-link) or from path
@@ -58,7 +65,7 @@ export function CreateNoteDialog() {
   const handlePathChange = (value: string) => {
     setPath(value);
     setPathDirty(true);
-    if (!titleManuallyEdited) {
+    if (!titleManuallyEdited && isNoteMode) {
       setTitle(titleFromPath(value));
     }
   };
@@ -69,78 +76,106 @@ export function CreateNoteDialog() {
   };
 
   // Validate inline — only show errors after the user has edited the field
-  const pathError = pathDirty && path.length > 0 && !path.endsWith(".md")
-    ? "Path must end with .md"
+  const notePathError = isNoteMode && pathDirty && path.length > 0 && path.trim().length === 0
+    ? "Path must not be empty"
     : null;
-  const titleError = pathDirty && title.trim().length === 0 && path.length > 0
+  const fileBasename = path.split("/").pop() ?? path;
+  const fileHasExtension = fileBasename.includes(".") && !fileBasename.endsWith(".");
+  const filePathError = !isNoteMode && pathDirty && path.length > 0
+    ? path.endsWith(".md")
+      ? "Use Note mode for .md files"
+      : !fileHasExtension
+        ? "Path must include a file extension"
+        : null
+    : null;
+  const pathError = isNoteMode ? notePathError : filePathError;
+  const titleError = isNoteMode && pathDirty && title.trim().length === 0 && path.length > 0
     ? "Title must not be empty"
     : null;
 
-  const isValid = path.endsWith(".md") && title.trim().length > 0;
+  const isValid = isNoteMode
+    ? path.trim().length > 0 && title.trim().length > 0
+    : path.trim().length > 0 && fileHasExtension && !path.endsWith(".md");
 
   const handleSubmit = useCallback(async () => {
     if (!isValid || isSubmitting) return;
     setIsSubmitting(true);
     setError(null);
 
-    const parsedTags = tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0);
-
     try {
       const api = await getAPI();
-      const createdPath = await api.createNote({
-        path,
-        title: title.trim(),
-        note_type: noteType,
-        tags: parsedTags,
-        body: body || undefined,
-      });
 
-      // Optimistic update: add to graph store
-      useGraphStore.getState().createNote(createdPath, title.trim(), noteType);
-      useUndoStore.getState().pushAction({ kind: "create-note", path: createdPath });
+      if (isNoteMode) {
+        // Note creation path (also covers create-and-link and save-as, which force note mode)
+        const finalPath = path.endsWith(".md") ? path : path + ".md";
+        const parsedTags = tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter((t) => t.length > 0);
 
-      // Clean up empty folder tracking — the folder is no longer empty
-      const parentDir = createdPath.includes("/")
-        ? createdPath.slice(0, createdPath.lastIndexOf("/"))
-        : null;
-      if (parentDir) {
-        const { emptyFolders, removeEmptyFolder } = useUIStore.getState();
-        if (emptyFolders.has(parentDir)) {
-          removeEmptyFolder(parentDir);
+        const createdPath = await api.createNote({
+          path: finalPath,
+          title: title.trim(),
+          note_type: noteType,
+          tags: parsedTags,
+          body: body || undefined,
+        });
+
+        // Optimistic update: add to graph store
+        useGraphStore.getState().createNote(createdPath, title.trim(), noteType);
+        useUndoStore.getState().pushAction({ kind: "create-note", path: createdPath });
+
+        // Clean up empty folder tracking — the folder is no longer empty
+        const parentDir = createdPath.includes("/")
+          ? createdPath.slice(0, createdPath.lastIndexOf("/"))
+          : null;
+        if (parentDir) {
+          const { emptyFolders, removeEmptyFolder } = useUIStore.getState();
+          if (emptyFolders.has(parentDir)) {
+            removeEmptyFolder(parentDir);
+          }
         }
-      }
 
-      if (isSaveAs && saveAsTabId) {
-        // Save-as mode: close the untitled tab, then open the real note
-        useTabStore.getState().closeTab(saveAsTabId);
-        await useEditorStore.getState().openNote(createdPath);
-      } else if (isCreateAndLink && linkSource) {
-        // Create the link from source note to the newly created note
-        try {
-          await api.createLink(linkSource.notePath, createdPath, linkSource.rel);
-          useGraphStore.getState().applyEvent({
-            type: "edge-created",
-            edge: {
-              source: linkSource.notePath,
-              target: createdPath,
-              rel: linkSource.rel,
-              kind: "Explicit",
-            },
-          });
-          await useEditorStore.getState().refreshActiveNote();
-        } catch (linkErr) {
-          // Note was created but link failed — close dialog, the new note now
-          // exists in the graph so the user can link to it manually from LinksEditor
-          log.warn("components::CreateNoteDialog", "note created but linking failed", { error: String(linkErr) });
-          close();
-          return;
+        if (isSaveAs && saveAsTabId) {
+          useTabStore.getState().closeTab(saveAsTabId);
+          await useEditorStore.getState().openNote(createdPath);
+        } else if (isCreateAndLink && linkSource) {
+          try {
+            await api.createLink(linkSource.notePath, createdPath, linkSource.rel);
+            useGraphStore.getState().applyEvent({
+              type: "edge-created",
+              edge: {
+                source: linkSource.notePath,
+                target: createdPath,
+                rel: linkSource.rel,
+                kind: "Explicit",
+              },
+            });
+            await useEditorStore.getState().refreshActiveNote();
+          } catch (linkErr) {
+            log.warn("components::CreateNoteDialog", "note created but linking failed", { error: String(linkErr) });
+            close();
+            return;
+          }
+        } else {
+          await useEditorStore.getState().openNote(createdPath);
         }
       } else {
-        // Default mode: open the new note in editor
-        await useEditorStore.getState().openNote(createdPath);
+        // Plain file creation path — no graph update, no undo (plain files are not graph-managed)
+        const createdPath = await api.createPlainFile(path, body || undefined);
+
+        // Clean up empty folder tracking
+        const parentDir = createdPath.includes("/")
+          ? createdPath.slice(0, createdPath.lastIndexOf("/"))
+          : null;
+        if (parentDir) {
+          const { emptyFolders, removeEmptyFolder } = useUIStore.getState();
+          if (emptyFolders.has(parentDir)) {
+            removeEmptyFolder(parentDir);
+          }
+        }
+
+        await useEditorStore.getState().openPlainFile(createdPath);
       }
 
       close();
@@ -148,7 +183,7 @@ export function CreateNoteDialog() {
       setError(e instanceof Error ? e.message : String(e));
       setIsSubmitting(false);
     }
-  }, [isValid, isSubmitting, path, title, noteType, tags, body, close, isCreateAndLink, linkSource, isSaveAs, saveAsTabId]);
+  }, [isValid, isSubmitting, path, title, noteType, tags, body, close, isCreateAndLink, linkSource, isSaveAs, saveAsTabId, isNoteMode]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -282,10 +317,55 @@ export function CreateNoteDialog() {
     padding: "6px 10px",
   };
 
+  const segmentedStyle: React.CSSProperties = {
+    display: "flex",
+    borderRadius: 6,
+    border: "1px solid var(--border-color)",
+    overflow: "hidden",
+  };
+
+  const segBtnStyle = (active: boolean): React.CSSProperties => ({
+    flex: 1,
+    padding: "5px 12px",
+    fontSize: 13,
+    fontWeight: active ? 600 : 400,
+    border: "none",
+    background: active ? "var(--accent)" : "var(--bg-secondary)",
+    color: active ? "white" : "var(--text-secondary)",
+    cursor: "pointer",
+  });
+
+  const headingText = isSaveAs
+    ? "Save As"
+    : isCreateAndLink
+      ? "Create & Link"
+      : isNoteMode
+        ? "Create Note"
+        : "Create File";
+
   return (
     <div style={overlayStyle} onClick={handleOverlayClick}>
       <div style={boxStyle} onKeyDown={handleKeyDown}>
-        <h2 style={headingStyle}>{isSaveAs ? "Save As" : isCreateAndLink ? "Create & Link" : "Create Note"}</h2>
+        <h2 style={headingStyle}>{headingText}</h2>
+
+        {showModeToggle && (
+          <div style={segmentedStyle}>
+            <button
+              style={segBtnStyle(isNoteMode)}
+              onClick={() => setFileKind("note")}
+              disabled={isSubmitting}
+            >
+              Note
+            </button>
+            <button
+              style={segBtnStyle(!isNoteMode)}
+              onClick={() => setFileKind("file")}
+              disabled={isSubmitting}
+            >
+              File
+            </button>
+          </div>
+        )}
 
         <div style={fieldGroupStyle}>
           <label style={labelStyle} htmlFor="cn-path">Path *</label>
@@ -296,53 +376,60 @@ export function CreateNoteDialog() {
             style={pathError ? inputErrorStyle : inputStyle}
             value={path}
             onChange={(e) => handlePathChange(e.target.value)}
-            placeholder="Concepts/My-Note.md"
+            placeholder={isNoteMode ? "Concepts/My-Note" : "config.json"}
             disabled={isSubmitting}
           />
           {pathError && <span style={inlineErrorStyle}>{pathError}</span>}
+          {isNoteMode && !isSaveAs && (
+            <span style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 1 }}>.md extension added automatically</span>
+          )}
         </div>
 
-        <div style={fieldGroupStyle}>
-          <label style={labelStyle} htmlFor="cn-title">Title *</label>
-          <input
-            id="cn-title"
-            type="text"
-            style={titleError ? inputErrorStyle : inputStyle}
-            value={title}
-            onChange={(e) => handleTitleChange(e.target.value)}
-            placeholder="My Note"
-            disabled={isSubmitting}
-          />
-          {titleError && <span style={inlineErrorStyle}>{titleError}</span>}
-        </div>
+        {isNoteMode && (
+          <>
+            <div style={fieldGroupStyle}>
+              <label style={labelStyle} htmlFor="cn-title">Title *</label>
+              <input
+                id="cn-title"
+                type="text"
+                style={titleError ? inputErrorStyle : inputStyle}
+                value={title}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                placeholder="My Note"
+                disabled={isSubmitting}
+              />
+              {titleError && <span style={inlineErrorStyle}>{titleError}</span>}
+            </div>
 
-        <div style={fieldGroupStyle}>
-          <label style={labelStyle} htmlFor="cn-type">Type *</label>
-          <select
-            id="cn-type"
-            style={inputStyle}
-            value={noteType}
-            onChange={(e) => setNoteType(e.target.value)}
-            disabled={isSubmitting}
-          >
-            {noteTypes.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </div>
+            <div style={fieldGroupStyle}>
+              <label style={labelStyle} htmlFor="cn-type">Type *</label>
+              <select
+                id="cn-type"
+                style={inputStyle}
+                value={noteType}
+                onChange={(e) => setNoteType(e.target.value)}
+                disabled={isSubmitting}
+              >
+                {noteTypes.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
 
-        <div style={fieldGroupStyle}>
-          <label style={labelStyle} htmlFor="cn-tags">Tags (comma-separated)</label>
-          <input
-            id="cn-tags"
-            type="text"
-            style={inputStyle}
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            placeholder="causality, statistics"
-            disabled={isSubmitting}
-          />
-        </div>
+            <div style={fieldGroupStyle}>
+              <label style={labelStyle} htmlFor="cn-tags">Tags (comma-separated)</label>
+              <input
+                id="cn-tags"
+                type="text"
+                style={inputStyle}
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="causality, statistics"
+                disabled={isSubmitting}
+              />
+            </div>
+          </>
+        )}
 
         {!isSaveAs && (
           <div style={fieldGroupStyle}>
@@ -352,7 +439,7 @@ export function CreateNoteDialog() {
               style={textareaStyle}
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="Initial note content..."
+              placeholder={isNoteMode ? "Initial note content..." : "File content..."}
               disabled={isSubmitting}
             />
           </div>
