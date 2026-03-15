@@ -239,6 +239,8 @@ impl Workspace {
             "workspace opened"
         );
 
+        graph.assert_invariants();
+
         Ok(Self {
             root: root.to_path_buf(),
             config,
@@ -378,6 +380,7 @@ impl Workspace {
 
         info!(path = rel_path, title = title, note_type = note_type, "note created");
         self.notes.insert(path.clone(), note);
+        self.graph.assert_invariants();
         Ok(path)
     }
 
@@ -486,6 +489,7 @@ impl Workspace {
         }
 
         info!(path = rel_path, force = force, "note deleted");
+        self.graph.assert_invariants();
         Ok(())
     }
 
@@ -550,6 +554,7 @@ impl Workspace {
         self.index.add_edges(&[edge])?;
 
         info!(source = source_path, target = target_path, rel = rel, "link created");
+        self.graph.assert_invariants();
         Ok(())
     }
 
@@ -640,6 +645,7 @@ impl Workspace {
         self.index.remove_edge(&source, &target, rel)?;
 
         info!(source = source_path, target = target_path, rel = rel, "link deleted");
+        self.graph.assert_invariants();
         Ok(())
     }
 
@@ -715,6 +721,7 @@ impl Workspace {
         self.notes.insert(path, new_note);
 
         debug!(path = rel_path, "file reloaded");
+        self.graph.assert_invariants();
         Ok(GraphDiff {
             added_nodes: vec![], // node already existed, just updated
             removed_nodes: vec![],
@@ -785,6 +792,7 @@ impl Workspace {
         new_edges.extend(folder_edges);
 
         debug!(path = rel_path, "file added");
+        self.graph.assert_invariants();
         Ok(GraphDiff {
             added_nodes,
             removed_nodes: vec![],
@@ -825,6 +833,7 @@ impl Workspace {
         }
 
         debug!(path = rel_path, "file removed");
+        self.graph.assert_invariants();
         Ok(GraphDiff {
             added_nodes: vec![],
             removed_nodes,
@@ -987,6 +996,7 @@ impl Workspace {
         self.index.add_edges(&new_edges)?;
 
         info!(old_path = old_path, new_path = new_path, rewritten_count = rewritten.len(), "note moved");
+        self.graph.assert_invariants();
         Ok(rewritten)
     }
 
@@ -1229,6 +1239,7 @@ impl Workspace {
             rewritten_count = rewritten.len(),
             "folder moved"
         );
+        self.graph.assert_invariants();
         Ok(MoveFolderResult {
             new_folder: new_folder.to_string(),
             moved_notes,
