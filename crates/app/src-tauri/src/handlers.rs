@@ -482,6 +482,45 @@ pub(crate) fn validate_relative_path(root: &std::path::Path, path: &str) -> Resu
     Ok(normalized)
 }
 
+/// Load PDF highlights from a sidecar JSON file next to the PDF.
+/// Returns empty vec if the sidecar file doesn't exist (not an error).
+pub fn handle_load_pdf_highlights(ws: &Workspace, pdf_path: &str) -> Result<Vec<PdfHighlightDto>, String> {
+    let sidecar = format!("{}.highlights.json", pdf_path);
+    let abs = validate_relative_path(&ws.root, &sidecar)?;
+    if !abs.exists() {
+        return Ok(Vec::new());
+    }
+    let content = std::fs::read_to_string(&abs)
+        .map_err(|e| format!("Failed to read highlights file: {}", e))?;
+    let highlights: Vec<PdfHighlightDto> = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse highlights JSON: {}", e))?;
+    Ok(highlights)
+}
+
+/// Save PDF highlights to a sidecar JSON file next to the PDF.
+/// If the highlights vec is empty, deletes the sidecar file.
+pub fn handle_save_pdf_highlights(ws: &Workspace, pdf_path: &str, highlights: Vec<PdfHighlightDto>) -> Result<(), String> {
+    let sidecar = format!("{}.highlights.json", pdf_path);
+    let abs = validate_relative_path(&ws.root, &sidecar)?;
+    if highlights.is_empty() {
+        // Clean up empty file
+        if abs.exists() {
+            std::fs::remove_file(&abs)
+                .map_err(|e| format!("Failed to delete highlights file: {}", e))?;
+        }
+        return Ok(());
+    }
+    let json = serde_json::to_string_pretty(&highlights)
+        .map_err(|e| format!("Failed to serialize highlights: {}", e))?;
+    if let Some(parent) = abs.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create directories: {}", e))?;
+    }
+    std::fs::write(&abs, json)
+        .map_err(|e| format!("Failed to write highlights file: {}", e))?;
+    Ok(())
+}
+
 /// List all files in the workspace directory (recursive, no filtering).
 /// Returns relative paths from the workspace root.
 pub fn handle_list_workspace_files(ws: &Workspace) -> Vec<String> {

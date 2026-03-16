@@ -12,6 +12,22 @@ export type { NoteDetailDto as NoteDetail } from "./generated";
 export type { PlainFileDto as PlainFileDetail } from "./generated";
 export type { PdfMetaDto as PdfFileMeta } from "./generated";
 export type { NodeSummaryDto as NodeSummary } from "./generated";
+
+export interface HighlightRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface PdfHighlight {
+  id: string;
+  page: number;
+  rects: HighlightRect[];
+  text: string;
+  color: string;
+  created_at: string;
+}
 export type { SearchResultDto as SearchResult } from "./generated";
 export type { SubgraphDto as Subgraph } from "./generated";
 
@@ -91,6 +107,8 @@ export interface BrainMapAPI {
   createPlainFile(path: string, body?: string): Promise<string>;
   readPlainFile(path: string): Promise<PlainFileDto>;
   resolvePdfPath(path: string): Promise<PdfMetaDto>;
+  loadPdfHighlights(pdfPath: string): Promise<PdfHighlight[]>;
+  savePdfHighlights(pdfPath: string, highlights: PdfHighlight[]): Promise<void>;
   writePlainFile(path: string, body: string): Promise<void>;
   writeRawNote(path: string, content: string): Promise<void>;
   moveNote(oldPath: string, newPath: string): Promise<{ new_path: string; rewritten_paths: string[] }>;

@@ -589,6 +589,16 @@ pub fn resolve_pdf_path(state: State<'_, AppState>, path: String) -> Result<PdfM
 }
 
 #[tauri::command]
+pub fn load_pdf_highlights(state: State<'_, AppState>, pdf_path: String) -> Result<Vec<PdfHighlightDto>, String> {
+    state.with_active(|ws| handlers::handle_load_pdf_highlights(ws, &pdf_path))
+}
+
+#[tauri::command]
+pub fn save_pdf_highlights(state: State<'_, AppState>, pdf_path: String, highlights: Vec<PdfHighlightDto>) -> Result<(), String> {
+    state.with_active(|ws| handlers::handle_save_pdf_highlights(ws, &pdf_path, highlights))
+}
+
+#[tauri::command]
 pub fn write_plain_file(state: State<'_, AppState>, path: String, body: String) -> Result<(), String> {
     let root = state.resolve_root(None)?;
     let abs_path = state.with_slot(&root, |slot| {

@@ -5,6 +5,7 @@ import type {
   NodeSummary,
   NoteDetail,
   PdfFileMeta,
+  PdfHighlight,
   PlainFileDetail,
   SearchFilters,
   SearchResult,
@@ -302,6 +303,14 @@ export class MockBridge implements BrainMapAPI {
 
   async resolvePdfPath(path: string): Promise<PdfFileMeta> {
     return { path, absolute_path: `/mock/seed/${path}`, size_bytes: 0 };
+  }
+
+  async loadPdfHighlights(_pdfPath: string): Promise<PdfHighlight[]> {
+    return [];
+  }
+
+  async savePdfHighlights(_pdfPath: string, _highlights: PdfHighlight[]): Promise<void> {
+    // No-op in mock
   }
 
   async writePlainFile(_path: string, _body: string): Promise<void> {

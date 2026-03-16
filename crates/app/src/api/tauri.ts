@@ -7,6 +7,7 @@ import type {
   NodeSummary,
   NoteDetail,
   PdfFileMeta,
+  PdfHighlight,
   PlainFileDetail,
   SearchFilters,
   SearchResult,
@@ -127,6 +128,14 @@ export class TauriBridge implements BrainMapAPI {
 
   async resolvePdfPath(path: string): Promise<PdfFileMeta> {
     return invoke<PdfFileMeta>("resolve_pdf_path", { path });
+  }
+
+  async loadPdfHighlights(pdfPath: string): Promise<PdfHighlight[]> {
+    return invoke<PdfHighlight[]>("load_pdf_highlights", { pdfPath });
+  }
+
+  async savePdfHighlights(pdfPath: string, highlights: PdfHighlight[]): Promise<void> {
+    return invoke<void>("save_pdf_highlights", { pdfPath, highlights });
   }
 
   async writePlainFile(path: string, body: string): Promise<void> {

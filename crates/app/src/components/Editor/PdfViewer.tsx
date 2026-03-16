@@ -3,18 +3,35 @@ import * as pdfjsLib from "pdfjs-dist";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 import { TextLayer } from "pdfjs-dist";
 import { getAPI } from "../../api/bridge";
-import { useTabStore } from "../../stores/tabStore";
+import type { PdfHighlight, HighlightRect } from "../../api/types";
 import { useEditorStore } from "../../stores/editorStore";
 import { log } from "../../utils/logger";
-import { ZoomIn, ZoomOut, FileOutput } from "lucide-react";
+import {
+  selectionToHighlightRects,
+  getSelectionPageNum,
+} from "../../utils/pdfCoords";
+import { ZoomIn, ZoomOut, FileOutput, Highlighter, X } from "lucide-react";
 
 // Configure pdf.js worker using Vite's ?url import for static asset URL
 import workerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
-const PAGE_GAP = 12;
 const CONTAINER_PADDING = 24;
-const RENDER_BUFFER = 2; // render pages within this many pages of the viewport
+const RENDER_BUFFER = 2;
+
+const HIGHLIGHT_COLORS = [
+  { name: "Yellow", hex: "#FBBF24" },
+  { name: "Green", hex: "#34D399" },
+  { name: "Blue", hex: "#60A5FA" },
+  { name: "Pink", hex: "#F472B6" },
+  { name: "Red", hex: "#F87171" },
+];
+
+interface SelectionSnapshot {
+  text: string;
+  pageNum: number;
+  rects: HighlightRect[];
+}
 
 interface PdfViewerProps {
   path: string;
@@ -33,6 +50,8 @@ export function PdfViewer({ path }: PdfViewerProps) {
   const pdfDocRef = useRef<PDFDocumentProxy | null>(null);
   const renderingPages = useRef<Set<number>>(new Set());
   const renderedPages = useRef<Set<number>>(new Set());
+  const textLayerMutex = useRef<Promise<void>>(Promise.resolve());
+  const renderGeneration = useRef(0);
   const naturalWidthRef = useRef(0);
   const [fitScale, setFitScale] = useState(1.0);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -45,7 +64,17 @@ export function PdfViewer({ path }: PdfViewerProps) {
   const [hasSelection, setHasSelection] = useState(false);
   const [pages, setPages] = useState<PageInfo[]>([]);
 
+  // Highlight state
+  const [highlights, setHighlights] = useState<PdfHighlight[]>([]);
+  const [activeColor, setActiveColor] = useState(HIGHLIGHT_COLORS[0].hex);
+  const [hoveredHighlightId, setHoveredHighlightId] = useState<string | null>(
+    null,
+  );
+
+  const selectionSnapshotRef = useRef<SelectionSnapshot | null>(null);
+  const selectionRafId = useRef(0);
   const pageInputRef = useRef<HTMLInputElement>(null);
+  const scale = fitScale * userZoom;
 
   // Load PDF on mount
   useEffect(() => {
@@ -77,7 +106,6 @@ export function PdfViewer({ path }: PdfViewerProps) {
 
         pdfDocRef.current = doc;
 
-        // Store natural page width — fitScale computed after pages mount
         const firstPage = await doc.getPage(1);
         const naturalViewport = firstPage.getViewport({ scale: 1.0 });
         naturalWidthRef.current = naturalViewport.width;
@@ -85,6 +113,12 @@ export function PdfViewer({ path }: PdfViewerProps) {
         const pageList: PageInfo[] = [];
         for (let i = 1; i <= doc.numPages; i++) {
           pageList.push({ pageNum: i, rendered: false });
+        }
+
+        // Load existing highlights
+        const saved = await api.loadPdfHighlights(path);
+        if (!cancelled) {
+          setHighlights(saved);
         }
 
         setPages(pageList);
@@ -126,8 +160,8 @@ export function PdfViewer({ path }: PdfViewerProps) {
 
       try {
         const page: PDFPageProxy = await doc.getPage(pageNum);
-        const scale = fitScale * userZoom;
-        const viewport = page.getViewport({ scale });
+        const renderScale = fitScale * userZoom;
+        const viewport = page.getViewport({ scale: renderScale });
 
         const canvas = canvasRefsMap.current.get(pageNum);
         const textDiv = textLayerRefsMap.current.get(pageNum);
@@ -151,18 +185,35 @@ export function PdfViewer({ path }: PdfViewerProps) {
 
         await page.render({ canvasContext: ctx, viewport }).promise;
 
-        // Render text layer
-        textDiv.replaceChildren();
-        textDiv.style.width = `${viewport.width}px`;
-        textDiv.style.height = `${viewport.height}px`;
+        // Set --scale-factor CSS variable BEFORE rendering the text layer.
+        // pdf.js uses this for all span font-size and positioning calculations.
+        textDiv.style.setProperty("--scale-factor", String(renderScale));
 
-        const textContent = await page.getTextContent();
-        const textLayer = new TextLayer({
-          textContentSource: textContent,
-          container: textDiv,
-          viewport,
+        // Serialize text layer rendering to prevent measureText race conditions
+        // when multiple pages render concurrently (they share an internal canvas).
+        // The .catch() ensures a failed render doesn't permanently block the chain.
+        // Generation counter skips stale callbacks after zoom changes.
+        const capturedPageNum = pageNum;
+        const gen = renderGeneration.current;
+        textLayerMutex.current = textLayerMutex.current.then(async () => {
+          if (gen !== renderGeneration.current) return;
+          const div = textLayerRefsMap.current.get(capturedPageNum);
+          if (!div || !div.isConnected) return;
+          div.replaceChildren();
+          const textContent = await page.getTextContent();
+          const tl = new TextLayer({
+            textContentSource: textContent,
+            container: div,
+            viewport,
+          });
+          await tl.render();
+        }).catch((err) => {
+          log.error("pdf-viewer", "Text layer render failed", {
+            page: capturedPageNum,
+            error: err instanceof Error ? err.message : String(err),
+          });
         });
-        await textLayer.render();
+        await textLayerMutex.current;
 
         renderedPages.current.add(pageNum);
       } catch (e) {
@@ -177,7 +228,6 @@ export function PdfViewer({ path }: PdfViewerProps) {
     [userZoom, fitScale],
   );
 
-  // Render pages near the viewport
   const renderVisiblePages = useCallback(() => {
     const current = currentPage;
     const start = Math.max(1, current - RENDER_BUFFER);
@@ -187,7 +237,7 @@ export function PdfViewer({ path }: PdfViewerProps) {
     }
   }, [currentPage, numPages, renderPage]);
 
-  // Set up placeholder sizes and render initial pages after load
+  // Set up placeholder sizes and render initial pages
   useEffect(() => {
     if (numPages === 0 || !pdfDocRef.current) return;
 
@@ -197,23 +247,21 @@ export function PdfViewer({ path }: PdfViewerProps) {
       const doc = pdfDocRef.current;
       if (!doc || cancelled) return;
 
-      // Compute fit-to-width from actual container width (scrollbar present)
       if (naturalWidthRef.current > 0 && scrollContainerRef.current) {
         const availableWidth =
           scrollContainerRef.current.clientWidth - CONTAINER_PADDING * 2;
         const newFit = availableWidth / naturalWidthRef.current;
         if (Math.abs(newFit - fitScale) > 0.001) {
           setFitScale(newFit);
-          return; // will re-run with updated fitScale
+          return;
         }
       }
 
-      // Set placeholder dimensions for all pages using the fit scale
       for (let i = 1; i <= doc.numPages; i++) {
         const page = await doc.getPage(i);
         if (cancelled) return;
-        const scale = fitScale * userZoom;
-        const viewport = page.getViewport({ scale });
+        const s = fitScale * userZoom;
+        const viewport = page.getViewport({ scale: s });
         const container = pageRefsMap.current.get(i);
         if (container) {
           container.style.width = `${viewport.width}px`;
@@ -221,7 +269,6 @@ export function PdfViewer({ path }: PdfViewerProps) {
         }
       }
 
-      // Render the first few pages
       if (!cancelled) {
         renderVisiblePages();
       }
@@ -237,12 +284,12 @@ export function PdfViewer({ path }: PdfViewerProps) {
   // Re-render all when zoom changes
   useEffect(() => {
     if (numPages === 0) return;
-    // Clear rendered state so pages re-render at new scale
+    renderGeneration.current += 1;
     renderedPages.current.clear();
     renderVisiblePages();
   }, [userZoom, numPages, renderVisiblePages]);
 
-  // IntersectionObserver to track current page during scroll
+  // IntersectionObserver
   useEffect(() => {
     if (numPages === 0) return;
 
@@ -251,7 +298,6 @@ export function PdfViewer({ path }: PdfViewerProps) {
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        // Find the most visible page
         let mostVisible: { pageNum: number; ratio: number } | null = null;
         for (const entry of entries) {
           const pageNum = parseInt(
@@ -275,7 +321,6 @@ export function PdfViewer({ path }: PdfViewerProps) {
       },
     );
 
-    // Observe all page containers
     for (const [, el] of pageRefsMap.current) {
       observerRef.current.observe(el);
     }
@@ -286,24 +331,23 @@ export function PdfViewer({ path }: PdfViewerProps) {
     };
   }, [numPages, pages]);
 
-  // Render pages as user scrolls to them
+  // Render pages as user scrolls
   useEffect(() => {
     if (numPages === 0) return;
     renderVisiblePages();
   }, [currentPage, numPages, renderVisiblePages]);
 
-  // ResizeObserver to recalculate fit-to-width on container resize
+  // ResizeObserver
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container || numPages === 0 || !pdfDocRef.current) return;
 
     const resizeObserver = new ResizeObserver(() => {
       if (naturalWidthRef.current <= 0) return;
-
       const availableWidth = container.clientWidth - CONTAINER_PADDING * 2;
       const newFitScale = availableWidth / naturalWidthRef.current;
-
       if (Math.abs(newFitScale - fitScale) > 0.01) {
+        renderGeneration.current += 1;
         renderedPages.current.clear();
         setFitScale(newFitScale);
       }
@@ -313,7 +357,7 @@ export function PdfViewer({ path }: PdfViewerProps) {
     return () => resizeObserver.disconnect();
   }, [numPages, fitScale]);
 
-  // Track text selection within the scroll container
+  // Track text selection — snapshot rects eagerly so they survive button clicks
   const checkSelection = useCallback(() => {
     const sel = window.getSelection();
     if (
@@ -321,21 +365,36 @@ export function PdfViewer({ path }: PdfViewerProps) {
       sel.toString().trim().length > 0 &&
       scrollContainerRef.current?.contains(sel.anchorNode)
     ) {
-      setHasSelection(true);
-    } else {
-      setHasSelection(false);
+      const pageNum = getSelectionPageNum(sel);
+      if (pageNum) {
+        const pageContainer = pageRefsMap.current.get(pageNum);
+        if (pageContainer) {
+          const rects = selectionToHighlightRects(sel, pageContainer, scale);
+          if (rects.length > 0) {
+            selectionSnapshotRef.current = {
+              text: sel.toString().trim(),
+              pageNum,
+              rects,
+            };
+            setHasSelection(true);
+            return;
+          }
+        }
+      }
     }
-  }, []);
+    selectionSnapshotRef.current = null;
+    setHasSelection(false);
+  }, [scale]);
 
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    container.addEventListener("mouseup", checkSelection);
-    container.addEventListener("keyup", checkSelection);
+    const throttled = () => {
+      cancelAnimationFrame(selectionRafId.current);
+      selectionRafId.current = requestAnimationFrame(checkSelection);
+    };
+    document.addEventListener("selectionchange", throttled);
     return () => {
-      container.removeEventListener("mouseup", checkSelection);
-      container.removeEventListener("keyup", checkSelection);
+      document.removeEventListener("selectionchange", throttled);
+      cancelAnimationFrame(selectionRafId.current);
     };
   }, [checkSelection]);
 
@@ -372,60 +431,109 @@ export function PdfViewer({ path }: PdfViewerProps) {
     renderedPages.current.clear();
   }, []);
 
-  // Copy selection to new note
+  // Copy selection to new note (uses snapshot for resilience)
   const copyToNote = useCallback(async () => {
-    const sel = window.getSelection();
-    if (
-      !sel ||
-      sel.toString().trim().length === 0 ||
-      !scrollContainerRef.current?.contains(sel.anchorNode)
-    ) {
-      return;
-    }
+    const snap = selectionSnapshotRef.current;
+    if (!snap) return;
 
-    const selectedText = sel.toString().trim();
     const fileName = path.split("/").pop() ?? path;
-    const body = `${selectedText}\n\n> Source: [${fileName}](${path})`;
+    const body = `${snap.text}\n\n> Source: [${fileName}](${path})`;
 
     await useEditorStore.getState().openUntitledTab();
     useEditorStore.getState().updateContent(body);
 
     log.info("pdf-viewer", "Copied selection to new note", {
       path,
-      chars: selectedText.length,
+      chars: snap.text.length,
     });
   }, [path]);
 
-  // Ref callback for page containers
+  // Create highlight from the eagerly-captured selection snapshot
+  const createHighlight = useCallback(async () => {
+    const snap = selectionSnapshotRef.current;
+    if (!snap) return;
+
+    const highlight: PdfHighlight = {
+      id: crypto.randomUUID(),
+      page: snap.pageNum,
+      rects: snap.rects,
+      text: snap.text,
+      color: activeColor,
+      created_at: new Date().toISOString(),
+    };
+
+    let updated: PdfHighlight[] = [];
+    setHighlights((prev) => {
+      updated = [...prev, highlight];
+      return updated;
+    });
+
+    // Persist
+    try {
+      const api = await getAPI();
+      await api.savePdfHighlights(path, updated);
+    } catch (e) {
+      log.error("pdf-viewer", "Failed to save highlight", {
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+
+    // Clear selection and snapshot
+    window.getSelection()?.removeAllRanges();
+    selectionSnapshotRef.current = null;
+    setHasSelection(false);
+
+    log.info("pdf-viewer", "Created highlight", {
+      path,
+      page: snap.pageNum,
+      color: activeColor,
+      chars: snap.text.length,
+    });
+  }, [path, activeColor]);
+
+  // Delete highlight
+  const deleteHighlight = useCallback(
+    async (id: string) => {
+      let updated: PdfHighlight[] = [];
+      setHighlights((prev) => {
+        updated = prev.filter((h) => h.id !== id);
+        return updated;
+      });
+      setHoveredHighlightId(null);
+
+      try {
+        const api = await getAPI();
+        await api.savePdfHighlights(path, updated);
+      } catch (e) {
+        log.error("pdf-viewer", "Failed to save highlights after delete", {
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+    },
+    [path],
+  );
+
+  // Ref callbacks
   const setPageRef = useCallback(
     (pageNum: number) => (el: HTMLDivElement | null) => {
-      if (el) {
-        pageRefsMap.current.set(pageNum, el);
-      } else {
-        pageRefsMap.current.delete(pageNum);
-      }
+      if (el) pageRefsMap.current.set(pageNum, el);
+      else pageRefsMap.current.delete(pageNum);
     },
     [],
   );
 
   const setCanvasRef = useCallback(
     (pageNum: number) => (el: HTMLCanvasElement | null) => {
-      if (el) {
-        canvasRefsMap.current.set(pageNum, el);
-      } else {
-        canvasRefsMap.current.delete(pageNum);
-      }
+      if (el) canvasRefsMap.current.set(pageNum, el);
+      else canvasRefsMap.current.delete(pageNum);
     },
     [],
   );
 
   const setTextLayerRef = useCallback(
     (pageNum: number) => (el: HTMLDivElement | null) => {
-      if (el) {
-        textLayerRefsMap.current.set(pageNum, el);
-      } else {
-        textLayerRefsMap.current.delete(pageNum);
-      }
+      if (el) textLayerRefsMap.current.set(pageNum, el);
+      else textLayerRefsMap.current.delete(pageNum);
     },
     [],
   );
@@ -495,6 +603,7 @@ export function PdfViewer({ path }: PdfViewerProps) {
         <div className="editor-hero">
           <div className="editor-hero-top">
             <div className="pdf-toolbar">
+              {/* Page indicator */}
               <span className="pdf-toolbar-page-info">
                 <input
                   ref={pageInputRef}
@@ -515,6 +624,7 @@ export function PdfViewer({ path }: PdfViewerProps) {
 
               <span className="pdf-toolbar-separator" />
 
+              {/* Zoom */}
               <button
                 className="pdf-toolbar-btn"
                 onClick={zoomOut}
@@ -537,9 +647,43 @@ export function PdfViewer({ path }: PdfViewerProps) {
 
               <span className="pdf-toolbar-separator" />
 
+              {/* Highlight color swatches */}
+              <div className="pdf-color-swatches">
+                {HIGHLIGHT_COLORS.map((c) => (
+                  <button
+                    key={c.hex}
+                    className={`pdf-color-swatch${activeColor === c.hex ? " pdf-color-swatch--active" : ""}`}
+                    style={{ backgroundColor: c.hex }}
+                    onClick={() => setActiveColor(c.hex)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    title={c.name}
+                  />
+                ))}
+              </div>
+
+              {/* Highlight button */}
               <button
                 className="pdf-toolbar-btn pdf-toolbar-btn--accent"
+                onClick={createHighlight}
+                onMouseDown={(e) => e.preventDefault()}
+                disabled={!hasSelection}
+                title={
+                  hasSelection
+                    ? "Highlight selected text"
+                    : "Select text in the PDF first"
+                }
+              >
+                <Highlighter size={16} />
+                <span>Highlight</span>
+              </button>
+
+              <span className="pdf-toolbar-separator" />
+
+              {/* Copy to Note */}
+              <button
+                className="pdf-toolbar-btn"
                 onClick={copyToNote}
+                onMouseDown={(e) => e.preventDefault()}
                 disabled={!hasSelection}
                 title={
                   hasSelection
@@ -558,23 +702,65 @@ export function PdfViewer({ path }: PdfViewerProps) {
           </div>
         </div>
         <div className="editor-body pdf-viewer-body" ref={scrollContainerRef}>
-          {pages.map((p) => (
-            <div
-              key={p.pageNum}
-              ref={setPageRef(p.pageNum)}
-              className="pdf-page-container"
-              data-page={p.pageNum}
-            >
-              <canvas
-                ref={setCanvasRef(p.pageNum)}
-                className="pdf-canvas"
-              />
+          {pages.map((p) => {
+            const pageHighlights = highlights.filter(
+              (h) => h.page === p.pageNum,
+            );
+            return (
               <div
-                ref={setTextLayerRef(p.pageNum)}
-                className="pdf-text-layer"
-              />
-            </div>
-          ))}
+                key={p.pageNum}
+                ref={setPageRef(p.pageNum)}
+                className="pdf-page-container"
+                data-page={p.pageNum}
+              >
+                <canvas
+                  ref={setCanvasRef(p.pageNum)}
+                  className="pdf-canvas"
+                />
+                {/* Highlight overlay — between canvas and text layer */}
+                {pageHighlights.length > 0 && (
+                  <div className="pdf-highlight-layer">
+                    {pageHighlights.map((h) =>
+                      h.rects.map((r, i) => (
+                        <div
+                          key={`${h.id}-${i}`}
+                          className={`pdf-highlight-rect${hoveredHighlightId === h.id ? " pdf-highlight-rect--hovered" : ""}`}
+                          style={{
+                            left: r.x * scale,
+                            top: r.y * scale,
+                            width: r.w * scale,
+                            height: r.h * scale,
+                            backgroundColor: h.color,
+                          }}
+                          data-highlight-id={h.id}
+                          onMouseEnter={() => setHoveredHighlightId(h.id)}
+                          onMouseLeave={() => setHoveredHighlightId(null)}
+                        >
+                          {/* Show delete button on the first rect of hovered highlight */}
+                          {i === 0 && hoveredHighlightId === h.id && (
+                            <button
+                              className="pdf-highlight-delete"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteHighlight(h.id);
+                              }}
+                              title="Remove highlight"
+                            >
+                              <X size={12} />
+                            </button>
+                          )}
+                        </div>
+                      )),
+                    )}
+                  </div>
+                )}
+                <div
+                  ref={setTextLayerRef(p.pageNum)}
+                  className="textLayer"
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -331,6 +331,26 @@ pub struct PdfMetaDto {
     pub size_bytes: u64,
 }
 
+// ── PDF Highlight DTOs ───────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HighlightRectDto {
+    pub x: f64,
+    pub y: f64,
+    pub w: f64,
+    pub h: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PdfHighlightDto {
+    pub id: String,
+    pub page: u32,
+    pub rects: Vec<HighlightRectDto>,
+    pub text: String,
+    pub color: String,
+    pub created_at: String,
+}
+
 // ── Helpers ────────────────────────────────────────────────────────
 
 /// Convert serde_yaml::Value map to serde_json::Value map for IPC boundary.
