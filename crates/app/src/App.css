@@ -3190,7 +3190,7 @@ body {
 }
 
 .pdf-highlight-group {
-  opacity: 0.35;
+  opacity: 0.5;
   pointer-events: auto;
   cursor: pointer;
   transition: opacity 0.15s;
@@ -3198,7 +3198,7 @@ body {
 
 .pdf-highlight-group:hover,
 .pdf-highlight-group--hovered {
-  opacity: 0.55;
+  opacity: 0.65;
 }
 
 .pdf-highlight-rect {

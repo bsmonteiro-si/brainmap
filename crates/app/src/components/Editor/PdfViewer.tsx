@@ -395,9 +395,14 @@ export function PdfViewer({ path }: PdfViewerProps) {
       selectionRafId.current = requestAnimationFrame(checkSelection);
     };
     document.addEventListener("selectionchange", throttled);
+    // Also capture final selection immediately on mouseup (no rAF delay)
+    // so the snapshot is up-to-date before the user can click toolbar buttons.
+    const container = scrollContainerRef.current;
+    container?.addEventListener("mouseup", checkSelection);
     return () => {
       document.removeEventListener("selectionchange", throttled);
       cancelAnimationFrame(selectionRafId.current);
+      container?.removeEventListener("mouseup", checkSelection);
     };
   }, [checkSelection]);
 
