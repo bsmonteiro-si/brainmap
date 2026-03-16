@@ -41,9 +41,19 @@ export function resolveNotePath(
   return resolved.join("/");
 }
 
-/** Returns true if the href looks like a local .md file link (not a URL). */
-export function isLocalMdLink(href: string): boolean {
+/** Returns true if the href looks like a local note link (not a URL). */
+export function isLocalNoteLink(href: string): boolean {
+  // Fragment-only links (e.g., #section) are not note links
+  if (href.startsWith("#")) return false;
   // Has a scheme (http:, https:, mailto:, etc.) → not local
   if (/^[a-z][a-z0-9+.-]*:/i.test(href)) return false;
-  return href.endsWith(".md");
+  if (href.endsWith(".md")) return true;
+  // No file extension → assume note reference (wiki-style link)
+  const lastSegment = href.split("/").pop() ?? "";
+  return !lastSegment.includes(".");
+}
+
+/** Append .md if the path doesn't already have it. */
+export function ensureMdExtension(path: string): string {
+  return path.endsWith(".md") ? path : `${path}.md`;
 }

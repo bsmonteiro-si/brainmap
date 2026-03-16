@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveNotePath, isLocalMdLink } from "./resolveNotePath";
+import { resolveNotePath, isLocalNoteLink, ensureMdExtension } from "./resolveNotePath";
 
 describe("resolveNotePath", () => {
   it("resolves same-directory link with ./", () => {
@@ -51,28 +51,58 @@ describe("resolveNotePath", () => {
   });
 });
 
-describe("isLocalMdLink", () => {
+describe("isLocalNoteLink", () => {
   it("returns true for relative .md link", () => {
-    expect(isLocalMdLink("./foo.md")).toBe(true);
+    expect(isLocalNoteLink("./foo.md")).toBe(true);
   });
 
   it("returns true for bare .md filename", () => {
-    expect(isLocalMdLink("foo.md")).toBe(true);
+    expect(isLocalNoteLink("foo.md")).toBe(true);
+  });
+
+  it("returns true for extension-less relative path", () => {
+    expect(isLocalNoteLink("./Level 2 - Intervention")).toBe(true);
+  });
+
+  it("returns true for extension-less bare name", () => {
+    expect(isLocalNoteLink("Some Note")).toBe(true);
+  });
+
+  it("returns true for extension-less path with subdirectory", () => {
+    expect(isLocalNoteLink("./Sub/Note Name")).toBe(true);
+  });
+
+  it("returns false for fragment-only link", () => {
+    expect(isLocalNoteLink("#section-heading")).toBe(false);
   });
 
   it("returns false for https URL", () => {
-    expect(isLocalMdLink("https://example.com")).toBe(false);
+    expect(isLocalNoteLink("https://example.com")).toBe(false);
   });
 
   it("returns false for non-.md file", () => {
-    expect(isLocalMdLink("./foo.txt")).toBe(false);
+    expect(isLocalNoteLink("./foo.txt")).toBe(false);
+  });
+
+  it("returns false for image file", () => {
+    expect(isLocalNoteLink("./diagram.png")).toBe(false);
   });
 
   it("returns false for mailto link", () => {
-    expect(isLocalMdLink("mailto:x@y.com")).toBe(false);
+    expect(isLocalNoteLink("mailto:x@y.com")).toBe(false);
   });
 
   it("returns false for http URL ending in .md", () => {
-    expect(isLocalMdLink("https://example.com/file.md")).toBe(false);
+    expect(isLocalNoteLink("https://example.com/file.md")).toBe(false);
+  });
+});
+
+describe("ensureMdExtension", () => {
+  it("appends .md to extension-less path", () => {
+    expect(ensureMdExtension("Level 2 - Intervention")).toBe("Level 2 - Intervention.md");
+  });
+
+  it("leaves .md path unchanged", () => {
+    expect(ensureMdExtension("People/Judea Pearl.md")).toBe("People/Judea Pearl.md");
   });
 });

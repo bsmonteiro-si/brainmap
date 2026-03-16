@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { resolveNotePath, isLocalMdLink } from "../../utils/resolveNotePath";
+import { resolveNotePath, isLocalNoteLink, ensureMdExtension } from "../../utils/resolveNotePath";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { CALLOUT_TYPES, CALLOUT_FALLBACK, CALLOUT_RE } from "./calloutTypes";
@@ -117,7 +117,7 @@ export function MarkdownPreview({ content, notePath }: Props) {
       }: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
         children?: React.ReactNode;
       }) => {
-        if (href && isLocalMdLink(href)) {
+        if (href && isLocalNoteLink(href)) {
           return (
             <a
               {...props}
@@ -127,7 +127,7 @@ export function MarkdownPreview({ content, notePath }: Props) {
               onClick={(e) => {
                 e.preventDefault();
                 if (!(e.metaKey || e.ctrlKey)) return;
-                const resolved = resolveNotePath(notePath, href);
+                const resolved = ensureMdExtension(resolveNotePath(notePath, href));
                 useGraphStore.getState().selectNode(resolved);
                 useEditorStore.getState().openNote(resolved);
               }}

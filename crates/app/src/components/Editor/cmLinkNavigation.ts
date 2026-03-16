@@ -1,6 +1,6 @@
 import { EditorView } from "@codemirror/view";
 import type { Extension } from "@codemirror/state";
-import { resolveNotePath, isLocalMdLink } from "../../utils/resolveNotePath";
+import { resolveNotePath, isLocalNoteLink, ensureMdExtension } from "../../utils/resolveNotePath";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 
@@ -59,9 +59,9 @@ export function linkNavigation(notePath: string): Extension {
       if (!(event.metaKey || event.ctrlKey)) return false;
 
       const target = checkLinkAtCoords(view, event.clientX, event.clientY);
-      if (!target || !isLocalMdLink(target)) return false;
+      if (!target || !isLocalNoteLink(target)) return false;
 
-      const resolved = resolveNotePath(notePath, target);
+      const resolved = ensureMdExtension(resolveNotePath(notePath, target));
       useGraphStore.getState().selectNode(resolved);
       useEditorStore.getState().openNote(resolved);
 
@@ -72,7 +72,7 @@ export function linkNavigation(notePath: string): Extension {
     mousemove(event: MouseEvent, view: EditorView) {
       cmdHeld = event.metaKey || event.ctrlKey;
       const target = checkLinkAtCoords(view, event.clientX, event.clientY);
-      lastLinkAtMouse = target !== null && isLocalMdLink(target);
+      lastLinkAtMouse = target !== null && isLocalNoteLink(target);
       updateHoverClass(view, lastLinkAtMouse);
       return false;
     },
