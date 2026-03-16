@@ -10,7 +10,7 @@ import {
   selectionToHighlightRects,
   getSelectionPageNum,
 } from "../../utils/pdfCoords";
-import { ZoomIn, ZoomOut, FileOutput, Highlighter, X } from "lucide-react";
+import { ZoomIn, ZoomOut, FileOutput, Highlighter, X, Undo2, Eraser } from "lucide-react";
 
 // Configure pdf.js worker using Vite's ?url import for static asset URL
 import workerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
@@ -70,6 +70,8 @@ export function PdfViewer({ path }: PdfViewerProps) {
   const [hoveredHighlightId, setHoveredHighlightId] = useState<string | null>(
     null,
   );
+  // Undo stack: each entry is the full highlights array before the last action
+  const undoStackRef = useRef<PdfHighlight[][]>([]);
 
   const selectionSnapshotRef = useRef<SelectionSnapshot | null>(null);
   const selectionRafId = useRef(0);
@@ -83,6 +85,7 @@ export function PdfViewer({ path }: PdfViewerProps) {
     async function loadPdf() {
       setLoading(true);
       setError(null);
+      undoStackRef.current = [];
 
       try {
         const api = await getAPI();
@@ -448,34 +451,107 @@ export function PdfViewer({ path }: PdfViewerProps) {
     });
   }, [path]);
 
-  // Create highlight from the eagerly-captured selection snapshot
+  // Persist highlights and push previous state onto undo stack
+  const persistHighlights = useCallback(
+    async (prev: PdfHighlight[], next: PdfHighlight[]) => {
+      undoStackRef.current.push(prev);
+      // Cap undo stack at 50 entries
+      if (undoStackRef.current.length > 50) {
+        undoStackRef.current = undoStackRef.current.slice(-50);
+      }
+      try {
+        const api = await getAPI();
+        await api.savePdfHighlights(path, next);
+      } catch (e) {
+        log.error("pdf-viewer", "Failed to save highlights", {
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+    },
+    [path],
+  );
+
+  // Undo last highlight action
+  const undoHighlight = useCallback(async () => {
+    const prev = undoStackRef.current.pop();
+    if (prev === undefined) return;
+    setHighlights(prev);
+    try {
+      const api = await getAPI();
+      await api.savePdfHighlights(path, prev);
+    } catch (e) {
+      log.error("pdf-viewer", "Failed to persist undo", {
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }, [path]);
+
+  // Cmd+Z to undo highlight actions when PDF viewer is focused
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+        if (
+          undoStackRef.current.length > 0 &&
+          scrollContainerRef.current?.contains(document.activeElement as Node | null)
+        ) {
+          e.preventDefault();
+          undoHighlight();
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [undoHighlight]);
+
+  // Create highlight from the eagerly-captured selection snapshot.
+  // If the selected text already has a highlight on the same page:
+  //   - same color → no-op
+  //   - different color → recolor the existing highlight
   const createHighlight = useCallback(async () => {
     const snap = selectionSnapshotRef.current;
     if (!snap) return;
 
-    const highlight: PdfHighlight = {
-      id: crypto.randomUUID(),
-      page: snap.pageNum,
-      rects: snap.rects,
-      text: snap.text,
-      color: activeColor,
-      created_at: new Date().toISOString(),
-    };
-
+    let prev: PdfHighlight[] = [];
     let updated: PdfHighlight[] = [];
-    setHighlights((prev) => {
-      updated = [...prev, highlight];
+    let changed = false;
+
+    setHighlights((current) => {
+      prev = current;
+
+      const existing = current.find(
+        (h) => h.page === snap.pageNum && h.text === snap.text,
+      );
+
+      if (existing) {
+        if (existing.color === activeColor) {
+          // Same color — no-op
+          updated = current;
+          return current;
+        }
+        // Different color — recolor in place
+        updated = current.map((h) =>
+          h.id === existing.id ? { ...h, color: activeColor } : h,
+        );
+        changed = true;
+        return updated;
+      }
+
+      // New highlight
+      const highlight: PdfHighlight = {
+        id: crypto.randomUUID(),
+        page: snap.pageNum,
+        rects: snap.rects,
+        text: snap.text,
+        color: activeColor,
+        created_at: new Date().toISOString(),
+      };
+      updated = [...current, highlight];
+      changed = true;
       return updated;
     });
 
-    // Persist
-    try {
-      const api = await getAPI();
-      await api.savePdfHighlights(path, updated);
-    } catch (e) {
-      log.error("pdf-viewer", "Failed to save highlight", {
-        error: e instanceof Error ? e.message : String(e),
-      });
+    if (changed) {
+      await persistHighlights(prev, updated);
     }
 
     // Clear selection and snapshot
@@ -483,35 +559,43 @@ export function PdfViewer({ path }: PdfViewerProps) {
     selectionSnapshotRef.current = null;
     setHasSelection(false);
 
-    log.info("pdf-viewer", "Created highlight", {
-      path,
-      page: snap.pageNum,
-      color: activeColor,
-      chars: snap.text.length,
-    });
-  }, [path, activeColor]);
+    if (changed) {
+      log.info("pdf-viewer", "Created/recolored highlight", {
+        path,
+        page: snap.pageNum,
+        color: activeColor,
+        chars: snap.text.length,
+      });
+    }
+  }, [path, activeColor, persistHighlights]);
 
-  // Delete highlight
+  // Delete highlight (with undo support)
   const deleteHighlight = useCallback(
     async (id: string) => {
+      let prev: PdfHighlight[] = [];
       let updated: PdfHighlight[] = [];
-      setHighlights((prev) => {
-        updated = prev.filter((h) => h.id !== id);
+      setHighlights((current) => {
+        prev = current;
+        updated = current.filter((h) => h.id !== id);
         return updated;
       });
       setHoveredHighlightId(null);
-
-      try {
-        const api = await getAPI();
-        await api.savePdfHighlights(path, updated);
-      } catch (e) {
-        log.error("pdf-viewer", "Failed to save highlights after delete", {
-          error: e instanceof Error ? e.message : String(e),
-        });
-      }
+      await persistHighlights(prev, updated);
     },
-    [path],
+    [persistHighlights],
   );
+
+  // Clear all highlights
+  const clearAllHighlights = useCallback(async () => {
+    let prev: PdfHighlight[] = [];
+    setHighlights((current) => {
+      prev = current;
+      return [];
+    });
+    if (prev.length > 0) {
+      await persistHighlights(prev, []);
+    }
+  }, [persistHighlights]);
 
   // Ref callbacks
   const setPageRef = useCallback(
@@ -675,6 +759,25 @@ export function PdfViewer({ path }: PdfViewerProps) {
               >
                 <Highlighter size={16} />
                 <span>Highlight</span>
+              </button>
+
+              {/* Undo last highlight action */}
+              <button
+                className="pdf-toolbar-btn"
+                onClick={undoHighlight}
+                title="Undo last highlight action (Cmd+Z)"
+              >
+                <Undo2 size={16} />
+              </button>
+
+              {/* Clear all highlights */}
+              <button
+                className="pdf-toolbar-btn"
+                onClick={clearAllHighlights}
+                disabled={highlights.length === 0}
+                title="Remove all highlights"
+              >
+                <Eraser size={16} />
               </button>
 
               <span className="pdf-toolbar-separator" />
