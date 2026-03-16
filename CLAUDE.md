@@ -28,6 +28,7 @@ Frontmatter: `title`, `type`, `tags`, `status`, `created`, `modified`, `source`,
 - Folder nodes: virtual, in `Graph.nodes` only (not `Workspace.notes`)
 - MCP: manual dispatch, `Arc<Mutex<Workspace>>`
 - Envelope: `{"success": bool, "data": ..., "error": {"code": ..., "message": ...}}`
+- CodeMirror spacing: NEVER add `margin` or `padding` to `.cm-line` elements — it breaks mouse hit-testing. Use block widget decorations (`Decoration.widget({ widget, block: true })`) with a matching `estimatedHeight` getter instead; CM6 includes these in its height map.
 
 ## Logging
 

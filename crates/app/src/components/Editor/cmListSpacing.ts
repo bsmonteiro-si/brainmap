@@ -17,15 +17,19 @@ import { RangeSetBuilder, type Extension } from "@codemirror/state";
 const LIST_LINE_RE = /^\s*(?:[-*+]|\d+[.)]) /;
 
 const listLineDeco = Decoration.line({ class: "cm-list-line" });
+const listFirstDeco = Decoration.line({ class: "cm-list-line cm-list-first" });
 
 function buildDecorations(view: EditorView): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
   for (const { from, to } of view.visibleRanges) {
+    let prevWasList = false;
     for (let pos = from; pos <= to; ) {
       const line = view.state.doc.lineAt(pos);
-      if (LIST_LINE_RE.test(line.text)) {
-        builder.add(line.from, line.from, listLineDeco);
+      const isList = LIST_LINE_RE.test(line.text);
+      if (isList) {
+        builder.add(line.from, line.from, prevWasList ? listLineDeco : listFirstDeco);
       }
+      prevWasList = isList;
       pos = line.to + 1;
     }
   }
