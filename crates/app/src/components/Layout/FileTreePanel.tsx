@@ -345,6 +345,10 @@ function ContextMenu({
           <div className="context-menu-item" onClick={handleRename}>
             Rename
           </div>
+          <div className="context-menu-separator" />
+          <div className="context-menu-item context-menu-item--danger" onClick={handleDelete}>
+            Delete
+          </div>
         </>
       )}
     </div>,
@@ -1060,8 +1064,34 @@ export function FileTreePanel() {
       }
     }
 
+    const isBrainMapNote = !!deleteTarget.note_type;
+
     try {
-      if (deleteTarget.isFolder) {
+      if (!deleteTarget.isFolder && !isBrainMapNote) {
+        // Untracked file — no undo snapshot, no graph update needed
+        await api.deletePlainFile(deleteTarget.fullPath);
+        // files-changed event from backend updates workspaceFiles automatically
+
+        // If the parent folder will become empty after this deletion, track it
+        // so it remains visible in the tree instead of vanishing.
+        const parts = deleteTarget.fullPath.split("/");
+        if (parts.length > 1) {
+          const parentDir = parts.slice(0, -1).join("/");
+          const prefix = parentDir + "/";
+          const { workspaceFiles } = useGraphStore.getState();
+          const hasOtherWorkspaceFile = workspaceFiles.some(
+            (f) => f !== deleteTarget.fullPath && f.startsWith(prefix) &&
+                   !f.slice(prefix.length).includes("/"),
+          );
+          const hasGraphNode = [...nodes.entries()].some(
+            ([p, n]) => n.note_type !== "folder" && p !== deleteTarget.fullPath &&
+                        p.startsWith(prefix) && !p.slice(prefix.length).includes("/"),
+          );
+          if (!hasOtherWorkspaceFile && !hasGraphNode) {
+            useUIStore.getState().addEmptyFolder(parentDir);
+          }
+        }
+      } else if (deleteTarget.isFolder) {
         // 3. Snapshot all notes in folder for undo
         const folderNotePaths = [...nodes.entries()]
           .filter(([p]) => p.startsWith(deleteTarget.fullPath + "/"))

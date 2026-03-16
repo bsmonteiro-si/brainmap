@@ -107,6 +107,63 @@ describe("buildTree noteCount", () => {
   });
 });
 
+describe("buildTree with workspaceFiles (untracked files)", () => {
+  it("includes untracked files that are not in the nodes map", () => {
+    const nodes = new Map<string, NodeDto>([
+      ["Concepts/a.md", makeNode("A")],
+    ]);
+    const workspaceFiles = ["Concepts/a.md", "Concepts/image.png"];
+    const tree = buildTree(nodes, undefined, workspaceFiles);
+    const folder = tree.find((n) => n.fullPath === "Concepts");
+    expect(folder).toBeDefined();
+    expect(folder!.children).toHaveLength(2);
+    const untracked = folder!.children.find((c) => c.fullPath === "Concepts/image.png");
+    expect(untracked).toBeDefined();
+    expect(untracked!.note_type).toBeUndefined();
+    expect(untracked!.isFolder).toBe(false);
+  });
+
+  it("untracked files at root level are included", () => {
+    const nodes = new Map<string, NodeDto>();
+    const workspaceFiles = ["readme.txt"];
+    const tree = buildTree(nodes, undefined, workspaceFiles);
+    expect(tree).toHaveLength(1);
+    expect(tree[0].fullPath).toBe("readme.txt");
+    expect(tree[0].note_type).toBeUndefined();
+  });
+
+  it("does not duplicate files already in nodes map", () => {
+    const nodes = new Map<string, NodeDto>([
+      ["note.md", makeNode("Note")],
+    ]);
+    const workspaceFiles = ["note.md"];
+    const tree = buildTree(nodes, undefined, workspaceFiles);
+    expect(tree).toHaveLength(1);
+    expect(tree[0].title).toBe("Note");
+  });
+
+  it("folder disappears when its only untracked file is removed, unless tracked as empty", () => {
+    const nodes = new Map<string, NodeDto>();
+    // Folder exists only because of an untracked file
+    const workspaceFiles = ["Photos/cat.png"];
+    const treeBefore = buildTree(nodes, undefined, workspaceFiles);
+    expect(treeBefore).toHaveLength(1);
+    expect(treeBefore[0].fullPath).toBe("Photos");
+    expect(treeBefore[0].children).toHaveLength(1);
+
+    // After deletion: no workspace files, folder vanishes
+    const treeAfter = buildTree(nodes, undefined, []);
+    expect(treeAfter).toHaveLength(0);
+
+    // With emptyFolders tracking, folder is preserved
+    const treePreserved = buildTree(nodes, new Set(["Photos"]), []);
+    expect(treePreserved).toHaveLength(1);
+    expect(treePreserved[0].fullPath).toBe("Photos");
+    expect(treePreserved[0].isFolder).toBe(true);
+    expect(treePreserved[0].children).toHaveLength(0);
+  });
+});
+
 describe("fuzzyFilterTree", () => {
   it("fuzzy-matches note titles and attaches indices", () => {
     const nodes = new Map<string, NodeDto>([
