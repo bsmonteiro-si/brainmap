@@ -8,6 +8,7 @@ interface DeleteTarget {
   name: string;
   fullPath: string;
   isFolder: boolean;
+  note_type?: string;
 }
 
 interface ExternalBacklink {
@@ -30,6 +31,8 @@ export function ConfirmDeleteDialog({ target, onConfirm, onCancel }: Props) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isBrainMapNote = !target.isFolder && !!target.note_type;
+
   const activeNote = useEditorStore((s) => s.activeNote);
   const isDirty = useEditorStore((s) => s.isDirty);
 
@@ -46,6 +49,11 @@ export function ConfirmDeleteDialog({ target, onConfirm, onCancel }: Props) {
     let cancelled = false;
 
     async function load() {
+      // Untracked (non-BrainMap) single files have no backlinks to check
+      if (!target.isFolder && !target.note_type) {
+        if (!cancelled) setIsLoading(false);
+        return;
+      }
       try {
         const api = await getAPI();
         if (target.isFolder) {
@@ -212,13 +220,30 @@ export function ConfirmDeleteDialog({ target, onConfirm, onCancel }: Props) {
 
         <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
           {target.isFolder ? (
-            folderNoteCount > 0 ? (
-              <>This folder contains <strong>{folderNoteCount}</strong> note{folderNoteCount !== 1 ? "s" : ""}. All will be permanently deleted.</>
-            ) : (
-              <>This empty folder will be removed.</>
-            )
-          ) : (
+            (() => {
+              const { workspaceFiles } = useGraphStore.getState();
+              const nodes = useGraphStore.getState().nodes;
+              const prefix = target.fullPath + "/";
+              const untrackedCount = workspaceFiles.filter(
+                (f) => f.startsWith(prefix) && !nodes.has(f)
+              ).length;
+              const totalItems = folderNoteCount + untrackedCount;
+              if (totalItems === 0) return <>This empty folder will be removed.</>;
+              return (
+                <>
+                  This folder contains{" "}
+                  {folderNoteCount > 0 && <><strong>{folderNoteCount}</strong> note{folderNoteCount !== 1 ? "s" : ""}</>}
+                  {folderNoteCount > 0 && untrackedCount > 0 && " and "}
+                  {untrackedCount > 0 && <><strong>{untrackedCount}</strong> other file{untrackedCount !== 1 ? "s" : ""}</>}
+                  . All will be permanently deleted.
+                  {untrackedCount > 0 && " Non-note files cannot be restored after deletion."}
+                </>
+              );
+            })()
+          ) : isBrainMapNote ? (
             <>This note will be permanently deleted.</>
+          ) : (
+            <>This file will be permanently deleted. This action cannot be undone.</>
           )}
         </div>
 

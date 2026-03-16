@@ -30,6 +30,10 @@ export class TauriBridge implements BrainMapAPI {
     return invoke<void>("close_workspace", { root });
   }
 
+  async refreshWorkspace(): Promise<WorkspaceInfo> {
+    return invoke<WorkspaceInfo>("refresh_workspace");
+  }
+
   async getGraphTopology(): Promise<GraphTopology> {
     return invoke<GraphTopology>("get_graph_topology");
   }
@@ -120,6 +124,10 @@ export class TauriBridge implements BrainMapAPI {
 
   async createPlainFile(path: string, body?: string): Promise<string> {
     return invoke<string>("create_plain_file", { path, body });
+  }
+
+  async deletePlainFile(path: string): Promise<void> {
+    return invoke<void>("delete_plain_file", { path });
   }
 
   async readPlainFile(path: string): Promise<PlainFileDetail> {

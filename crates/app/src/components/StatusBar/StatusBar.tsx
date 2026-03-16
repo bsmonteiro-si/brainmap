@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Plus, FolderPlus, X } from "lucide-react";
+import { ChevronDown, Plus, FolderPlus, X, RefreshCw } from "lucide-react";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { useSegmentStore } from "../../stores/segmentStore";
@@ -13,6 +13,8 @@ function nameFromPath(path: string): string {
 export function StatusBar() {
   const info = useWorkspaceStore((s) => s.info);
   const switchInProgress = useWorkspaceStore((s) => s.switchInProgress);
+  const isLoading = useWorkspaceStore((s) => s.isLoading);
+  const refreshSegment = useWorkspaceStore((s) => s.refreshSegment);
   const switchSegment = useWorkspaceStore((s) => s.switchSegment);
   const closeSegment = useWorkspaceStore((s) => s.closeSegment);
   const isDirty = useEditorStore((s) => s.isDirty);
@@ -202,6 +204,15 @@ export function StatusBar() {
           </div>
         )}
       </div>
+      <button
+        className="status-bar-refresh"
+        onClick={refreshSegment}
+        disabled={isLoading || switchInProgress}
+        title="Refresh segment (Cmd+Shift+R)"
+        aria-label="Refresh segment"
+      >
+        <RefreshCw size={12} className={isLoading ? "spin" : ""} />
+      </button>
       {activeNote && (
         <>
           <span className="separator">|</span>

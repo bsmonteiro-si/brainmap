@@ -30,6 +30,7 @@ interface WorkspaceState {
   switchSegment: (segmentId: string, opts?: { skipOutgoingCache?: boolean }) => Promise<void>;
   closeSegment: (segmentId: string) => Promise<void>;
   refreshStats: () => Promise<void>;
+  refreshSegment: () => Promise<void>;
 }
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
@@ -241,6 +242,36 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       set({ stats });
     } catch (e) {
       log.error("stores::workspace", "failed to refresh stats", { error: String(e) });
+    }
+  },
+
+  refreshSegment: async () => {
+    const { info, isLoading } = get();
+    if (!info || isLoading) return;
+    // Save dirty editor state before rebuilding (same pattern as switchSegment)
+    const editor = useEditorStore.getState();
+    if (editor.isDirty && !editor.savingInProgress) {
+      await editor.saveNote();
+    }
+    const waitStart = Date.now();
+    while (useEditorStore.getState().savingInProgress && Date.now() - waitStart < 2000) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    set({ isLoading: true, error: null });
+    try {
+      const api = await getAPI();
+      log.info("stores::workspace", "refreshing segment");
+      const newInfo = await api.refreshWorkspace();
+      const stats = await api.getStats();
+      set({ info: newInfo, stats, isLoading: false });
+      await useGraphStore.getState().loadTopology();
+      log.info("stores::workspace", "segment refreshed", {
+        node_count: newInfo.node_count,
+        edge_count: newInfo.edge_count,
+      });
+    } catch (e) {
+      log.error("stores::workspace", "failed to refresh segment", { error: String(e) });
+      set({ error: String(e), isLoading: false });
     }
   },
 }));

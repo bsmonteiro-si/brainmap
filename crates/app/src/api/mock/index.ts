@@ -43,6 +43,16 @@ export class MockBridge implements BrainMapAPI {
     // no-op in mock
   }
 
+  async refreshWorkspace(): Promise<WorkspaceInfo> {
+    await mockDelay("openWorkspace");
+    return {
+      name: "The Book of Why",
+      root: "/mock/seed",
+      node_count: mockState.notes.size,
+      edge_count: mockState.edges.length,
+    };
+  }
+
   async getGraphTopology(): Promise<GraphTopology> {
     await mockDelay("getGraphTopology");
     return {
@@ -295,6 +305,10 @@ export class MockBridge implements BrainMapAPI {
 
   async createPlainFile(path: string, _body?: string): Promise<string> {
     return path;
+  }
+
+  async deletePlainFile(_path: string): Promise<void> {
+    // No-op in mock
   }
 
   async readPlainFile(path: string): Promise<PlainFileDetail> {

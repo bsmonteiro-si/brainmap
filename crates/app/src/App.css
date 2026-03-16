@@ -277,6 +277,30 @@ body {
   color: var(--border-color);
 }
 
+.status-bar-refresh {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+}
+.status-bar-refresh:hover {
+  color: var(--text-primary);
+}
+.status-bar-refresh:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.status-bar-refresh .spin {
+  animation: spin 1s linear infinite;
+}
+
 .status-bar-btn {
   background: none;
   border: none;

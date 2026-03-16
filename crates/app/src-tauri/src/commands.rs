@@ -108,6 +108,22 @@ pub fn switch_workspace(state: State<'_, AppState>, root: String) -> Result<Work
 }
 
 #[tauri::command]
+pub async fn refresh_workspace(state: State<'_, AppState>) -> Result<WorkspaceInfoDto, String> {
+    let root = state.resolve_root(None)?;
+    info!(root = %root, "refresh_workspace called");
+    state.with_slot_mut(&root, |slot| {
+        let path = slot.workspace.root.clone();
+        let fresh = brainmap_core::workspace::Workspace::open_or_init(&path)
+            .map_err(|e| e.to_string())?;
+        slot.workspace = fresh;
+        // Clear expected_writes so the file watcher doesn't suppress events
+        // for paths that were pending before refresh.
+        slot.expected_writes.clear();
+        Ok(workspace_info_from_slot(slot))
+    })
+}
+
+#[tauri::command]
 pub fn get_graph_topology(state: State<'_, AppState>) -> Result<GraphTopologyDto, String> {
     state.with_active(|ws| {
         let topo = handlers::handle_get_topology(ws);
@@ -466,6 +482,16 @@ pub fn delete_folder(
     // Register expected writes for ALL note files in the folder before deleting
     let prefix = if path.ends_with('/') { path.clone() } else { format!("{}/", path) };
 
+    // Collect all workspace files under the folder before deletion (for files-changed event)
+    let all_files_in_folder: Vec<String> = state.with_slot(&root, |slot| {
+        let mut files = Vec::new();
+        let folder_abs = slot.workspace.root.join(&path);
+        if folder_abs.is_dir() {
+            handlers::collect_folder_files(&slot.workspace.root, &folder_abs, &mut files);
+        }
+        Ok(files)
+    })?;
+
     // Collect edges and folder nodes before deletion, then perform deletion in one lock
     let (result, edges_before, removed_folder_nodes) = state.with_slot_mut(&root, |slot| {
         // Register expected writes
@@ -526,6 +552,16 @@ pub fn delete_folder(
 
     emit_topology_event(&app, &root, vec![], removed_nodes, vec![], edges_before);
 
+    // Emit files-changed for untracked files that were in the folder
+    let deleted_note_set: std::collections::HashSet<&str> =
+        result.deleted_paths.iter().map(|s| s.as_str()).collect();
+    let removed_plain_files: Vec<String> = all_files_in_folder.into_iter()
+        .filter(|f| !deleted_note_set.contains(f.as_str()))
+        .collect();
+    if !removed_plain_files.is_empty() {
+        emit_files_changed_event(&app, &root, vec![], removed_plain_files);
+    }
+
     Ok(result)
 }
 
@@ -581,6 +617,26 @@ pub fn create_plain_file(
 #[tauri::command]
 pub fn read_plain_file(state: State<'_, AppState>, path: String) -> Result<PlainFileDto, String> {
     state.with_active(|ws| handlers::handle_read_plain_file(ws, &path))
+}
+
+#[tauri::command]
+pub fn delete_plain_file(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<(), String> {
+    let root = state.resolve_root(None)?;
+    // Plain file ops bypass Workspace state and only touch disk,
+    // matching create_plain_file/write_plain_file convention.
+    let abs_path = state.with_slot(&root, |slot| {
+        handlers::validate_relative_path(&slot.workspace.root, &path)
+    })?;
+    state.register_expected_write(&root, abs_path);
+    state.with_slot(&root, |slot| handlers::handle_delete_plain_file(&slot.workspace, &path))?;
+
+    emit_files_changed_event(&app, &root, vec![], vec![path.clone()]);
+
+    Ok(())
 }
 
 #[tauri::command]

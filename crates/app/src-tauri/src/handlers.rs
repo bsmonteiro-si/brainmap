@@ -189,9 +189,10 @@ pub fn handle_delete_folder(
         }
     }
 
-    // Try to remove the directory (non-recursive — won't delete non-note files)
+    // Delete remaining non-note files in the folder (images, PDFs, plain text, etc.)
     let dir_path = ws.root.join(folder_path);
     if dir_path.is_dir() {
+        delete_remaining_files_recursive(&dir_path);
         // Walk bottom-up to remove empty subdirectories
         let _ = remove_empty_dirs_recursive(&dir_path);
     }
@@ -214,6 +215,28 @@ fn remove_empty_dirs_recursive(dir: &std::path::Path) -> std::io::Result<()> {
         let _ = std::fs::remove_dir(dir);
     }
     Ok(())
+}
+
+/// Recursively delete all regular files in a directory.
+/// Skips symlinks (both files and directories) to avoid deleting content outside the workspace,
+/// matching the behavior of `collect_files_recursive`.
+fn delete_remaining_files_recursive(dir: &std::path::Path) {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        // Skip symlinks to avoid cycles and escaping workspace root
+        if path.is_symlink() {
+            continue;
+        }
+        if path.is_dir() {
+            delete_remaining_files_recursive(&path);
+        } else {
+            let _ = std::fs::remove_file(&path);
+        }
+    }
 }
 
 /// Move a note to a new path.
@@ -445,6 +468,22 @@ pub fn handle_write_plain_file(ws: &Workspace, path: &str, body: &str) -> Result
         .map_err(|e| format!("Failed to write file: {}", e))
 }
 
+/// Delete a plain (non-BrainMap) file from disk.
+/// Rejects deletion of files tracked in the BrainMap graph (use `delete_note` instead).
+pub fn handle_delete_plain_file(ws: &Workspace, path: &str) -> Result<(), String> {
+    let rp = brainmap_core::model::RelativePath::new(path);
+    if ws.notes.contains_key(&rp) {
+        return Err("Cannot delete a BrainMap-managed note via plain file API".to_string());
+    }
+    let abs = validate_relative_path(&ws.root, path)?;
+    if !abs.exists() {
+        return Err(format!("File not found: {}", path));
+    }
+    std::fs::remove_file(&abs)
+        .map_err(|e| format!("Failed to delete file: {}", e))?;
+    Ok(())
+}
+
 /// Write raw content (frontmatter + body) for a BrainMap-managed note.
 /// Writes to disk then re-parses via `reload_file` to update graph/index.
 /// Returns the `GraphDiff` from reload_file for event emission.
@@ -528,6 +567,16 @@ pub fn handle_list_workspace_files(ws: &Workspace) -> Vec<String> {
     collect_files_recursive(&ws.root, &ws.root, &mut files);
     files.sort();
     files
+}
+
+/// Collect all files under a specific directory, returning paths relative to base.
+/// Used by `delete_folder` to identify untracked files for the files-changed event.
+pub(crate) fn collect_folder_files(
+    base: &std::path::Path,
+    dir: &std::path::Path,
+    out: &mut Vec<String>,
+) {
+    collect_files_recursive(base, dir, out);
 }
 
 fn collect_files_recursive(

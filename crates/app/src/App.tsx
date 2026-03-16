@@ -201,6 +201,11 @@ function App() {
         e.preventDefault();
         useUIStore.getState().resetZoom();
       }
+      // Cmd+Shift+R: Refresh segment
+      if (isMod && e.shiftKey && e.key.toLowerCase() === "r") {
+        e.preventDefault();
+        useWorkspaceStore.getState().refreshSegment();
+      }
       // Cmd+Z: Undo (frontmatter fields → frontmatter undo, CodeMirror → CM undo, else → file-op undo)
       if (isMod && e.key === "z" && !e.shiftKey) {
         const target = e.target as HTMLElement | null;

@@ -68,6 +68,7 @@ export interface BrainMapAPI {
   openWorkspace(path: string): Promise<WorkspaceInfoDto>;
   switchWorkspace(root: string): Promise<WorkspaceInfoDto>;
   closeWorkspace(root: string): Promise<void>;
+  refreshWorkspace(): Promise<WorkspaceInfoDto>;
   getGraphTopology(): Promise<GraphTopologyDto>;
   getNodeSummary(path: string): Promise<NodeSummaryDto>;
   readNote(path: string): Promise<NoteDetailDto>;
@@ -105,6 +106,7 @@ export interface BrainMapAPI {
   deleteFolder(path: string, force?: boolean): Promise<{ deleted_paths: string[] }>;
   listWorkspaceFiles(): Promise<string[]>;
   createPlainFile(path: string, body?: string): Promise<string>;
+  deletePlainFile(path: string): Promise<void>;
   readPlainFile(path: string): Promise<PlainFileDto>;
   resolvePdfPath(path: string): Promise<PdfMetaDto>;
   loadPdfHighlights(pdfPath: string): Promise<PdfHighlight[]>;
