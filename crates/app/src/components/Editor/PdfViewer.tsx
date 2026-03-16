@@ -12,10 +12,8 @@ import {
 } from "../../utils/pdfCoords";
 import { ZoomIn, ZoomOut, FileOutput, Highlighter, X, Undo2, Eraser } from "lucide-react";
 
-// Configure pdf.js worker and font data using Vite's ?url import for static asset URLs
+// Configure pdf.js worker using Vite's ?url import for static asset URL
 import workerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
-import cMapUrl from "pdfjs-dist/cmaps/?url";
-import standardFontDataUrl from "pdfjs-dist/standard_fonts/?url";
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
 const CONTAINER_PADDING = 24;
@@ -103,9 +101,9 @@ export function PdfViewer({ path }: PdfViewerProps) {
 
         const loadingTask = pdfjsLib.getDocument({
           url,
-          cMapUrl,
+          cMapUrl: "/pdfjs-cmaps/",
           cMapPacked: true,
-          standardFontDataUrl,
+          standardFontDataUrl: "/pdfjs-fonts/",
         });
         const doc = await loadingTask.promise;
 
