@@ -2,11 +2,11 @@
 
 ## Context
 
-Following the AI-first codebase audit (`.claude/research/ai-first-codebase-audit.md`), 12 upgrades were identified. This plan tracks implementation progress across two batches of 6 parallel agents.
+Following the AI-first codebase audit (`.claude/research/ai-first-codebase-audit.md`), 12 upgrades were identified. Implemented across two batches of 6 parallel agents. All 12 tasks complete and merged.
 
 ---
 
-## Batch 1 — COMPLETED ✅ (all 6 merged to main)
+## Batch 1 — COMPLETED ✅
 
 ### 1A. Trunk-Based Safety Net — DONE ✅
 **Commit:** `6552915` | **Merged to main**
@@ -65,96 +65,75 @@ Added `Graph::assert_invariants()` checking 7 invariants (node existence, edge s
 
 ---
 
-## Batch 2 — NOT STARTED
+## Batch 2 — COMPLETED ✅
 
-### 1C. CLAUDE.md Restructuring
-**Goal:** Slim CLAUDE.md to essentials; move feature history to `docs/CHANGELOG.md`.
+### 1C. CLAUDE.md Restructuring — DONE ✅
+**Commit:** `1b54885` | **Merged to main**
 
-**New CLAUDE.md structure (order matters):**
-1. `# BrainMap` — one-line description
-2. `## Verification` — `./scripts/check.sh` (reference 1A)
-3. `## Building` — cargo/npm commands
-4. `## Project Structure` — crate layout
-5. `## Architecture` — core design decisions (~10 lines)
-6. `## Data Model` — summary + "See `docs/02-data-model.md`"
-7. `## Conventions` — keep existing
-8. `## Logging` — trim, reference `docs/logging.md`
-9. `## Review Agents` — keep existing (mandatory feedback loops)
-10. `## Documentation Maintenance` — keep existing
-
-**Must also add references to new batch 1 docs:**
-- `## Decisions` → `docs/decisions/`
-- `## Extension Guides` → `docs/extension-guides/`
-- `## Error Recovery` → `docs/error-recovery.md`
+Slimmed CLAUDE.md from 31KB to 4.9KB. Moved entire "Current Status" feature history to `docs/CHANGELOG.md`. Kept conventions, review agents, and mandatory feedback loops intact. Added references to new docs (decisions, extension guides, error recovery).
 
 ---
 
-### 1D. Review File Cleanup Convention
-**Goal:** Prevent `.claude/reviews/` from growing unboundedly.
+### 1D. Review File Cleanup Convention — DONE ✅
+**Commit:** `9264d74` | **Merged to main**
 
-- Add cleanup rule to CLAUDE.md Review Agents section
-- Create `.claude/reviews/archive/.gitkeep`
-
----
-
-### 3B. Property-Based Testing (Rust — proptest)
-**Goal:** Test graph invariants hold under arbitrary operation sequences.
-
-- Add `proptest = "1"` to `crates/core/Cargo.toml` dev-dependencies
-- Create `crates/core/tests/property_tests.rs`
-- Test strategies: random paths, random edge types, add/remove sequences
-- Uses `assert_invariants()` from 3A (now merged)
+Created `.claude/reviews/archive/.gitkeep`. Cleanup convention added to CLAUDE.md by 1C agent: move review files to archive after committing, move files older than 7 days at session start.
 
 ---
 
-### 3C. Property-Based Testing (TypeScript — fast-check)
-**Goal:** Test Zustand store consistency under arbitrary event sequences.
+### 3B. Property-Based Testing (Rust — proptest) — DONE ✅
+**Commit:** `f278f69` | **Merged to main**
 
-- Add `fast-check` to `crates/app/package.json` devDependencies
-- Create `crates/app/src/stores/graphStore.property.test.ts`
-- Test: `applyEvent` never produces duplicate edges
+Added `proptest = "1"` to core dev-dependencies. Created `crates/core/tests/property_tests.rs` with 4 property-based tests: add/remove nodes preserves invariants, edge symmetry after random adds, remove edges preserves symmetry, interleaved ops no panic. Smart strategies: avoids folder type (contains invariant), deduplicates edges before add.
 
 ---
 
-### 4A. Tauri Integration Tests
-**Goal:** Test real Rust command → core library → DTO → response path.
+### 3C. Property-Based Testing (TypeScript — fast-check) — DONE ✅
+**Commit:** `9264d74` | **Merged to main**
 
-- Add `tempfile`, `serde_json` to `crates/app/src-tauri/Cargo.toml` dev-deps
-- Create `crates/app/src-tauri/tests/integration.rs`
-- Test flows: open workspace roundtrip, create/read note, link CRUD, HAS_BACKLINKS error, move note, path traversal rejection
+Added `fast-check` to devDependencies. Created `crates/app/src/stores/graphStore.property.test.ts` with 10 property-based tests across 5 groups: duplicate edge prevention, node count consistency, reset to empty, edge deletion, cascading node deletion. All 608 Vitest tests passing.
 
 ---
 
-### 4B. Screenshot/DOM Snapshot Command
-**Goal:** Give AI a way to "see" the running app without Chrome MCP.
+### 4A. Tauri Integration Tests — DONE ✅
+**Commit:** `16e3ab4` | **Merged to main**
 
-- Add `debug_snapshot` Tauri command (`commands.rs` + `lib.rs` registration)
-- Add `data-*` attributes to key frontend elements (tab bar, tree items, editor, graph)
-- Snapshot captures: active tab, editor content, file tree, graph node count, errors, viewport
+Added `tempfile` to src-tauri dev-dependencies. Created `crates/app/src-tauri/tests/integration.rs` with 7 tests: topology validation, create/read roundtrip, link CRUD, backlink error handling, move note path rewriting, path traversal rejection, DTO field name verification. Uses `fresh_workspace()` helper with 3 minimal notes (avoids seed invariant issues).
 
 ---
 
-## Deferred (post-batch 2)
+### 4B. Debug Snapshot Command — DONE ✅
+**Commit:** `8bc0d63` | **Merged to main**
+
+Pure frontend approach (no Tauri command needed). Created `crates/app/src/api/debugSnapshot.ts` with `collectDebugSnapshot()`. Added `data-*` attributes to TabBar (`data-tab-id`, `data-active`, `data-dirty`), EditorPanel (`data-view-mode`, `data-editor-dirty`), FileTreePanel (`data-tree-path`), GraphView (`data-graph-nodes`, `data-graph-layout`, `data-graph-focus`). Added `debugSnapshot()` to BrainMapAPI interface, TauriBridge, and MockBridge.
+
+---
+
+## Deferred
 
 ### 5A. CLAUDE.md ↔ docs/ Deduplication
-**Depends on:** 1C (CLAUDE.md restructuring)
-
-Replace duplicated content in CLAUDE.md with references to docs/ files.
+Largely addressed by 1C — CLAUDE.md now references docs/ instead of duplicating. Some minor overlap may remain; can be cleaned up incrementally.
 
 ### 6A. Visual Regression Testing
-**Lowest priority.** Playwright + screenshot comparison for graph/editor states.
+**Lowest priority.** Playwright + screenshot comparison for graph/editor states. Not yet started.
 
 ---
 
-## Batch 2 Parallelism Map
+## Summary
 
-```
-Agent 1: 1C (CLAUDE.md split)    → CLAUDE.md, docs/CHANGELOG.md
-Agent 2: 1D (review cleanup)     → .claude/reviews/archive/
-Agent 3: 3B (proptest Rust)      → crates/core/ (uses 3A assert_invariants)
-Agent 4: 3C (fast-check TS)      → crates/app/ stores
-Agent 5: 4A (Tauri integ tests)  → crates/app/src-tauri/tests/
-Agent 6: 4B (debug snapshot)     → commands.rs, lib.rs, frontend data-attrs
-```
-
-No file conflicts between agents. 1C and 1D both touch CLAUDE.md — run 1D after 1C, or have 1D only create the archive dir and add the convention text separately.
+| # | Task | Batch | Status |
+|---|------|-------|--------|
+| 1A | Trunk-based safety net | 1 | ✅ Merged |
+| 1B | ts-rs type generation | 1 | ✅ Merged |
+| 1C | CLAUDE.md restructuring | 2 | ✅ Merged |
+| 1D | Review cleanup convention | 2 | ✅ Merged |
+| 2A | Architecture decision records | 1 | ✅ Merged |
+| 2B | Extension guides | 1 | ✅ Merged |
+| 2C | Error recovery guide | 1 | ✅ Merged |
+| 3A | Workspace invariant assertions | 1 | ✅ Merged |
+| 3B | Property-based testing (Rust) | 2 | ✅ Merged |
+| 3C | Property-based testing (TS) | 2 | ✅ Merged |
+| 4A | Tauri integration tests | 2 | ✅ Merged |
+| 4B | Debug snapshot command | 2 | ✅ Merged |
+| 5A | CLAUDE.md deduplication | — | Largely done via 1C |
+| 6A | Visual regression testing | — | Deferred |
