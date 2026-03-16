@@ -1090,7 +1090,6 @@ body {
 /* Extra vertical spacing for list lines in CodeMirror edit/raw views.
    Uses line-height (not margin/padding) to avoid breaking CM6 hit-testing. */
 .editor-body .cm-editor .cm-list-line { line-height: 2.2; }
-.editor-body .cm-editor .cm-list-first { line-height: 2.8; }
 
 /* Indent callout left border to align with regular text */
 .editor-body .cm-editor .cm-callout-line { margin-left: 6px !important; }
