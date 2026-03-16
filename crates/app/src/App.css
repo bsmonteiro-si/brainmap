@@ -1243,6 +1243,10 @@ body {
   text-transform: uppercase;
   opacity: 0.7;
 }
+.editor-body .cm-editor .cm-bullet-widget {
+  font-size: 0.8em;
+  color: var(--text-muted);
+}
 .editor-body .cm-editor .cm-checkbox-widget {
   accent-color: var(--accent);
   vertical-align: middle;

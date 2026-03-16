@@ -16,6 +16,7 @@ import { copyReferenceMenu } from "./cmCopyReference";
 import { listSpacing } from "./cmListSpacing";
 import { markdownDecorations } from "./cmMarkdownDecorations";
 import { checkboxDecorations } from "./cmCheckboxDecorations";
+import { bulletDecorations } from "./cmBulletDecorations";
 
 const ACCENT = "#4a9eff";
 const ACCENT_DARK = "#5aaeFF";
@@ -100,6 +101,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
       listSpacing(),
       markdownDecorations(),
       checkboxDecorations(),
+      bulletDecorations(),
       ...(wsRoot ? [copyReferenceMenu(wsRoot.replace(/\/$/, "") + "/" + notePath)] : []),
     ];
 

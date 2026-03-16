@@ -224,6 +224,20 @@ class ZeroHeightWidget extends WidgetType {
   }
 }
 
+class CalloutSpacerWidget extends WidgetType {
+  toDOM() {
+    const el = document.createElement("div");
+    el.style.height = "6px";
+    return el;
+  }
+  get estimatedHeight() {
+    return 6;
+  }
+  ignoreEvent() {
+    return false;
+  }
+}
+
 class CalloutHeaderWidget extends WidgetType {
   constructor(
     readonly type: string,
@@ -343,6 +357,13 @@ function buildDecorations(
       : doc.lineAt(r.closingLineTo).number;
     const cursorOnClosing = r.closed && cursorLine === closingLineNum;
 
+    // Spacer above callout
+    builder.add(r.headerFrom, r.headerFrom, Decoration.widget({
+      widget: new CalloutSpacerWidget(),
+      block: true,
+      side: -1,
+    }));
+
     // Header line
     const headerClasses = computeLineClasses(
       headerLineNum, headerLineNum, closingLineNum,
@@ -393,6 +414,14 @@ function buildDecorations(
         builder.add(r.closingLineFrom, r.closingLineFrom, lineDeco(classes, color));
       }
     }
+
+    // Spacer below callout
+    const endPos = r.closed ? r.closingLineTo : r.closingLineTo;
+    builder.add(endPos, endPos, Decoration.widget({
+      widget: new CalloutSpacerWidget(),
+      block: true,
+      side: 1,
+    }));
   }
 
   return builder.finish();
@@ -468,6 +497,7 @@ const baseTheme = EditorView.baseTheme({
     borderRight: "1px solid color-mix(in srgb, var(--callout-color) 15%, transparent)",
     paddingLeft: "14px",
     background: "color-mix(in srgb, var(--callout-color) 5%, transparent)",
+    color: "var(--text-secondary)",
   },
   ".cm-callout-header": {
     background: "color-mix(in srgb, var(--callout-color) 8%, transparent)",

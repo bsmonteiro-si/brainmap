@@ -6,7 +6,6 @@
  * - Inline code (background pill via tree walk)
  * - Image URL dimming (cursor-aware)
  * - Link markup dimming (cursor-aware)
- * - Inline source citations [!source ...] (accent pill)
  */
 import {
   EditorView,
@@ -255,20 +254,6 @@ const fencedBodyDeco = Decoration.line({ class: "cm-fenced-code" });
 const inlineCodeMark = Decoration.mark({ class: "cm-inline-code" });
 const imageUrlMark = Decoration.mark({ class: "cm-image-url" });
 const linkDimMark = Decoration.mark({ class: "cm-link-dim" });
-const sourceTagMark = Decoration.mark({ class: "cm-source-tag" });
-const sourceContentMark = Decoration.mark({ class: "cm-source-content" });
-const sourceBracketMark = Decoration.mark({ class: "cm-source-bracket" });
-
-class InlineSourceWidget extends WidgetType {
-  eq(): boolean { return true; }
-  toDOM(): HTMLElement {
-    const span = document.createElement("span");
-    span.className = "cm-source-widget-tag";
-    span.textContent = "source";
-    return span;
-  }
-  ignoreEvent(): boolean { return false; }
-}
 const tableHeaderDeco = Decoration.line({ class: "cm-table-line cm-table-header" });
 const tableDelimDeco = Decoration.line({ class: "cm-table-line cm-table-delimiter" });
 const tableRowDeco = Decoration.line({ class: "cm-table-line cm-table-row" });
@@ -309,15 +294,13 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
     }
   }
 
-  // Tree walk for inline elements + collect skip ranges for inline source pass
+  // Tree walk for inline elements
   const tree = syntaxTree(state);
-  const sourceSkipRanges: { from: number; to: number }[] = [];
   tree.iterate({
     enter(node) {
       // Inline code — background pill
       if (node.name === "InlineCode") {
         decos.push({ from: node.from, to: node.to, deco: inlineCodeMark });
-        sourceSkipRanges.push({ from: node.from, to: node.to });
         return false; // don't descend
       }
 
@@ -379,11 +362,6 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
 
       // Link — dim brackets and URL (cursor-aware)
       if (node.name === "Link") {
-        // Don't skip inline source citations that lezer parses as Link nodes
-        const linkText = state.sliceDoc(node.from, node.to);
-        if (!linkText.startsWith("[!source ")) {
-          sourceSkipRanges.push({ from: node.from, to: node.to });
-        }
         const linkLine = doc.lineAt(node.from).number;
         if (linkLine !== cursorLine) {
           const text = state.sliceDoc(node.from, node.to);
@@ -401,28 +379,6 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
       }
     },
   });
-
-  // Inline source citations [!source ...] — regex pass over non-fenced lines
-  const fencedLines = fencedLineSet(cls.fencedBlocks);
-  const inlineSourceRe = /\[!source\s+([^\]]+)\]/g;
-
-  for (let ln = 1; ln <= doc.lines; ln++) {
-    if (fencedLines.has(ln)) continue;
-    const line = doc.line(ln);
-    let m: RegExpExecArray | null;
-    inlineSourceRe.lastIndex = 0;
-    while ((m = inlineSourceRe.exec(line.text)) !== null) {
-      if (!m[1].trim()) continue; // skip whitespace-only
-      const matchFrom = line.from + m.index;
-      const matchTo = matchFrom + m[0].length;
-      // Skip if overlapping with InlineCode or Link
-      if (sourceSkipRanges.some((r) => matchFrom < r.to && matchTo > r.from)) continue;
-      const tagEnd = matchFrom + m[0].indexOf(m[1]); // start of content
-      decos.push({ from: matchFrom, to: tagEnd, deco: Decoration.replace({ widget: new InlineSourceWidget() }) });
-      decos.push({ from: tagEnd, to: matchTo - 1, deco: sourceContentMark });
-      decos.push({ from: matchTo - 1, to: matchTo, deco: Decoration.replace({}) });
-    }
-  }
 
   // Sort by from position, then by to (line decos first since to === from)
   decos.sort((a, b) => a.from - b.from || a.to - b.to);
