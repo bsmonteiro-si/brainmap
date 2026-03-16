@@ -585,16 +585,25 @@ export function PdfViewer({ path }: PdfViewerProps) {
     [persistHighlights],
   );
 
-  // Clear all highlights
-  const clearAllHighlights = useCallback(async () => {
+  // Remove the highlight matching the current text selection
+  const removeSelectedHighlight = useCallback(async () => {
+    const snap = selectionSnapshotRef.current;
+    if (!snap) return;
     let prev: PdfHighlight[] = [];
+    let updated: PdfHighlight[] = [];
     setHighlights((current) => {
       prev = current;
-      return [];
+      updated = current.filter(
+        (h) => !(h.page === snap.pageNum && h.text === snap.text),
+      );
+      return updated;
     });
-    if (prev.length > 0) {
-      await persistHighlights(prev, []);
+    if (updated.length < prev.length) {
+      await persistHighlights(prev, updated);
     }
+    window.getSelection()?.removeAllRanges();
+    selectionSnapshotRef.current = null;
+    setHasSelection(false);
   }, [persistHighlights]);
 
   // Ref callbacks
@@ -770,12 +779,13 @@ export function PdfViewer({ path }: PdfViewerProps) {
                 <Undo2 size={16} />
               </button>
 
-              {/* Clear all highlights */}
+              {/* Remove selected highlight */}
               <button
                 className="pdf-toolbar-btn"
-                onClick={clearAllHighlights}
-                disabled={highlights.length === 0}
-                title="Remove all highlights"
+                onClick={removeSelectedHighlight}
+                onMouseDown={(e) => e.preventDefault()}
+                disabled={!hasSelection}
+                title="Remove selected highlight"
               >
                 <Eraser size={16} />
               </button>
