@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Text } from "@codemirror/state";
-import { scanCallouts } from "./cmCalloutDecorations";
+import { scanCallouts, computeLineClasses } from "./cmCalloutDecorations";
 
 function doc(s: string): Text {
   return Text.of(s.split("\n"));
@@ -105,5 +105,68 @@ describe("scanCallouts", () => {
     const closingLine = d.line(4);
     expect(ranges[0].closingLineFrom).toBe(closingLine.from);
     expect(ranges[0].closingLineTo).toBe(closingLine.to);
+  });
+});
+
+describe("computeLineClasses", () => {
+  // Callout: header=line 2, body=lines 3-4, closing=line 5 (2 body lines)
+  const H = 2, C = 5, BODY = 2;
+
+  it("header line gets cm-callout-header (brace hidden)", () => {
+    const cls = computeLineClasses(H, H, C, BODY, true, false);
+    expect(cls).toBe("cm-callout-line cm-callout-header");
+  });
+
+  it("header line gets cm-callout-header (brace visible)", () => {
+    const cls = computeLineClasses(H, H, C, BODY, true, true);
+    expect(cls).toBe("cm-callout-line cm-callout-header");
+  });
+
+  it("middle body line gets cm-callout-body", () => {
+    const cls = computeLineClasses(3, H, C, BODY, true, false);
+    expect(cls).toBe("cm-callout-line cm-callout-body");
+  });
+
+  it("last body line gets cm-callout-last when brace hidden", () => {
+    const cls = computeLineClasses(4, H, C, BODY, true, false);
+    expect(cls).toBe("cm-callout-line cm-callout-body cm-callout-last");
+  });
+
+  it("last body line does NOT get cm-callout-last when brace visible", () => {
+    const cls = computeLineClasses(4, H, C, BODY, true, true);
+    expect(cls).toBe("cm-callout-line cm-callout-body");
+  });
+
+  it("closing brace line gets cm-callout-last", () => {
+    const cls = computeLineClasses(C, H, C, BODY, true, true);
+    expect(cls).toBe("cm-callout-line cm-callout-body cm-callout-last");
+  });
+
+  // Empty callout: header=line 2, closing=line 3, 0 body lines
+  it("header-only callout: header gets cm-callout-last when brace hidden", () => {
+    const cls = computeLineClasses(2, 2, 3, 0, true, false);
+    expect(cls).toBe("cm-callout-line cm-callout-header cm-callout-last");
+  });
+
+  it("header-only callout: header does NOT get cm-callout-last when brace visible", () => {
+    const cls = computeLineClasses(2, 2, 3, 0, true, true);
+    expect(cls).toBe("cm-callout-line cm-callout-header");
+  });
+
+  it("header-only callout: visible brace gets cm-callout-last", () => {
+    const cls = computeLineClasses(3, 2, 3, 0, true, true);
+    expect(cls).toBe("cm-callout-line cm-callout-body cm-callout-last");
+  });
+
+  // Unclosed callout: header=line 2, closingLineNum=line 4 (last doc line), 2 body lines
+  it("unclosed callout: line at closingLineNum gets cm-callout-last", () => {
+    // For unclosed callouts, closingLineNum IS the last body line
+    const cls = computeLineClasses(4, 2, 4, 2, false, false);
+    expect(cls).toBe("cm-callout-line cm-callout-body cm-callout-last");
+  });
+
+  it("unclosed callout: non-last body line is plain cm-callout-body", () => {
+    const cls = computeLineClasses(3, 2, 4, 2, false, false);
+    expect(cls).toBe("cm-callout-line cm-callout-body");
   });
 });

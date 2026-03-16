@@ -1,11 +1,13 @@
 import React, { useMemo, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import { resolveNotePath, isLocalNoteLink, ensureMdExtension } from "../../utils/resolveNotePath";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { CALLOUT_TYPES, CALLOUT_FALLBACK, CALLOUT_RE } from "./calloutTypes";
 import { remarkCalloutMerge } from "./remarkCalloutMerge";
+import { remarkInlineSource } from "./remarkInlineSource";
 import { preprocessCallouts, encodeLinkSpaces } from "./calloutPreprocess";
 
 interface Props {
@@ -13,7 +15,7 @@ interface Props {
   notePath: string;
 }
 
-const remarkPlugins = [remarkGfm, remarkCalloutMerge];
+const remarkPlugins = [remarkGfm, remarkCalloutMerge, remarkInlineSource];
 
 interface CalloutInfo {
   type: string;
@@ -183,7 +185,7 @@ export function MarkdownPreview({ content, notePath }: Props) {
 
   return (
     <div className="md-preview" ref={containerRef}>
-      <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
+      <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={[rehypeRaw]} components={components}>
         {encodeLinkSpaces(preprocessCallouts(content))}
       </ReactMarkdown>
     </div>

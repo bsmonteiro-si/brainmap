@@ -275,6 +275,50 @@ class CalloutHeaderWidget extends WidgetType {
 }
 
 // ---------------------------------------------------------------------------
+// Compute CSS classes for a given line within a callout
+// ---------------------------------------------------------------------------
+export function computeLineClasses(
+  lineNum: number,
+  headerLineNum: number,
+  closingLineNum: number,
+  bodyLineCount: number,
+  closed: boolean,
+  cursorOnClosing: boolean,
+): string {
+  const base = "cm-callout-line";
+
+  if (lineNum === headerLineNum) {
+    // Header is also last visible line when: no body AND (brace hidden or unclosed)
+    const headerIsLast =
+      bodyLineCount === 0 && (!closed || !cursorOnClosing);
+    return headerIsLast
+      ? `${base} cm-callout-header cm-callout-last`
+      : `${base} cm-callout-header`;
+  }
+
+  if (closed && lineNum === closingLineNum) {
+    // Closing brace line (only visible when cursor is on it)
+    return `${base} cm-callout-body cm-callout-last`;
+  }
+
+  // Body line — determine if it's the last visible body line
+  // For closed callouts, last body is the line before the closing brace.
+  // For unclosed callouts, closingLineNum itself is the last body line.
+  const lastBodyLineNum = closed ? closingLineNum - 1 : closingLineNum;
+  const isLastBody = lineNum === lastBodyLineNum;
+
+  if (!isLastBody) {
+    return `${base} cm-callout-body`;
+  }
+
+  // Last body line: gets cm-callout-last only when closing brace is hidden (or unclosed)
+  if (!closed || !cursorOnClosing) {
+    return `${base} cm-callout-body cm-callout-last`;
+  }
+  return `${base} cm-callout-body`;
+}
+
+// ---------------------------------------------------------------------------
 // Build decorations from scan results
 // ---------------------------------------------------------------------------
 function buildDecorations(
@@ -283,57 +327,54 @@ function buildDecorations(
   cursorLine: number,
 ): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
+
+  const lineDeco = (classes: string, color: string) =>
+    Decoration.line({
+      attributes: { class: classes, style: `--callout-color: ${color};` },
+    });
+
   // Decorations must be added in document order
   for (const r of ranges) {
     const color = getCalloutColor(r.type);
-    const headerBg = `background: color-mix(in srgb, ${color} 12%, transparent); border-left: 3px solid ${color}; padding-left: 8px;`;
-    const bodyBg = `background: color-mix(in srgb, ${color} 6%, transparent); border-left: 3px solid ${color}; padding-left: 8px;`;
 
     const headerLineNum = doc.lineAt(r.headerFrom).number;
     const closingLineNum = r.closed
       ? doc.lineAt(r.closingLineFrom).number
       : doc.lineAt(r.closingLineTo).number;
+    const cursorOnClosing = r.closed && cursorLine === closingLineNum;
 
     // Header line
-    if (cursorLine === headerLineNum) {
-      // Cursor on header → show raw syntax with background only
+    const headerClasses = computeLineClasses(
+      headerLineNum, headerLineNum, closingLineNum,
+      r.bodyLineCount, r.closed, cursorOnClosing,
+    );
+    builder.add(r.headerFrom, r.headerFrom, lineDeco(headerClasses, color));
+
+    if (cursorLine !== headerLineNum && r.headerFrom < r.headerTo) {
+      // Replace header content with widget when cursor is elsewhere
       builder.add(
         r.headerFrom,
-        r.headerFrom,
-        Decoration.line({ attributes: { style: headerBg } }),
+        r.headerTo,
+        Decoration.replace({
+          widget: new CalloutHeaderWidget(r.type, r.title),
+        }),
       );
-    } else {
-      // Header line background
-      builder.add(
-        r.headerFrom,
-        r.headerFrom,
-        Decoration.line({ attributes: { style: headerBg } }),
-      );
-      // Replace header content with widget
-      if (r.headerFrom < r.headerTo) {
-        builder.add(
-          r.headerFrom,
-          r.headerTo,
-          Decoration.replace({
-            widget: new CalloutHeaderWidget(r.type, r.title),
-          }),
-        );
-      }
     }
 
-    // Body lines
-    for (let ln = headerLineNum + 1; ln < closingLineNum; ln++) {
+    // Body lines (include closingLineNum for unclosed callouts since it's the last body line)
+    const bodyEnd = r.closed ? closingLineNum : closingLineNum + 1;
+    for (let ln = headerLineNum + 1; ln < bodyEnd; ln++) {
       const line = doc.line(ln);
-      builder.add(
-        line.from,
-        line.from,
-        Decoration.line({ attributes: { style: bodyBg } }),
+      const classes = computeLineClasses(
+        ln, headerLineNum, closingLineNum,
+        r.bodyLineCount, r.closed, cursorOnClosing,
       );
+      builder.add(line.from, line.from, lineDeco(classes, color));
     }
 
-    // Closing line — block-replace when hidden, tinted background when cursor is on it
+    // Closing line
     if (r.closed) {
-      if (cursorLine !== closingLineNum) {
+      if (!cursorOnClosing) {
         // Replace with zero-height block widget so CodeMirror's height map stays accurate
         builder.add(
           r.closingLineFrom,
@@ -344,12 +385,12 @@ function buildDecorations(
           }),
         );
       } else {
-        // Cursor on closing line: show raw } with tinted background
-        builder.add(
-          r.closingLineFrom,
-          r.closingLineFrom,
-          Decoration.line({ attributes: { style: bodyBg } }),
+        // Cursor on closing line: show raw } with styling
+        const classes = computeLineClasses(
+          closingLineNum, headerLineNum, closingLineNum,
+          r.bodyLineCount, r.closed, cursorOnClosing,
         );
+        builder.add(r.closingLineFrom, r.closingLineFrom, lineDeco(classes, color));
       }
     }
   }
@@ -421,6 +462,28 @@ const calloutFoldService = foldService.of((state, lineStart) => {
 // Base theme
 // ---------------------------------------------------------------------------
 const baseTheme = EditorView.baseTheme({
+  // Card-like callout line styling
+  ".cm-callout-line": {
+    borderLeft: "3px solid var(--callout-color)",
+    borderRight: "1px solid color-mix(in srgb, var(--callout-color) 15%, transparent)",
+    paddingLeft: "14px",
+    background: "color-mix(in srgb, var(--callout-color) 5%, transparent)",
+  },
+  ".cm-callout-header": {
+    background: "color-mix(in srgb, var(--callout-color) 8%, transparent)",
+    borderTop: "1px solid color-mix(in srgb, var(--callout-color) 15%, transparent)",
+    borderRadius: "0 6px 0 0",
+    paddingTop: "6px",
+  },
+  ".cm-callout-last": {
+    borderBottom: "1px solid color-mix(in srgb, var(--callout-color) 15%, transparent)",
+    borderRadius: "0 0 6px 0",
+    paddingBottom: "8px",
+  },
+  "&.cm-editor .cm-callout-header.cm-callout-last": {
+    borderRadius: "0 6px 6px 0",
+  },
+  // Widget styling
   ".cm-callout-widget-header": {
     display: "inline-flex",
     alignItems: "center",
