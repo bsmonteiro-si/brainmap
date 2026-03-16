@@ -137,6 +137,49 @@ describe("closeOtherTabs", () => {
   });
 });
 
+describe("closeTabsToRight", () => {
+  it("removes tabs after the specified tab", () => {
+    useTabStore.getState().openTab("a.md", "note", "A", null);
+    useTabStore.getState().openTab("b.md", "note", "B", null);
+    useTabStore.getState().openTab("c.md", "note", "C", null);
+    useTabStore.getState().closeTabsToRight("a.md");
+    expect(useTabStore.getState().tabs).toHaveLength(1);
+    expect(useTabStore.getState().tabs[0].id).toBe("a.md");
+  });
+
+  it("does nothing when called on the last tab", () => {
+    useTabStore.getState().openTab("a.md", "note", "A", null);
+    useTabStore.getState().openTab("b.md", "note", "B", null);
+    useTabStore.getState().closeTabsToRight("b.md");
+    expect(useTabStore.getState().tabs).toHaveLength(2);
+  });
+
+  it("activates the target tab if active tab was to the right", () => {
+    useTabStore.getState().openTab("a.md", "note", "A", null);
+    useTabStore.getState().openTab("b.md", "note", "B", null);
+    useTabStore.getState().openTab("c.md", "note", "C", null);
+    // c.md is active (last opened)
+    useTabStore.getState().closeTabsToRight("a.md");
+    expect(useTabStore.getState().activeTabId).toBe("a.md");
+  });
+
+  it("keeps active tab if it is at or before the target", () => {
+    useTabStore.getState().openTab("a.md", "note", "A", null);
+    useTabStore.getState().openTab("b.md", "note", "B", null);
+    useTabStore.getState().openTab("c.md", "note", "C", null);
+    useTabStore.getState().activateTab("a.md");
+    useTabStore.getState().closeTabsToRight("b.md");
+    expect(useTabStore.getState().activeTabId).toBe("a.md");
+    expect(useTabStore.getState().tabs).toHaveLength(2);
+  });
+
+  it("no-ops for unknown tab id", () => {
+    useTabStore.getState().openTab("a.md", "note", "A", null);
+    useTabStore.getState().closeTabsToRight("unknown.md");
+    expect(useTabStore.getState().tabs).toHaveLength(1);
+  });
+});
+
 describe("closeAllTabs", () => {
   it("removes all tabs", () => {
     useTabStore.getState().openTab("a.md", "note", "A", null);

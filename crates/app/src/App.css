@@ -1692,6 +1692,11 @@ body {
 .context-menu-item--danger:hover {
   background: color-mix(in srgb, var(--danger, #e53935) 12%, transparent);
 }
+.context-menu-item--disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
 .context-menu-separator {
   height: 1px;
   background: var(--border-color);

@@ -38,6 +38,7 @@ interface TabStoreState {
   closeTab: (id: string) => void;
   closeActiveTab: () => void;
   closeOtherTabs: (id: string) => void;
+  closeTabsToRight: (id: string) => void;
   closeAllTabs: () => void;
   activateTab: (id: string) => void;
   updateTabState: (id: string, partial: Partial<TabState>) => void;
@@ -132,6 +133,15 @@ export const useTabStore = create<TabStoreState>((set, get) => ({
     const keep = tabs.find((t) => t.id === id);
     if (!keep) return;
     set({ tabs: [keep], activeTabId: id });
+  },
+
+  closeTabsToRight: (id) => {
+    const { tabs, activeTabId } = get();
+    const idx = tabs.findIndex((t) => t.id === id);
+    if (idx < 0 || idx === tabs.length - 1) return;
+    const next = tabs.slice(0, idx + 1);
+    const activeStillPresent = next.some((t) => t.id === activeTabId);
+    set({ tabs: next, activeTabId: activeStillPresent ? activeTabId : id });
   },
 
   closeAllTabs: () => {
