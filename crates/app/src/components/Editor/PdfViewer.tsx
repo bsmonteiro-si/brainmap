@@ -823,38 +823,45 @@ export function PdfViewer({ path }: PdfViewerProps) {
                 {/* Highlight overlay — between canvas and text layer */}
                 {pageHighlights.length > 0 && (
                   <div className="pdf-highlight-layer">
-                    {pageHighlights.map((h) =>
-                      h.rects.map((r, i) => (
-                        <div
-                          key={`${h.id}-${i}`}
-                          className={`pdf-highlight-rect${hoveredHighlightId === h.id ? " pdf-highlight-rect--hovered" : ""}`}
-                          style={{
-                            left: r.x * scale,
-                            top: r.y * scale,
-                            width: r.w * scale,
-                            height: r.h * scale,
-                            backgroundColor: h.color,
-                          }}
-                          data-highlight-id={h.id}
-                          onMouseEnter={() => setHoveredHighlightId(h.id)}
-                          onMouseLeave={() => setHoveredHighlightId(null)}
-                        >
-                          {/* Show delete button on the first rect of hovered highlight */}
-                          {i === 0 && hoveredHighlightId === h.id && (
-                            <button
-                              className="pdf-highlight-delete"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteHighlight(h.id);
-                              }}
-                              title="Remove highlight"
-                            >
-                              <X size={12} />
-                            </button>
-                          )}
-                        </div>
-                      )),
-                    )}
+                    {pageHighlights.map((h) => (
+                      <div
+                        key={h.id}
+                        className={`pdf-highlight-group${hoveredHighlightId === h.id ? " pdf-highlight-group--hovered" : ""}`}
+                        data-highlight-id={h.id}
+                        onMouseEnter={() => setHoveredHighlightId(h.id)}
+                        onMouseLeave={() => setHoveredHighlightId(null)}
+                      >
+                        {h.rects.map((r, i) => (
+                          <div
+                            key={i}
+                            className="pdf-highlight-rect"
+                            style={{
+                              left: r.x * scale,
+                              top: r.y * scale,
+                              width: r.w * scale,
+                              height: r.h * scale,
+                              backgroundColor: h.color,
+                            }}
+                          />
+                        ))}
+                        {hoveredHighlightId === h.id && (
+                          <button
+                            className="pdf-highlight-delete"
+                            style={{
+                              left: h.rects[0].x * scale + h.rects[0].w * scale - 9,
+                              top: h.rects[0].y * scale - 9,
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteHighlight(h.id);
+                            }}
+                            title="Remove highlight"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
                 <div

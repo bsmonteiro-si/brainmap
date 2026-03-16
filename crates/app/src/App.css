@@ -3189,24 +3189,25 @@ body {
   z-index: 1;
 }
 
-.pdf-highlight-rect {
-  position: absolute;
-  opacity: 0.3;
+.pdf-highlight-group {
+  opacity: 0.35;
   pointer-events: auto;
   cursor: pointer;
-  border-radius: 2px;
   transition: opacity 0.15s;
 }
 
-.pdf-highlight-rect:hover,
-.pdf-highlight-rect--hovered {
-  opacity: 0.5;
+.pdf-highlight-group:hover,
+.pdf-highlight-group--hovered {
+  opacity: 0.55;
+}
+
+.pdf-highlight-rect {
+  position: absolute;
+  border-radius: 2px;
 }
 
 .pdf-highlight-delete {
   position: absolute;
-  top: -8px;
-  right: -8px;
   width: 18px;
   height: 18px;
   padding: 0;
