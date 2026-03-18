@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveNotePath, isLocalNoteLink, ensureMdExtension } from "./resolveNotePath";
+import { resolveNotePath, isLocalNoteLink, ensureMdExtension, relativePath } from "./resolveNotePath";
 
 describe("resolveNotePath", () => {
   it("resolves same-directory link with ./", () => {
@@ -104,5 +104,34 @@ describe("ensureMdExtension", () => {
 
   it("leaves .md path unchanged", () => {
     expect(ensureMdExtension("People/Judea Pearl.md")).toBe("People/Judea Pearl.md");
+  });
+});
+
+describe("relativePath", () => {
+  it("same directory → ./filename", () => {
+    expect(relativePath("Concepts/AI.md", "Concepts/ML.md")).toBe("./ML.md");
+  });
+
+  it("different directory → ../target", () => {
+    expect(relativePath("Concepts/AI.md", "People/Turing.md")).toBe("../People/Turing.md");
+  });
+
+  it("root to subdirectory → ./Sub/file", () => {
+    expect(relativePath("Root.md", "Sub/Note.md")).toBe("./Sub/Note.md");
+  });
+
+  it("deep to shallow → ../../file", () => {
+    expect(relativePath("A/B/C.md", "D.md")).toBe("../../D.md");
+  });
+
+  it("same file → ./file", () => {
+    expect(relativePath("A/B.md", "A/B.md")).toBe("./B.md");
+  });
+
+  it("round-trips with resolveNotePath", () => {
+    const from = "Concepts/AI.md";
+    const to = "People/Turing.md";
+    const rel = relativePath(from, to);
+    expect(resolveNotePath(from, rel)).toBe(to);
   });
 });

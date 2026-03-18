@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { ChevronDown, Plus, FolderPlus, X, RefreshCw } from "lucide-react";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useEditorStore } from "../../stores/editorStore";
@@ -19,10 +19,18 @@ export function StatusBar() {
   const closeSegment = useWorkspaceStore((s) => s.closeSegment);
   const isDirty = useEditorStore((s) => s.isDirty);
   const activeNote = useEditorStore((s) => s.activeNote);
+  const editedBody = useEditorStore((s) => s.editedBody);
   const activeSegmentId = useSegmentStore((s) => s.activeSegmentId);
   const segments = useSegmentStore((s) => s.segments);
   const openSegmentIds = useSegmentStore((s) => s.openSegmentIds);
   const addSegment = useSegmentStore((s) => s.addSegment);
+
+  const body = editedBody ?? activeNote?.body ?? "";
+  const wordCount = useMemo(() => {
+    const trimmed = body.trim();
+    if (!trimmed) return 0;
+    return trimmed.split(/\s+/).length;
+  }, [body]);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -220,6 +228,8 @@ export function StatusBar() {
             {activeNote.path}
             {isDirty && <span className="dirty-indicator"> (unsaved)</span>}
           </span>
+          <span className="separator">|</span>
+          <span className="status-word-count">{wordCount} {wordCount === 1 ? "word" : "words"}</span>
         </>
       )}
     </div>

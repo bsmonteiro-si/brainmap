@@ -8,6 +8,7 @@ import { FrontmatterForm } from "./FrontmatterForm";
 import { RelatedNotesFooter } from "./RelatedNotesFooter";
 import { EditorToolbar } from "./EditorToolbar";
 import { PdfViewer } from "./PdfViewer";
+import { DocumentOutline } from "./DocumentOutline";
 import { getNodeColor } from "../GraphView/graphStyles";
 import type { EditorView } from "@codemirror/view";
 
@@ -317,6 +318,7 @@ export function EditorPanel() {
                 type="button"
               >Raw</button>
             </div>
+            <DocumentOutline editorView={editorViewRef.current} />
             <button
               className={`editor-line-numbers-btn${showLineNumbers ? " editor-line-numbers-btn--active" : ""}`}
               onClick={toggleLineNumbers}

@@ -7,7 +7,7 @@ import { defaultKeymap, history, historyKeymap, redo, indentWithTab } from "@cod
 import { oneDark } from "@codemirror/theme-one-dark";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
 import { search, searchKeymap } from "@codemirror/search";
-import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
+import { autocompletion, closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { tags } from "@lezer/highlight";
 import { useUIStore, THEME_BASE } from "../../stores/uiStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
@@ -20,6 +20,9 @@ import { markdownDecorations } from "./cmMarkdownDecorations";
 import { checkboxDecorations } from "./cmCheckboxDecorations";
 import { bulletDecorations } from "./cmBulletDecorations";
 import { listNestingKeymap } from "./cmListNesting";
+import { smartPaste } from "./cmSmartPaste";
+import { noteCompletionSource } from "./cmNoteAutocomplete";
+import { slashCommandSource } from "./cmSlashCommands";
 
 const ACCENT = "#4a9eff";
 const ACCENT_DARK = "#5aaeFF";
@@ -126,7 +129,9 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
         ]),
         EditorState.languageData.of(() => [{ closeBrackets: { brackets: ["(", "[", "{", "`"] } }]),
         closeBrackets(),
+        autocompletion({ override: [noteCompletionSource, slashCommandSource], activateOnTyping: true }),
         search(),
+        smartPaste(),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             onChangeRef.current(update.state.doc.toString());

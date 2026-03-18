@@ -1206,11 +1206,19 @@ body {
 .editor-body .cm-editor .cm-image-url { opacity: 0.4; font-size: 0.85em; }
 .editor-body .cm-editor .cm-link-dim { opacity: 0.4; }
 
-/* Inline source citations [!source ...] */
+/* Inline source citations [!source ...] — mark-based (no replace widgets) */
 .editor-body .cm-editor .cm-source-tag {
+  font-size: 0;
+  color: transparent;
+}
+.editor-body .cm-editor .cm-source-tag::after {
+  content: "source";
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
   color: var(--accent);
-  opacity: 0.45;
-  font-size: 0.85em;
+  opacity: 0.8;
+  margin-right: 3px;
 }
 .editor-body .cm-editor .cm-source-content {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
@@ -1219,16 +1227,8 @@ body {
   font-style: italic;
 }
 .editor-body .cm-editor .cm-source-bracket {
-  opacity: 0.3;
-}
-.editor-body .cm-editor .cm-source-widget-tag {
-  color: var(--accent);
-  font-size: 0.75em;
-  font-weight: 600;
-  text-transform: uppercase;
-  opacity: 0.8;
-  margin-right: 3px;
-  vertical-align: baseline;
+  font-size: 0;
+  color: transparent;
 }
 
 /* Preview inline source */
@@ -1352,6 +1352,58 @@ body {
 
 .editor-body .cm-editor .cm-searchMatch-selected {
   background: rgba(74, 158, 255, 0.45);
+}
+
+/* ── CodeMirror autocomplete popup ───────────────────────────── */
+.editor-body .cm-editor .cm-tooltip-autocomplete {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-family: var(--ui-font-family);
+  font-size: var(--ui-font-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.editor-body .cm-editor .cm-tooltip-autocomplete ul {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.editor-body .cm-editor .cm-tooltip-autocomplete li {
+  padding: 4px 10px;
+  cursor: pointer;
+  color: var(--text-primary);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.editor-body .cm-editor .cm-tooltip-autocomplete li[aria-selected="true"],
+.editor-body .cm-editor .cm-tooltip-autocomplete li:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.editor-body .cm-editor .cm-completionLabel {
+  flex: 1;
+}
+
+.editor-body .cm-editor .cm-completionDetail {
+  opacity: 0.6;
+  font-size: var(--ui-font-xs);
+}
+
+.editor-body .cm-editor .cm-completionSection {
+  padding: 4px 10px 2px;
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  border-top: 1px solid var(--border-color);
 }
 
 .conflict-banner {
@@ -1895,6 +1947,62 @@ body {
 .editor-view-btn--active {
   background: var(--bg-tertiary);
   color: var(--text-primary);
+}
+
+/* ── Document Outline ────────────────────────────────────────── */
+.outline-container {
+  position: relative;
+}
+
+.outline-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 100;
+  min-width: 200px;
+  max-width: 320px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 4px 0;
+  margin-top: 4px;
+}
+
+.outline-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 5px 12px;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: var(--ui-font-sm);
+  font-family: var(--ui-font-family);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.outline-item:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.outline-empty {
+  padding: 8px 12px;
+  color: var(--text-muted);
+  font-size: var(--ui-font-sm);
+  font-style: italic;
+}
+
+/* ── Status Bar word count ───────────────────────────────────── */
+.status-word-count {
+  color: var(--text-muted);
+  font-size: var(--ui-font-xs);
 }
 
 /* ── Markdown Preview ─────────────────────────────────────────── */

@@ -13,6 +13,15 @@ Four foundational CodeMirror 6 features added to close the gap with standard tex
 
 New deps: `@codemirror/search`, `@codemirror/autocomplete`.
 
+## Editor Phase B — Markdown-Specific Features
+
+Four markdown-specific features to close the gap with Obsidian/Typora:
+
+- **Smart paste**: Pasting a URL while text is selected wraps as `[selected text](url)`. Falls through to normal paste otherwise.
+- **Note autocomplete**: Typing `[[` triggers an autocomplete popup with note titles and paths from the graph store. Select to insert `[[path]]`.
+- **Word count**: Live word count displayed in the status bar, derived from `editedBody` via `useMemo`.
+- **Document outline**: Dropdown button (`≡`) in the editor toolbar showing all headings with indentation. Click to scroll to heading. Skips headings inside fenced code blocks.
+
 ## Phase 1c — Desktop App
 
 UX improvements shipped: fcose/dagre graph layouts, edge label toggle, resizable panels (react-resizable-panels v4), file tree (Cmd+B), focus mode (button / Escape), related notes footer, debug cleanup. Additional opportunities implemented: node sizing by in-degree, color legend overlay (Legend toggle in graph toolbar), hover tooltips on graph nodes.

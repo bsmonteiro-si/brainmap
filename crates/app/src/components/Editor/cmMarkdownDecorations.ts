@@ -244,6 +244,15 @@ class TableWidget extends WidgetType {
 }
 
 // ---------------------------------------------------------------------------
+// Inline source citation marks (no replace widgets — preserves CM hit-testing)
+// ---------------------------------------------------------------------------
+const INLINE_SOURCE_RE = /\[!source\s+([^\]]+)\]/g;
+
+const sourceTagMark = Decoration.mark({ class: "cm-source-tag" });
+const sourceContentMark = Decoration.mark({ class: "cm-source-content" });
+const sourceBracketMark = Decoration.mark({ class: "cm-source-bracket" });
+
+// ---------------------------------------------------------------------------
 // Decoration builders
 // ---------------------------------------------------------------------------
 const hrLineDeco = Decoration.line({ class: "cm-hr-line" });
@@ -295,11 +304,14 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
   }
 
   // Tree walk for inline elements
+  // Collect skip ranges for inline source scanning (inline code and link nodes)
+  const sourceSkipRanges: [number, number][] = [];
   const tree = syntaxTree(state);
   tree.iterate({
     enter(node) {
       // Inline code — background pill
       if (node.name === "InlineCode") {
+        sourceSkipRanges.push([node.from, node.to]);
         decos.push({ from: node.from, to: node.to, deco: inlineCodeMark });
         return false; // don't descend
       }
@@ -362,6 +374,11 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
 
       // Link — dim brackets and URL (cursor-aware)
       if (node.name === "Link") {
+        // Track as skip range for inline source scanning (unless it IS an inline source)
+        const linkText = state.sliceDoc(node.from, node.to);
+        if (!linkText.startsWith("[!source")) {
+          sourceSkipRanges.push([node.from, node.to]);
+        }
         const linkLine = doc.lineAt(node.from).number;
         if (linkLine !== cursorLine) {
           const text = state.sliceDoc(node.from, node.to);
@@ -380,6 +397,38 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
     },
   });
 
+  // Inline source citations (cursor-aware per-match, skip fenced code + inline code + links)
+  const cursorPos = state.selection.main.head;
+  const fencedLines = fencedLineSet(cls.fencedBlocks);
+  for (let ln = 1; ln <= doc.lines; ln++) {
+    if (fencedLines.has(ln)) continue;
+    const line = doc.line(ln);
+    const text = line.text;
+    INLINE_SOURCE_RE.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = INLINE_SOURCE_RE.exec(text)) !== null) {
+      const content = m[1];
+      if (!content.trim()) continue;
+      const matchFrom = line.from + m.index;
+      const matchTo = matchFrom + m[0].length;
+      // Skip if cursor is inside this specific citation
+      if (cursorPos >= matchFrom && cursorPos <= matchTo) continue;
+      // Skip if overlapping with inline code or link
+      const overlaps = sourceSkipRanges.some(
+        ([sf, st]) => matchFrom < st && matchTo > sf,
+      );
+      if (overlaps) continue;
+      // [!source  → content start
+      const tagEnd = matchFrom + m[0].indexOf(content);
+      // Mark [!source  as tag (CSS hides text + shows "source" via ::after)
+      decos.push({ from: matchFrom, to: tagEnd, deco: sourceTagMark });
+      // Style the content
+      decos.push({ from: tagEnd, to: matchTo - 1, deco: sourceContentMark });
+      // Mark closing ] as bracket (dimmed)
+      decos.push({ from: matchTo - 1, to: matchTo, deco: sourceBracketMark });
+    }
+  }
+
   // Sort by from position, then by to (line decos first since to === from)
   decos.sort((a, b) => a.from - b.from || a.to - b.to);
 
@@ -393,19 +442,21 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
 // ---------------------------------------------------------------------------
 // StateField
 // ---------------------------------------------------------------------------
-const markdownDecoField = StateField.define<{ cursorLine: number; cls: LineClassification; decos: DecorationSet }>({
+const markdownDecoField = StateField.define<{ cursorLine: number; cursorPos: number; cls: LineClassification; decos: DecorationSet }>({
   create(state) {
-    const cursorLine = state.doc.lineAt(state.selection.main.head).number;
+    const cursorPos = state.selection.main.head;
+    const cursorLine = state.doc.lineAt(cursorPos).number;
     const cls = classifyLines(state.doc);
-    return { cursorLine, cls, decos: buildDecorations(state, cls, cursorLine) };
+    return { cursorLine, cursorPos, cls, decos: buildDecorations(state, cls, cursorLine) };
   },
   update(value, tr) {
-    const cursorLine = tr.state.doc.lineAt(tr.state.selection.main.head).number;
+    const cursorPos = tr.state.selection.main.head;
+    const cursorLine = tr.state.doc.lineAt(cursorPos).number;
     const docChanged = tr.docChanged;
-    const lineChanged = cursorLine !== value.cursorLine;
-    if (!docChanged && !lineChanged) return value;
+    const posChanged = cursorPos !== value.cursorPos;
+    if (!docChanged && !posChanged) return value;
     const cls = docChanged ? classifyLines(tr.state.doc) : value.cls;
-    return { cursorLine, cls, decos: buildDecorations(tr.state, cls, cursorLine) };
+    return { cursorLine, cursorPos, cls, decos: buildDecorations(tr.state, cls, cursorLine) };
   },
   provide: (f) => EditorView.decorations.from(f, (v) => v.decos),
 });

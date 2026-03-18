@@ -53,6 +53,44 @@ export function isLocalNoteLink(href: string): boolean {
   return !lastSegment.includes(".");
 }
 
+/**
+ * Compute a relative path from `fromPath` to `toPath`.
+ * Both paths are workspace-relative (e.g., "Concepts/AI.md", "People/Turing.md").
+ *
+ * Examples:
+ *   relativePath("Concepts/AI.md", "People/Turing.md") => "../People/Turing.md"
+ *   relativePath("Concepts/AI.md", "Concepts/ML.md") => "./ML.md"
+ *   relativePath("Root.md", "Sub/Note.md") => "./Sub/Note.md"
+ */
+export function relativePath(fromPath: string, toPath: string): string {
+  const fromDir = fromPath.lastIndexOf("/") >= 0
+    ? fromPath.slice(0, fromPath.lastIndexOf("/")).split("/")
+    : [];
+  const toParts = toPath.split("/");
+  const toDir = toParts.slice(0, -1);
+  const toFile = toParts[toParts.length - 1];
+
+  // Find common prefix length
+  let common = 0;
+  while (common < fromDir.length && common < toDir.length && fromDir[common] === toDir[common]) {
+    common++;
+  }
+
+  const ups = fromDir.length - common;
+  const downs = toDir.slice(common);
+
+  if (ups === 0) {
+    return `./${[...downs, toFile].join("/")}`;
+  }
+
+  const parts = [
+    ...Array(ups).fill(".."),
+    ...downs,
+    toFile,
+  ];
+  return parts.join("/");
+}
+
 /** Append .md if the path doesn't already have it. */
 export function ensureMdExtension(path: string): string {
   return path.endsWith(".md") ? path : `${path}.md`;
