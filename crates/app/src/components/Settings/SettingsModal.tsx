@@ -71,6 +71,8 @@ export function SettingsModal() {
   const setSpellCheck = useUIStore((s) => s.setSpellCheck);
   const editorIndentSize = useUIStore((s) => s.editorIndentSize);
   const setEditorIndentSize = useUIStore((s) => s.setEditorIndentSize);
+  const mermaidMaxHeight = useUIStore((s) => s.mermaidMaxHeight);
+  const setMermaidMaxHeight = useUIStore((s) => s.setMermaidMaxHeight);
   const resetFontPrefs = useUIStore((s) => s.resetFontPrefs);
   const tooltipFontSize = useUIStore((s) => s.tooltipFontSize);
   const tooltipPillSize = useUIStore((s) => s.tooltipPillSize);
@@ -292,6 +294,27 @@ export function SettingsModal() {
                   <option value={4}>4 spaces</option>
                   <option value={8}>8 spaces</option>
                 </select>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Mermaid Diagrams ── */}
+          <div className="settings-section">
+            <div className="settings-section-title">Mermaid Diagrams</div>
+            <div className="settings-row">
+              <span className="settings-label">Max height</span>
+              <div className="settings-control">
+                <div className="settings-size-row">
+                  <input
+                    type="range"
+                    min={150}
+                    max={800}
+                    step={50}
+                    value={mermaidMaxHeight}
+                    onChange={(e) => setMermaidMaxHeight(Number(e.target.value))}
+                  />
+                  <span className="settings-size-value">{mermaidMaxHeight}px</span>
+                </div>
               </div>
             </div>
           </div>

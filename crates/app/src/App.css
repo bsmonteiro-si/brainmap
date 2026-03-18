@@ -1155,6 +1155,7 @@ body {
 .editor-body .cm-editor .cm-mermaid-widget svg {
   max-width: 100%;
   height: auto;
+  width: auto;
 }
 .editor-body .cm-editor .cm-mermaid-loading {
   color: var(--text-muted);

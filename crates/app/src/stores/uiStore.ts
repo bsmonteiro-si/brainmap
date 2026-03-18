@@ -86,6 +86,7 @@ export const DEFAULT_NODE_LABEL_SIZE = 11;
 export const DEFAULT_NODE_ICON_SIZE = 18;
 export const DEFAULT_NODE_LABEL_BG_PADDING = 3;
 export const DEFAULT_EDGE_LABEL_SIZE = 8;
+export const DEFAULT_MERMAID_MAX_HEIGHT = 400;
 
 export type LeftTab = "files" | "graph" | "search";
 
@@ -154,6 +155,7 @@ interface PersistedPrefs {
   lineWrapping?: boolean;
   spellCheck?: boolean;
   editorIndentSize?: number;
+  mermaidMaxHeight?: number;
 }
 
 type CreateNoteMode = "default" | "create-and-link";
@@ -206,6 +208,7 @@ interface UIState {
   lineWrapping: boolean;
   spellCheck: boolean;
   editorIndentSize: number;
+  mermaidMaxHeight: number;
   moveDialogTarget: { path: string; isFolder: boolean } | null;
   hiddenEdgeTypes: Set<string>;
   panelSizes: PanelSizes;
@@ -271,6 +274,7 @@ interface UIState {
   setLineWrapping: (v: boolean) => void;
   setSpellCheck: (v: boolean) => void;
   setEditorIndentSize: (v: number) => void;
+  setMermaidMaxHeight: (v: number) => void;
   openMoveDialog: (target: { path: string; isFolder: boolean }) => void;
   closeMoveDialog: () => void;
   expandPathToFile: (filePath: string) => void;
@@ -442,6 +446,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   lineWrapping: storedPrefs.lineWrapping ?? true,
   spellCheck: storedPrefs.spellCheck ?? true,
   editorIndentSize: storedPrefs.editorIndentSize ?? 4,
+  mermaidMaxHeight: storedPrefs.mermaidMaxHeight ?? DEFAULT_MERMAID_MAX_HEIGHT,
   moveDialogTarget: null,
   hiddenEdgeTypes: new Set<string>(),
   panelSizes: storedSizes,
@@ -620,6 +625,11 @@ export const useUIStore = create<UIState>((set, get) => ({
   setEditorIndentSize: (v: number) => {
     set({ editorIndentSize: v });
     savePrefs({ editorIndentSize: v });
+  },
+
+  setMermaidMaxHeight: (v: number) => {
+    set({ mermaidMaxHeight: v });
+    savePrefs({ mermaidMaxHeight: v });
   },
 
   openMoveDialog: (target) => set({ moveDialogTarget: target }),

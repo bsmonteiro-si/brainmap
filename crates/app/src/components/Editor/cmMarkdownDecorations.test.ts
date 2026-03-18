@@ -57,6 +57,18 @@ describe("scanFencedBlocks", () => {
     const blocks = scanFencedBlocks(d);
     expect(blocks).toEqual([{ startLine: 1, endLine: 5, lang: undefined }]);
   });
+
+  it("detects indented fences (up to 3 spaces)", () => {
+    const d = doc("   ```mermaid\ngraph TD\n   ```");
+    const blocks = scanFencedBlocks(d);
+    expect(blocks).toEqual([{ startLine: 1, endLine: 3, lang: "mermaid" }]);
+  });
+
+  it("does not detect fence with 4+ spaces indent (code block)", () => {
+    const d = doc("    ```\ncode\n    ```");
+    const blocks = scanFencedBlocks(d);
+    expect(blocks).toEqual([]);
+  });
 });
 
 describe("classifyLines", () => {

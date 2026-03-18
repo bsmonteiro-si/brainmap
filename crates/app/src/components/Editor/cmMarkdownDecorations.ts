@@ -30,7 +30,7 @@ export interface FencedBlock {
   lang?: string;
 }
 
-const FENCE_OPEN_RE = /^(`{3,}|~{3,})/;
+const FENCE_OPEN_RE = /^[ \t]{0,3}(`{3,}|~{3,})/;
 
 /**
  * Scan document for fenced code block ranges.
@@ -54,11 +54,11 @@ export function scanFencedBlocks(doc: Text): FencedBlock[] {
         fenceChar = fenceMatch[1][0];
         fenceLen = fenceMatch[1].length;
         startLine = i;
-        const afterFence = text.slice(fenceMatch[1].length).trim();
+        const afterFence = text.slice(fenceMatch[0].length).trim();
         currentLang = afterFence || undefined;
       } else {
         // Closing fence must use same char and at least same length
-        const trimmed = text.trimEnd();
+        const trimmed = text.trim();
         if (
           trimmed[0] === fenceChar &&
           trimmed.length >= fenceLen &&

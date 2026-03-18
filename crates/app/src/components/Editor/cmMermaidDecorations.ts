@@ -7,6 +7,7 @@ import {
   EditorView,
   Decoration,
   WidgetType,
+  ViewPlugin,
   type DecorationSet,
 } from "@codemirror/view";
 import {
@@ -17,6 +18,7 @@ import {
 } from "@codemirror/state";
 import type { EditorState } from "@codemirror/state";
 import { scanFencedBlocks } from "./cmMarkdownDecorations";
+import { useUIStore } from "../../stores/uiStore";
 
 // ---------------------------------------------------------------------------
 // Lazy mermaid loading + initialization
@@ -122,7 +124,10 @@ class MermaidWidget extends WidgetType {
       wrapper.innerHTML = this.cached.svg;
       const svg = wrapper.querySelector("svg");
       if (svg) {
+        // Remove mermaid's hardcoded width/height so CSS constraints apply
+        svg.removeAttribute("width");
         svg.style.maxWidth = "100%";
+        svg.style.maxHeight = `${useUIStore.getState().mermaidMaxHeight}px`;
         svg.style.height = "auto";
       }
     }
@@ -151,7 +156,10 @@ interface MermaidDecoState {
   isDark: boolean;
 }
 
-function buildMermaidDecos(state: EditorState, cursorLine: number, isDark: boolean, view: EditorView | null): DecorationSet {
+/** Sources that need async rendering — collected during buildMermaidDecos, consumed by updateListener. */
+let pendingSources: string[] = [];
+
+function buildMermaidDecos(state: EditorState, cursorLine: number): DecorationSet {
   const doc = state.doc;
   const fencedBlocks = scanFencedBlocks(doc);
   const mermaidBlocks = fencedBlocks.filter((b) => b.lang === "mermaid");
@@ -176,10 +184,10 @@ function buildMermaidDecos(state: EditorState, cursorLine: number, isDark: boole
     const source = sourceLines.join("\n").trim();
     if (!source) continue;
 
-    // Trigger async render if not cached
+    // Check cache; if not cached, queue for async render
     const cached = svgCache.get(source);
-    if (!cached && view) {
-      renderMermaid(source, view, isDark);
+    if (!cached) {
+      pendingSources.push(source);
     }
 
     const from = doc.line(block.startLine).from;
@@ -197,14 +205,14 @@ function buildMermaidDecos(state: EditorState, cursorLine: number, isDark: boole
   return builder.finish();
 }
 
-function createMermaidField(isDark: boolean) {
+function createMermaidField() {
   return StateField.define<MermaidDecoState>({
     create(state) {
       const cursorLine = state.doc.lineAt(state.selection.main.head).number;
       return {
         cursorLine,
-        decos: buildMermaidDecos(state, cursorLine, isDark, null),
-        isDark,
+        decos: buildMermaidDecos(state, cursorLine),
+        isDark: false,
       };
     },
     update(value, tr) {
@@ -215,11 +223,25 @@ function createMermaidField(isDark: boolean) {
       }
       return {
         cursorLine,
-        decos: buildMermaidDecos(tr.state, cursorLine, value.isDark, tr.view),
+        decos: buildMermaidDecos(tr.state, cursorLine),
         isDark: value.isDark,
       };
     },
     provide: (f) => EditorView.decorations.from(f, (v) => v.decos),
+  });
+}
+
+/**
+ * UpdateListener that picks up pending mermaid sources and triggers async rendering.
+ * This runs after StateField.update, so pendingSources is populated.
+ */
+function createMermaidListener(isDark: boolean) {
+  return EditorView.updateListener.of((update) => {
+    if (pendingSources.length === 0) return;
+    const sources = pendingSources.splice(0);
+    for (const source of sources) {
+      renderMermaid(source, update.view, isDark);
+    }
   });
 }
 
@@ -235,8 +257,24 @@ export function clearMermaidCache(): void {
   mermaidLoading = null;
 }
 
+/**
+ * ViewPlugin that watches mermaidMaxHeight and directly updates all rendered
+ * mermaid SVG elements in the editor DOM when the setting changes.
+ */
+const mermaidSettingsPlugin = ViewPlugin.define((view) => {
+  const unsub = useUIStore.subscribe(
+    (s) => s.mermaidMaxHeight,
+    (maxHeight) => {
+      view.dom.querySelectorAll<SVGElement>(".cm-mermaid-widget svg").forEach((svg) => {
+        svg.style.maxHeight = `${maxHeight}px`;
+      });
+    },
+  );
+  return { destroy: unsub };
+});
+
 export function mermaidDecorations(isDark: boolean): Extension {
-  return [createMermaidField(isDark)];
+  return [createMermaidField(), createMermaidListener(isDark), mermaidSettingsPlugin];
 }
 
 // ---------------------------------------------------------------------------
