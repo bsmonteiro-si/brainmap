@@ -2,6 +2,21 @@
 
 Feature history moved from CLAUDE.md. Organized by phase and feature area.
 
+## Files Panel — Phase A
+
+Eight file management features to close the Obsidian gap:
+
+- **Show in Finder**: Right-click file/folder → "Show in Finder" reveals in macOS Finder (or platform equivalent).
+- **Copy file path**: "Copy Relative Path" and "Copy Absolute Path" context menu items for files and folders.
+- **Collapse all**: Toolbar button clears all expanded folders.
+- **Auto-reveal active file**: When opening a note from graph/search/links, the file tree auto-expands parents and scrolls to the file. Togglable in settings.
+- **Sort order**: Dropdown in tree toolbar — Name A→Z, Name Z→A, Modified ↓, Modified ↑. Requires `modified` field added to `NodeDto` (full Rust chain: `NodeData` → `NodeDto`).
+- **Move to trash**: File deletion now moves to system trash (macOS Trash, Windows Recycle Bin) instead of permanent deletion. Uses `trash` crate in the Tauri app layer.
+- **Duplicate**: Right-click note → "Duplicate" creates a copy with " (copy)" suffix and opens it.
+- **Modified timestamp in graph**: `NodeData` and `NodeDto` now include `modified: Option<NaiveDate>` / `modified: string | null`, enabling timestamp-based features.
+
+Backend: `trash` crate added, `reveal_in_file_manager` + `duplicate_note` Tauri commands. Frontend: sort dropdown, collapse button, auto-reveal, 7 new context menu items.
+
 ## Editor Phase C2 — Polish
 
 Three editor polish features:

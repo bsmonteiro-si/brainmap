@@ -699,6 +699,74 @@ pub fn list_workspace_files(state: State<'_, AppState>) -> Result<Vec<String>, S
 }
 
 #[tauri::command]
+pub fn reveal_in_file_manager(path: String) -> Result<(), String> {
+    let p = std::path::Path::new(&path);
+    if !p.exists() {
+        return Err(format!("Path not found: {}", path));
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg("-R")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to reveal in Finder: {}", e))?;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(format!("/select,{}", path))
+            .spawn()
+            .map_err(|e| format!("Failed to reveal in Explorer: {}", e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let parent = p.parent().unwrap_or(p);
+        std::process::Command::new("xdg-open")
+            .arg(parent)
+            .spawn()
+            .map_err(|e| format!("Failed to open file manager: {}", e))?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn duplicate_note(state: State<'_, AppState>, path: String) -> Result<NoteDetailDto, String> {
+    state.with_active_mut(|ws| {
+        // Read original note content
+        let abs = ws.root.join(&path);
+        let content = std::fs::read_to_string(&abs)
+            .map_err(|e| format!("Failed to read note: {}", e))?;
+
+        // Generate copy path: "Note.md" → "Note (copy).md"
+        let stem = path.trim_end_matches(".md");
+        let mut copy_path = format!("{} (copy).md", stem);
+        let mut counter = 2;
+        while ws.root.join(&copy_path).exists() {
+            copy_path = format!("{} (copy {}).md", stem, counter);
+            counter += 1;
+        }
+
+        // Write the copy
+        let copy_abs = ws.root.join(&copy_path);
+        if let Some(parent) = copy_abs.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create directory: {}", e))?;
+        }
+        std::fs::write(&copy_abs, &content)
+            .map_err(|e| format!("Failed to write copy: {}", e))?;
+
+        // Reload the workspace to pick up the new file
+        ws.add_file(&copy_path).map_err(|e| e.to_string())?;
+
+        // Return the new note detail
+        let note = ws.notes.get(&RelativePath::new(&copy_path))
+            .ok_or_else(|| format!("Failed to find copied note: {}", copy_path))?;
+        Ok(NoteDetailDto::from(note))
+    })
+}
+
+#[tauri::command]
 pub fn write_log(level: String, target: String, msg: String, fields: Option<String>) {
     let fields_str = fields.as_deref().unwrap_or("");
     match level.as_str() {

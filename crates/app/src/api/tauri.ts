@@ -162,6 +162,14 @@ export class TauriBridge implements BrainMapAPI {
     return invoke("move_folder", { oldFolder, newFolder });
   }
 
+  async revealInFileManager(absolutePath: string): Promise<void> {
+    return invoke("reveal_in_file_manager", { path: absolutePath });
+  }
+
+  async duplicateNote(path: string): Promise<NoteDetail> {
+    return invoke("duplicate_note", { path });
+  }
+
   onEvent(callback: (event: WorkspaceEvent) => void): () => void {
     let unlisten: (() => void) | null = null;
     let cancelled = false;

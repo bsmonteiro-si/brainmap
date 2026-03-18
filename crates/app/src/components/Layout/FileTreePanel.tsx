@@ -4,6 +4,7 @@ import { MoreHorizontal } from "lucide-react";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { useUIStore } from "../../stores/uiStore";
+import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useUndoStore } from "../../stores/undoStore";
 import { useTabStore } from "../../stores/tabStore";
 import { getAPI } from "../../api/bridge";
@@ -22,6 +23,7 @@ interface TreeNode {
   isFolder: boolean;
   children: TreeNode[];
   note_type?: string;
+  modified?: string | null;
   noteCount?: number;
   matchIndices?: number[];
 }
@@ -40,7 +42,7 @@ function computeNoteCounts(nodes: TreeNode[]): void {
   }
 }
 
-export function buildTree(nodes: Map<string, NodeDto>, emptyFolders?: Set<string>, workspaceFiles?: string[]): TreeNode[] {
+export function buildTree(nodes: Map<string, NodeDto>, emptyFolders?: Set<string>, workspaceFiles?: string[], sortOrder?: string): TreeNode[] {
   const folderMap = new Map<string, TreeNode>();
   const roots: TreeNode[] = [];
 
@@ -79,6 +81,7 @@ export function buildTree(nodes: Map<string, NodeDto>, emptyFolders?: Set<string
         isFolder: false,
         children: [],
         note_type: nodeData.note_type,
+        modified: nodeData.modified,
       });
     } else {
       for (let i = 0; i < parts.length - 1; i++) {
@@ -94,6 +97,7 @@ export function buildTree(nodes: Map<string, NodeDto>, emptyFolders?: Set<string
           isFolder: false,
           children: [],
           note_type: nodeData.note_type,
+          modified: nodeData.modified,
         });
       }
     }
@@ -146,16 +150,26 @@ export function buildTree(nodes: Map<string, NodeDto>, emptyFolders?: Set<string
     }
   }
 
-  function sortChildren(items: TreeNode[]): TreeNode[] {
+  function sortChildren(items: TreeNode[], sortOrder: string): TreeNode[] {
     return [...items]
       .sort((a, b) => {
+        // Folders always first
         if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
-        return a.name.localeCompare(b.name);
+        switch (sortOrder) {
+          case "name-desc":
+            return b.name.localeCompare(a.name);
+          case "modified-desc":
+            return (b.modified ?? "").localeCompare(a.modified ?? "");
+          case "modified-asc":
+            return (a.modified ?? "").localeCompare(b.modified ?? "");
+          default: // name-asc
+            return a.name.localeCompare(b.name);
+        }
       })
-      .map((n) => ({ ...n, children: sortChildren(n.children) }));
+      .map((n) => ({ ...n, children: sortChildren(n.children, sortOrder) }));
   }
 
-  const sorted = sortChildren(roots);
+  const sorted = sortChildren(roots, sortOrder ?? "name-asc");
   computeNoteCounts(sorted);
   return sorted;
 }
@@ -268,6 +282,46 @@ function ContextMenu({
     onRename(state.node);
   };
 
+  const handleShowInFinder = async () => {
+    if (!state.node) return;
+    onClose();
+    const wsRoot = useWorkspaceStore.getState().info?.root;
+    if (!wsRoot) return;
+    const absolutePath = `${wsRoot.replace(/\/$/, "")}/${state.node.fullPath}`;
+    try {
+      const api = await getAPI();
+      await api.revealInFileManager(absolutePath);
+    } catch (e) {
+      log.error("files", "failed to reveal in file manager", { error: String(e) });
+    }
+  };
+
+  const handleCopyRelativePath = () => {
+    if (!state.node) return;
+    onClose();
+    navigator.clipboard.writeText(state.node.fullPath).catch(() => {});
+  };
+
+  const handleCopyAbsolutePath = () => {
+    if (!state.node) return;
+    onClose();
+    const wsRoot = useWorkspaceStore.getState().info?.root;
+    if (!wsRoot) return;
+    navigator.clipboard.writeText(`${wsRoot.replace(/\/$/, "")}/${state.node.fullPath}`).catch(() => {});
+  };
+
+  const handleDuplicate = async () => {
+    if (!state.node || state.node.isFolder) return;
+    onClose();
+    try {
+      const api = await getAPI();
+      const newNote = await api.duplicateNote(state.node.fullPath);
+      useEditorStore.getState().openNote(newNote.path);
+    } catch (e) {
+      log.error("files", "failed to duplicate note", { error: String(e) });
+    }
+  };
+
   // Determine label for the file-level "new note" item
   const isRootLevelFile =
     state.node !== null &&
@@ -302,6 +356,16 @@ function ContextMenu({
             Rename
           </div>
           <div className="context-menu-separator" />
+          <div className="context-menu-item" onClick={handleShowInFinder}>
+            Show in Finder
+          </div>
+          <div className="context-menu-item" onClick={handleCopyRelativePath}>
+            Copy Relative Path
+          </div>
+          <div className="context-menu-item" onClick={handleCopyAbsolutePath}>
+            Copy Absolute Path
+          </div>
+          <div className="context-menu-separator" />
           <div className="context-menu-item context-menu-item--danger" onClick={handleDelete}>
             Delete Folder
           </div>
@@ -332,6 +396,19 @@ function ContextMenu({
           <div className="context-menu-item" onClick={handleRename}>
             Rename
           </div>
+          <div className="context-menu-item" onClick={handleDuplicate}>
+            Duplicate
+          </div>
+          <div className="context-menu-separator" />
+          <div className="context-menu-item" onClick={handleShowInFinder}>
+            Show in Finder
+          </div>
+          <div className="context-menu-item" onClick={handleCopyRelativePath}>
+            Copy Relative Path
+          </div>
+          <div className="context-menu-item" onClick={handleCopyAbsolutePath}>
+            Copy Absolute Path
+          </div>
           <div className="context-menu-separator" />
           <div className="context-menu-item context-menu-item--danger" onClick={handleDelete}>
             Delete
@@ -344,6 +421,16 @@ function ContextMenu({
           </div>
           <div className="context-menu-item" onClick={handleRename}>
             Rename
+          </div>
+          <div className="context-menu-separator" />
+          <div className="context-menu-item" onClick={handleShowInFinder}>
+            Show in Finder
+          </div>
+          <div className="context-menu-item" onClick={handleCopyRelativePath}>
+            Copy Relative Path
+          </div>
+          <div className="context-menu-item" onClick={handleCopyAbsolutePath}>
+            Copy Absolute Path
           </div>
           <div className="context-menu-separator" />
           <div className="context-menu-item context-menu-item--danger" onClick={handleDelete}>
@@ -495,6 +582,7 @@ function FileTreeNode({
           tabIndex={0}
           className={`tree-item tree-folder${isDragging ? " dragging" : ""}${isDragOver ? " drag-over" : ""}`}
           style={{ paddingLeft: 8 }}
+          data-tree-path={node.fullPath}
           draggable={!isRenaming}
           onClick={isRenaming ? undefined : handleToggle}
           onKeyDown={isRenaming ? undefined : (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleToggle(); } }}
@@ -594,6 +682,7 @@ function FileTreeNode({
       tabIndex={0}
       className={`tree-item tree-file${isActive ? " active" : ""}${!isBrainMapNote ? " tree-file--plain" : ""}${isDragging ? " dragging" : ""}`}
       style={{ paddingLeft: 8 }}
+      data-tree-path={node.fullPath}
       draggable={!isRenaming}
       onClick={isRenaming ? undefined : handleClick}
       onKeyDown={isRenaming ? undefined : (e) => {
@@ -660,8 +749,22 @@ export function FileTreePanel() {
   }, []);
 
   const emptyFolders = useUIStore((s) => s.emptyFolders);
+  const fileSortOrder = useUIStore((s) => s.fileSortOrder);
+  const autoRevealFile = useUIStore((s) => s.autoRevealFile);
+  const activeNotePath = useEditorStore((s) => s.activeNote?.path);
   const workspaceFiles = useGraphStore((s) => s.workspaceFiles);
-  const tree = useMemo(() => buildTree(nodes, emptyFolders, workspaceFiles), [nodes, emptyFolders, workspaceFiles]);
+
+  // Auto-reveal active file in tree
+  useEffect(() => {
+    if (!autoRevealFile || !activeNotePath) return;
+    useUIStore.getState().expandPathToFile(activeNotePath);
+    // Scroll into view after a frame to allow tree to re-render
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-tree-path="${CSS.escape(activeNotePath)}"]`);
+      el?.scrollIntoView({ block: "nearest" });
+    });
+  }, [activeNotePath, autoRevealFile]);
+  const tree = useMemo(() => buildTree(nodes, emptyFolders, workspaceFiles, fileSortOrder), [nodes, emptyFolders, workspaceFiles, fileSortOrder]);
 
   const filtered = useMemo(
     () => (filter.trim() ? fuzzyFilterTree(tree, filter.trim()) : tree),
@@ -1106,7 +1209,7 @@ export function FileTreePanel() {
           .map((r) => r.value);
 
         // 4. Delete folder — backend emits topology event for all deleted nodes
-        const result = await api.deleteFolder(deleteTarget.fullPath, force);
+        await api.deleteFolder(deleteTarget.fullPath, force);
         // 5. Remove tracked empty folders within deleted scope (single state update)
         const { emptyFolders } = useUIStore.getState();
         const prefix = deleteTarget.fullPath + "/";
@@ -1170,6 +1273,24 @@ export function FileTreePanel() {
         >
           ⊞
         </button>
+        <button
+          className="file-tree-toolbar-btn"
+          title="Collapse All"
+          onClick={() => useUIStore.getState().collapseAllFolders()}
+        >
+          ⌄
+        </button>
+        <select
+          className="file-tree-sort-select"
+          value={useUIStore.getState().fileSortOrder}
+          onChange={(e) => useUIStore.getState().setFileSortOrder(e.target.value as any)}
+          title="Sort order"
+        >
+          <option value="name-asc">Name A→Z</option>
+          <option value="name-desc">Name Z→A</option>
+          <option value="modified-desc">Modified ↓</option>
+          <option value="modified-asc">Modified ↑</option>
+        </select>
       </div>
 
       <div className="file-tree-search">

@@ -110,6 +110,8 @@ pub struct NodeDto {
     pub note_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub modified: Option<String>,
 }
 
 impl From<&NodeData> for NodeDto {
@@ -119,6 +121,7 @@ impl From<&NodeData> for NodeDto {
             title: nd.title.clone(),
             note_type: nd.note_type.clone(),
             tags: None,
+            modified: nd.modified.map(|d| d.to_string()),
         }
     }
 }

@@ -53,6 +53,8 @@ pub fn run() {
             commands::save_pdf_highlights,
             commands::write_plain_file,
             commands::write_raw_note,
+            commands::reveal_in_file_manager,
+            commands::duplicate_note,
             commands::write_log,
         ])
         .run(tauri::generate_context!())

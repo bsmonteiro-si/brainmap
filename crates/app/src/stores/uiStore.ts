@@ -6,6 +6,7 @@ export type ComponentTheme = "inherit" | ThemeName;
 type GraphMode = "navigate" | "edit";
 export type GraphLayout = "force" | "hierarchical" | "radial" | "concentric" | "grouped";
 
+export type FileSortOrder = "name-asc" | "name-desc" | "modified-desc" | "modified-asc";
 export type SourceStyle = "underline" | "pill" | "icon" | "quotes";
 export const SOURCE_STYLE_OPTIONS: { value: SourceStyle; label: string }[] = [
   { value: "underline", label: "Underline + label" },
@@ -139,6 +140,8 @@ interface PersistedPrefs {
   edgeLabelSize?: number;
   relatedNotesExpanded?: boolean;
   sourceStyle?: SourceStyle;
+  fileSortOrder?: FileSortOrder;
+  autoRevealFile?: boolean;
 }
 
 type CreateNoteMode = "default" | "create-and-link";
@@ -186,6 +189,8 @@ interface UIState {
   activeLeftTab: LeftTab;
   leftPanelCollapsed: boolean;
   treeExpandedFolders: Set<string>;
+  fileSortOrder: FileSortOrder;
+  autoRevealFile: boolean;
   hiddenEdgeTypes: Set<string>;
   panelSizes: PanelSizes;
   graphFocusPath: string | null;
@@ -238,6 +243,10 @@ interface UIState {
   setActiveLeftTab: (tab: LeftTab) => void;
   toggleLeftPanel: () => void;
   toggleFolder: (fullPath: string) => void;
+  collapseAllFolders: () => void;
+  setFileSortOrder: (order: FileSortOrder) => void;
+  setAutoRevealFile: (v: boolean) => void;
+  expandPathToFile: (filePath: string) => void;
   toggleEdgeType: (rel: string) => void;
   clearHiddenEdgeTypes: () => void;
   savePanelSizes: (tab: LeftTab, sizes: TabPanelSizes) => void;
@@ -400,6 +409,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   activeLeftTab: "files",
   leftPanelCollapsed: false,
   treeExpandedFolders: new Set<string>(),
+  fileSortOrder: storedPrefs.fileSortOrder ?? "name-asc" as FileSortOrder,
+  autoRevealFile: storedPrefs.autoRevealFile ?? true,
   hiddenEdgeTypes: new Set<string>(),
   panelSizes: storedSizes,
   showMinimap: false,
@@ -515,6 +526,30 @@ export const useUIStore = create<UIState>((set, get) => ({
       const next = new Set(s.treeExpandedFolders);
       if (next.has(fullPath)) next.delete(fullPath);
       else next.add(fullPath);
+      return { treeExpandedFolders: next };
+    }),
+
+  collapseAllFolders: () => set({ treeExpandedFolders: new Set<string>() }),
+
+  setFileSortOrder: (order: FileSortOrder) => {
+    set({ fileSortOrder: order });
+    savePrefs({ fileSortOrder: order });
+  },
+
+  setAutoRevealFile: (v: boolean) => {
+    set({ autoRevealFile: v });
+    savePrefs({ autoRevealFile: v });
+  },
+
+  expandPathToFile: (filePath: string) =>
+    set((s) => {
+      const segments = filePath.split("/").slice(0, -1); // parent dirs
+      const next = new Set(s.treeExpandedFolders);
+      let path = "";
+      for (const seg of segments) {
+        path = path ? `${path}/${seg}` : seg;
+        next.add(path);
+      }
       return { treeExpandedFolders: next };
     }),
 

@@ -108,6 +108,11 @@ pub fn handle_update_note(
 
 /// Delete a note.
 pub fn handle_delete_note(ws: &mut Workspace, path: &str, force: bool) -> Result<(), String> {
+    // Move file to system trash before core delete (which skips if file is gone)
+    let abs = ws.root.join(path);
+    if abs.exists() {
+        trash::delete(&abs).map_err(|e| format!("Failed to move to trash: {}", e))?;
+    }
     ws.delete_note(path, force).map_err(|e: BrainMapError| e.to_string())
 }
 
@@ -234,7 +239,7 @@ fn delete_remaining_files_recursive(dir: &std::path::Path) {
         if path.is_dir() {
             delete_remaining_files_recursive(&path);
         } else {
-            let _ = std::fs::remove_file(&path);
+            let _ = trash::delete(&path);
         }
     }
 }
@@ -479,8 +484,8 @@ pub fn handle_delete_plain_file(ws: &Workspace, path: &str) -> Result<(), String
     if !abs.exists() {
         return Err(format!("File not found: {}", path));
     }
-    std::fs::remove_file(&abs)
-        .map_err(|e| format!("Failed to delete file: {}", e))?;
+    trash::delete(&abs)
+        .map_err(|e| format!("Failed to move to trash: {}", e))?;
     Ok(())
 }
 

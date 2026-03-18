@@ -146,9 +146,9 @@ impl Workspace {
                 NodeData {
                     title: note.frontmatter.title.clone(),
                     note_type: note.frontmatter.note_type.clone(),
-
                     tags: note.frontmatter.tags.clone(),
                     path: path.clone(),
+                    modified: Some(note.frontmatter.modified),
                 },
             );
         }
@@ -192,9 +192,9 @@ impl Workspace {
                     NodeData {
                         title: n.frontmatter.title.clone(),
                         note_type: n.frontmatter.note_type.clone(),
-
                         tags: n.frontmatter.tags.clone(),
                         path: p.clone(),
+                        modified: Some(n.frontmatter.modified),
                     },
                 )
             })
@@ -370,9 +370,9 @@ impl Workspace {
             NodeData {
                 title: note.frontmatter.title.clone(),
                 note_type: note.frontmatter.note_type.clone(),
-
                 tags: note.frontmatter.tags.clone(),
                 path: path.clone(),
+                modified: Some(note.frontmatter.modified),
             },
         );
 
@@ -449,9 +449,9 @@ impl Workspace {
             NodeData {
                 title: note_ref.frontmatter.title.clone(),
                 note_type: note_ref.frontmatter.note_type.clone(),
-
                 tags: note_ref.frontmatter.tags.clone(),
                 path: path.clone(),
+                modified: Some(note_ref.frontmatter.modified),
             },
         );
 
@@ -701,9 +701,9 @@ impl Workspace {
             NodeData {
                 title: new_note.frontmatter.title.clone(),
                 note_type: new_note.frontmatter.note_type.clone(),
-
                 tags: new_note.frontmatter.tags.clone(),
                 path: path.clone(),
+                modified: Some(new_note.frontmatter.modified),
             },
         );
 
@@ -749,9 +749,9 @@ impl Workspace {
         let node_data = NodeData {
             title: note.frontmatter.title.clone(),
             note_type: note.frontmatter.note_type.clone(),
-
             tags: note.frontmatter.tags.clone(),
             path: path.clone(),
+            modified: Some(note.frontmatter.modified),
         };
         self.graph.add_node(path.clone(), node_data.clone());
 
@@ -926,9 +926,9 @@ impl Workspace {
             NodeData {
                 title: note.frontmatter.title.clone(),
                 note_type: note.frontmatter.note_type.clone(),
-
                 tags: note.frontmatter.tags.clone(),
                 path: new_rp.clone(),
+                modified: Some(note.frontmatter.modified),
             },
         );
         self.index.add_note(&note, mtime)?;
@@ -1152,6 +1152,7 @@ impl Workspace {
                     note_type: note.frontmatter.note_type.clone(),
                     tags: note.frontmatter.tags.clone(),
                     path: new_rp.clone(),
+                    modified: Some(note.frontmatter.modified),
                 },
             );
             self.index.add_note(&note, mtime)?;
@@ -1352,6 +1353,7 @@ impl Workspace {
                 note_type: "folder".to_string(),
                 tags: vec![],
                 path: dir.clone(),
+                modified: None,
             };
             self.graph.add_node(dir.clone(), folder_node.clone());
             added_nodes.push(folder_node);

@@ -186,6 +186,7 @@ pub struct NodeData {
     pub note_type: String,
     pub tags: Vec<String>,
     pub path: RelativePath,
+    pub modified: Option<NaiveDate>,
 }
 
 impl NodeData {
@@ -265,6 +266,7 @@ mod tests {
             note_type: "folder".into(),
             tags: vec![],
             path: RelativePath::new("Concepts"),
+            modified: None,
         };
         assert!(folder.is_folder());
 
@@ -273,6 +275,7 @@ mod tests {
             note_type: "concept".into(),
             tags: vec![],
             path: RelativePath::new("Concepts/Note.md"),
+            modified: None,
         };
         assert!(!note.is_folder());
     }
