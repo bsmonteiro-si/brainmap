@@ -15,6 +15,14 @@ export const SOURCE_STYLE_OPTIONS: { value: SourceStyle; label: string }[] = [
   { value: "quotes", label: "Quotation marks" },
 ];
 
+export type ExampleStyle = "underline" | "pill" | "icon" | "quotes";
+export const EXAMPLE_STYLE_OPTIONS: { value: ExampleStyle; label: string }[] = [
+  { value: "underline", label: "Underline + label" },
+  { value: "pill", label: "Pill badge" },
+  { value: "icon", label: "Flask icon" },
+  { value: "quotes", label: "Quotation marks" },
+];
+
 export const THEME_BASE: Record<ThemeName, "light" | "dark"> = {
   light: "light",
   dark: "dark",
@@ -140,6 +148,7 @@ interface PersistedPrefs {
   edgeLabelSize?: number;
   relatedNotesExpanded?: boolean;
   sourceStyle?: SourceStyle;
+  exampleStyle?: ExampleStyle;
   fileSortOrder?: FileSortOrder;
   autoRevealFile?: boolean;
   lineWrapping?: boolean;
@@ -222,6 +231,7 @@ interface UIState {
   edgeLabelSize: number;
   relatedNotesExpanded: boolean;
   sourceStyle: SourceStyle;
+  exampleStyle: ExampleStyle;
   emptyFolders: Set<string>;
   homeNotePath: string | null;
   customFileOrder: Record<string, string[]>;
@@ -290,6 +300,7 @@ interface UIState {
   resetNodePrefs: () => void;
   resetFontPrefs: () => void;
   setSourceStyle: (v: SourceStyle) => void;
+  setExampleStyle: (v: ExampleStyle) => void;
   setDefaultTabSize: (tab: LeftTab, content: number) => void;
   resetLayoutPrefs: () => void;
   resetWorkspaceState: () => void;
@@ -446,6 +457,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   uiZoom: storedPrefs.uiZoom ?? DEFAULT_ZOOM,
   showLineNumbers: storedPrefs.editorLineNumbers ?? false,
   sourceStyle: storedPrefs.sourceStyle ?? "pill",
+  exampleStyle: storedPrefs.exampleStyle ?? "pill",
   tooltipFontSize: storedPrefs.tooltipFontSize ?? DEFAULT_TOOLTIP_SIZE,
   tooltipPillSize: storedPrefs.tooltipPillSize ?? DEFAULT_TOOLTIP_PILL_SIZE,
   tooltipConnectionsSize: storedPrefs.tooltipConnectionsSize ?? DEFAULT_TOOLTIP_CONNECTIONS_SIZE,
@@ -675,6 +687,11 @@ export const useUIStore = create<UIState>((set, get) => ({
   setSourceStyle: (v: SourceStyle) => {
     set({ sourceStyle: v });
     savePrefs({ sourceStyle: v });
+  },
+
+  setExampleStyle: (v: ExampleStyle) => {
+    set({ exampleStyle: v });
+    savePrefs({ exampleStyle: v });
   },
 
   setTooltipFontSize: (v: number) => {

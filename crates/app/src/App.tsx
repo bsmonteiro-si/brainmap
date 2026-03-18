@@ -49,6 +49,7 @@ function App() {
   const tooltipTagSize = useUIStore((s) => s.tooltipTagSize);
   const uiZoom = useUIStore((s) => s.uiZoom); // drives zoom useEffect below
   const sourceStyle = useUIStore((s) => s.sourceStyle);
+  const exampleStyle = useUIStore((s) => s.exampleStyle);
 
   // Subscribe to workspace events for live updates
   useEffect(() => {
@@ -308,10 +309,13 @@ function App() {
     document.documentElement.setAttribute("data-theme", effectiveTheme);
   }, [effectiveTheme]);
 
-  // Apply inline source citation style
+  // Apply inline citation styles
   useEffect(() => {
     document.documentElement.setAttribute("data-source-style", sourceStyle);
   }, [sourceStyle]);
+  useEffect(() => {
+    document.documentElement.setAttribute("data-example-style", exampleStyle);
+  }, [exampleStyle]);
 
   // Apply font CSS variables
   useEffect(() => {

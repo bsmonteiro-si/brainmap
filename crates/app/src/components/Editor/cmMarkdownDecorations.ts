@@ -400,17 +400,18 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
     },
   });
 
-  // Inline source citations (cursor-aware per-match, skip fenced code + inline code + links)
+  // Inline citations (cursor-aware per-match, skip fenced code + inline code + links)
   const cursorPos = state.selection.main.head;
   const fencedLines = fencedLineSet(cls.fencedBlocks);
   for (let ln = 1; ln <= doc.lines; ln++) {
     if (fencedLines.has(ln)) continue;
     const line = doc.line(ln);
     const text = line.text;
-    INLINE_SOURCE_RE.lastIndex = 0;
+    INLINE_CITATION_RE.lastIndex = 0;
     let m: RegExpExecArray | null;
-    while ((m = INLINE_SOURCE_RE.exec(text)) !== null) {
-      const content = m[1];
+    while ((m = INLINE_CITATION_RE.exec(text)) !== null) {
+      const type = m[1];
+      const content = m[2];
       if (!content.trim()) continue;
       const matchFrom = line.from + m.index;
       const matchTo = matchFrom + m[0].length;
@@ -421,14 +422,18 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
         ([sf, st]) => matchFrom < st && matchTo > sf,
       );
       if (overlaps) continue;
-      // [!source  → content start
+      // Select mark set based on citation type
+      const tagMark = type === "example" ? exampleTagMark : sourceTagMark;
+      const contentMark = type === "example" ? exampleContentMark : sourceContentMark;
+      const bracketMark = type === "example" ? exampleBracketMark : sourceBracketMark;
+      // [!type  → content start
       const tagEnd = matchFrom + m[0].indexOf(content);
-      // Mark [!source  as tag (CSS hides text + shows "source" via ::after)
-      decos.push({ from: matchFrom, to: tagEnd, deco: sourceTagMark });
+      // Mark [!type  as tag (CSS hides text + shows label via ::after)
+      decos.push({ from: matchFrom, to: tagEnd, deco: tagMark });
       // Style the content
-      decos.push({ from: tagEnd, to: matchTo - 1, deco: sourceContentMark });
+      decos.push({ from: tagEnd, to: matchTo - 1, deco: contentMark });
       // Mark closing ] as bracket (dimmed)
-      decos.push({ from: matchTo - 1, to: matchTo, deco: sourceBracketMark });
+      decos.push({ from: matchTo - 1, to: matchTo, deco: bracketMark });
     }
   }
 
