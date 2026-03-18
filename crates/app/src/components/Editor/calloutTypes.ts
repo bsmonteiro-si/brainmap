@@ -1,4 +1,4 @@
-import { Bot, BookOpen, HelpCircle, Lightbulb, type LucideIcon } from "lucide-react";
+import { Bot, BookOpen, HelpCircle, Lightbulb, FlaskConical, type LucideIcon } from "lucide-react";
 
 export interface CalloutTypeDef {
   color: string;
@@ -11,6 +11,7 @@ export const CALLOUT_TYPES: Record<string, CalloutTypeDef> = {
   source: { color: "#f39c12", label: "Source", Icon: BookOpen },
   question: { color: "#9b59b6", label: "Question", Icon: HelpCircle },
   "key-insight": { color: "#27ae60", label: "Key Insight", Icon: Lightbulb },
+  example: { color: "#17a2b8", label: "Example", Icon: FlaskConical },
 };
 
 /** Ordered list for UI (toolbar picker, etc.) */

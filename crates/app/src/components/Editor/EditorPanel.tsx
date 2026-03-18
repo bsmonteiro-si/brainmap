@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useEditorStore } from "../../stores/editorStore";
 import { useUIStore } from "../../stores/uiStore";
 import { useTabStore } from "../../stores/tabStore";
@@ -43,9 +43,12 @@ export function EditorPanel() {
     useEditorStore.getState().updateRawContent(body);
   }, []);
 
-  // Capture scroll/cursor from editorView before note switch
+  // Force a re-render when the editor view becomes available so the toolbar
+  // picks up the non-null ref and enables its buttons.
+  const [, setEditorReady] = useState(0);
   const handleViewReady = useCallback((view: EditorView | null) => {
     editorViewRef.current = view;
+    setEditorReady((n) => n + 1);
   }, []);
 
   const activePath = activeNote?.path ?? activePlainFile?.path ?? (isUntitled ? activeTabId : undefined);
@@ -178,6 +181,7 @@ export function EditorPanel() {
                   notePath={activePlainFile.path}
                   content={rawContent}
                   onChange={onRawChange}
+                  raw
                 />
               ) : viewMode === "raw" ? (
                 <div className="editor-placeholder">Loading raw content...</div>
@@ -259,6 +263,7 @@ export function EditorPanel() {
                   notePath={activeTabId}
                   content={rawContent}
                   onChange={onRawChange}
+                  raw
                 />
               ) : viewMode === "raw" ? (
                 <div className="editor-placeholder">Loading raw content...</div>
@@ -393,6 +398,7 @@ export function EditorPanel() {
                 notePath={activeNote.path}
                 content={rawContent}
                 onChange={onRawChange}
+                raw
               />
             ) : viewMode === "raw" ? (
               <div className="editor-placeholder">Loading raw content...</div>

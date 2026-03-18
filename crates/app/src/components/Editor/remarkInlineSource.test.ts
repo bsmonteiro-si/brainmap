@@ -27,6 +27,11 @@ function hasInlineSource(tree: Root): boolean {
   return htmlNodes(tree).some((v) => v.includes("inline-source"));
 }
 
+/** Check if any HTML node contains inline-example markup. */
+function hasInlineExample(tree: Root): boolean {
+  return htmlNodes(tree).some((v) => v.includes("inline-example"));
+}
+
 describe("remarkInlineSource", () => {
   it("transforms a basic inline source citation", () => {
     const tree = process("Some text [!source Book of Why, Ch.1] more text.");
@@ -104,5 +109,54 @@ describe("remarkInlineSource", () => {
     expect(hasInlineSource(tree)).toBe(true);
     const html = htmlNodes(tree);
     expect(html[0]).toContain("ref here");
+  });
+});
+
+describe("remarkInlineSource – inline example", () => {
+  it("transforms a basic inline example", () => {
+    const tree = process("Text [!example fibonacci sequence] more.");
+    expect(hasInlineExample(tree)).toBe(true);
+    const html = htmlNodes(tree);
+    expect(html[0]).toContain("inline-example-tag");
+    expect(html[0]).toContain("fibonacci sequence");
+  });
+
+  it("transforms mixed source and example in one paragraph", () => {
+    const tree = process("Text [!source A] and [!example B] end.");
+    const html = htmlNodes(tree);
+    expect(html.some((v) => v.includes("inline-source"))).toBe(true);
+    expect(html.some((v) => v.includes("inline-example"))).toBe(true);
+  });
+
+  it("does NOT match empty content [!example ]", () => {
+    const tree = process("Text [!example ] end.");
+    expect(hasInlineExample(tree)).toBe(false);
+  });
+
+  it("does NOT match without space after !example", () => {
+    const tree = process("Text [!exampletext] end.");
+    expect(hasInlineExample(tree)).toBe(false);
+  });
+
+  it("does NOT transform inside fenced code blocks", () => {
+    const tree = process("```\n[!example not a cite]\n```");
+    expect(hasInlineExample(tree)).toBe(false);
+  });
+
+  it("does NOT transform inside inline code", () => {
+    const tree = process("Text `[!example not a cite]` more.");
+    expect(hasInlineExample(tree)).toBe(false);
+  });
+
+  it("works inside headings", () => {
+    const tree = process("## Title [!example ref here]");
+    expect(hasInlineExample(tree)).toBe(true);
+  });
+
+  it("works inside list items", () => {
+    const tree = process("- Item [!example quicksort]");
+    expect(hasInlineExample(tree)).toBe(true);
+    const html = htmlNodes(tree);
+    expect(html[0]).toContain("quicksort");
   });
 });

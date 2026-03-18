@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { SLASH_COMMANDS, filterSlashCommands } from "./cmSlashCommands";
 import { CALLOUT_TYPE_ENTRIES } from "./calloutTypes";
 
-const STATIC_COMMAND_COUNT = 12; // headings(3) + lists(3) + blocks(5) + inline source(1)
+const STATIC_COMMAND_COUNT = 13; // headings(3) + lists(3) + blocks(5) + inline source(1) + inline example(1)
 
 describe("SLASH_COMMANDS registry", () => {
   it("has the expected number of commands", () => {
@@ -31,6 +31,7 @@ describe("SLASH_COMMANDS registry", () => {
     expect(keywords).toContain("source-callout");
     expect(keywords).toContain("question");
     expect(keywords).toContain("key-insight");
+    expect(keywords).toContain("example-callout");
   });
 
   it("includes standard markdown commands", () => {
@@ -51,6 +52,11 @@ describe("SLASH_COMMANDS registry", () => {
   it("includes inline source command", () => {
     const keywords = SLASH_COMMANDS.map((c) => c.keyword);
     expect(keywords).toContain("source");
+  });
+
+  it("includes inline example command", () => {
+    const keywords = SLASH_COMMANDS.map((c) => c.keyword);
+    expect(keywords).toContain("example");
   });
 
   it("has valid sections", () => {
@@ -110,6 +116,13 @@ describe("filterSlashCommands", () => {
     const keywords = result.map((c) => c.keyword);
     expect(keywords).toContain("source");
     expect(keywords).toContain("source-callout");
+  });
+
+  it("matches 'example' to both inline and callout", () => {
+    const result = filterSlashCommands("example");
+    const keywords = result.map((c) => c.keyword);
+    expect(keywords).toContain("example");
+    expect(keywords).toContain("example-callout");
   });
 });
 

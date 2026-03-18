@@ -91,6 +91,11 @@ const ICON_PATHS: Record<string, SvgElement[]> = {
     ["path", { d: "M9 18h6" }],
     ["path", { d: "M10 22h4" }],
   ],
+  "flask-conical": [
+    ["path", { d: "M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2" }],
+    ["path", { d: "M6.453 15h11.094" }],
+    ["path", { d: "M8.5 2h7" }],
+  ],
 };
 
 function renderSvgElement(el: SvgElement): string {
@@ -125,7 +130,11 @@ const CALLOUT_ICON_MAP: Record<string, string> = {
   source: "book-open",
   question: "help-circle",
   "key-insight": "lightbulb",
+  example: "flask-conical",
 };
+
+/** Callout types that also have an inline `/keyword` command in the BrainMap section. */
+const INLINE_COMMAND_TYPES = new Set(["source", "example"]);
 
 // ---------------------------------------------------------------------------
 // Slash command definitions
@@ -276,10 +285,19 @@ export const SLASH_COMMANDS: SlashCommandDef[] = [
     apply: (v, from, to) =>
       replaceWith(v, from, to, '[!source ""]', '[!source "'.length),
   },
+  {
+    keyword: "example",
+    label: "Inline Example",
+    detail: "Example reference",
+    section: "BrainMap",
+    icon: "flask-conical",
+    apply: (v, from, to) =>
+      replaceWith(v, from, to, '[!example ""]', '[!example "'.length),
+  },
 
   // ── Callouts (generated from calloutTypes.ts) ──
   ...CALLOUT_TYPE_ENTRIES.map(([type, def]) => ({
-    keyword: type === "source" ? "source-callout" : type,
+    keyword: INLINE_COMMAND_TYPES.has(type) ? `${type}-callout` : type,
     label: `${def.label} Callout`,
     detail: `${def.label} callout block`,
     section: "Callouts",
@@ -364,7 +382,7 @@ export function createSlashAutocompletion() {
           // Use callout color for callout items, muted gray for others
           let color = ICON_COLOR;
           if (ext._calloutType) {
-            const calloutKey = ext._calloutType === "source-callout" ? "source" : ext._calloutType;
+            const calloutKey = ext._calloutType.replace(/-callout$/, "");
             const calloutDef = CALLOUT_TYPES[calloutKey];
             if (calloutDef) color = calloutDef.color;
           }
@@ -374,7 +392,7 @@ export function createSlashAutocompletion() {
             icon.style.backgroundImage = `url("${uri}")`;
           }
           if (ext._calloutType) {
-            const calloutKey = ext._calloutType === "source-callout" ? "source" : ext._calloutType;
+            const calloutKey = ext._calloutType.replace(/-callout$/, "");
             const calloutDef = CALLOUT_TYPES[calloutKey];
             if (calloutDef) {
               icon.style.setProperty("--slash-icon-bg", `${calloutDef.color}20`);
