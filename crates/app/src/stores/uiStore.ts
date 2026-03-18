@@ -6,6 +6,14 @@ export type ComponentTheme = "inherit" | ThemeName;
 type GraphMode = "navigate" | "edit";
 export type GraphLayout = "force" | "hierarchical" | "radial" | "concentric" | "grouped";
 
+export type SourceStyle = "underline" | "pill" | "icon" | "quotes";
+export const SOURCE_STYLE_OPTIONS: { value: SourceStyle; label: string }[] = [
+  { value: "underline", label: "Underline + label" },
+  { value: "pill", label: "Pill badge" },
+  { value: "icon", label: "Book icon" },
+  { value: "quotes", label: "Quotation marks" },
+];
+
 export const THEME_BASE: Record<ThemeName, "light" | "dark"> = {
   light: "light",
   dark: "dark",
@@ -129,6 +137,8 @@ interface PersistedPrefs {
   nodeIconSize?: number;
   nodeLabelBgPadding?: number;
   edgeLabelSize?: number;
+  relatedNotesExpanded?: boolean;
+  sourceStyle?: SourceStyle;
 }
 
 type CreateNoteMode = "default" | "create-and-link";
@@ -198,6 +208,8 @@ interface UIState {
   nodeIconSize: number;
   nodeLabelBgPadding: number;
   edgeLabelSize: number;
+  relatedNotesExpanded: boolean;
+  sourceStyle: SourceStyle;
   emptyFolders: Set<string>;
   homeNotePath: string | null;
 
@@ -251,12 +263,14 @@ interface UIState {
   setEdgeLabelSize: (v: number) => void;
   resetNodePrefs: () => void;
   resetFontPrefs: () => void;
+  setSourceStyle: (v: SourceStyle) => void;
   setDefaultTabSize: (tab: LeftTab, content: number) => void;
   resetLayoutPrefs: () => void;
   resetWorkspaceState: () => void;
   zoomIn: () => void;
   zoomOut: () => void;
   resetZoom: () => void;
+  toggleRelatedNotes: () => void;
   addEmptyFolder: (path: string) => void;
   removeEmptyFolder: (path: string) => void;
 }
@@ -399,6 +413,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   editorFontSize: storedPrefs.editorFontSize ?? DEFAULT_EDITOR_SIZE,
   uiZoom: storedPrefs.uiZoom ?? DEFAULT_ZOOM,
   showLineNumbers: storedPrefs.editorLineNumbers ?? false,
+  sourceStyle: storedPrefs.sourceStyle ?? "pill",
   tooltipFontSize: storedPrefs.tooltipFontSize ?? DEFAULT_TOOLTIP_SIZE,
   tooltipPillSize: storedPrefs.tooltipPillSize ?? DEFAULT_TOOLTIP_PILL_SIZE,
   tooltipConnectionsSize: storedPrefs.tooltipConnectionsSize ?? DEFAULT_TOOLTIP_CONNECTIONS_SIZE,
@@ -408,6 +423,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   nodeIconSize: storedPrefs.nodeIconSize ?? DEFAULT_NODE_ICON_SIZE,
   nodeLabelBgPadding: storedPrefs.nodeLabelBgPadding ?? DEFAULT_NODE_LABEL_BG_PADDING,
   edgeLabelSize: storedPrefs.edgeLabelSize ?? DEFAULT_EDGE_LABEL_SIZE,
+  relatedNotesExpanded: storedPrefs.relatedNotesExpanded ?? false,
   emptyFolders: new Set<string>(),
   homeNotePath: null,
 
@@ -549,6 +565,11 @@ export const useUIStore = create<UIState>((set, get) => ({
     savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: v, uiZoom: s.uiZoom });
   },
 
+  setSourceStyle: (v: SourceStyle) => {
+    set({ sourceStyle: v });
+    savePrefs({ sourceStyle: v });
+  },
+
   setTooltipFontSize: (v: number) => {
     const scale = v / DEFAULT_TOOLTIP_SIZE;
     const pill = Math.round(DEFAULT_TOOLTIP_PILL_SIZE * scale);
@@ -666,6 +687,11 @@ export const useUIStore = create<UIState>((set, get) => ({
     savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: DEFAULT_ZOOM });
   },
 
+  toggleRelatedNotes: () => {
+    const next = !get().relatedNotesExpanded;
+    set({ relatedNotesExpanded: next });
+    savePrefs({ relatedNotesExpanded: next });
+  },
   addEmptyFolder: (path: string) => {
     const s = get();
     const nextFolders = new Set(s.emptyFolders);

@@ -1,5 +1,5 @@
-import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES, THEME_OPTIONS } from "../../stores/uiStore";
-import type { LeftTab, ComponentTheme, ThemeName } from "../../stores/uiStore";
+import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES, THEME_OPTIONS, SOURCE_STYLE_OPTIONS } from "../../stores/uiStore";
+import type { LeftTab, ComponentTheme, ThemeName, SourceStyle } from "../../stores/uiStore";
 
 function FontFamilySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const presetValue =
@@ -61,6 +61,8 @@ export function SettingsModal() {
   const setEditorFontSize = useUIStore((s) => s.setEditorFontSize);
   const showLineNumbers = useUIStore((s) => s.showLineNumbers);
   const setEditorLineNumbersDefault = useUIStore((s) => s.setEditorLineNumbersDefault);
+  const sourceStyle = useUIStore((s) => s.sourceStyle);
+  const setSourceStyle = useUIStore((s) => s.setSourceStyle);
   const resetFontPrefs = useUIStore((s) => s.resetFontPrefs);
   const tooltipFontSize = useUIStore((s) => s.tooltipFontSize);
   const tooltipPillSize = useUIStore((s) => s.tooltipPillSize);
@@ -204,6 +206,19 @@ export function SettingsModal() {
                 />
                 Show by default
               </label>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Source citations</span>
+              <div className="settings-control">
+                <select
+                  value={sourceStyle}
+                  onChange={(e) => setSourceStyle(e.target.value as SourceStyle)}
+                >
+                  {SOURCE_STYLE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 

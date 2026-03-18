@@ -3,13 +3,15 @@ import { getAPI } from "../../api/bridge";
 import type { NodeSummary } from "../../api/types";
 import { useEditorStore } from "../../stores/editorStore";
 import { useGraphStore } from "../../stores/graphStore";
+import { useUIStore } from "../../stores/uiStore";
 import { getNodeColor } from "../GraphView/graphStyles";
 
 export function RelatedNotesFooter() {
   const activeNote = useEditorStore((s) => s.activeNote);
   const edges = useGraphStore((s) => s.edges);
   const nodes = useGraphStore((s) => s.nodes);
-  const [expanded, setExpanded] = useState(false);
+  const expanded = useUIStore((s) => s.relatedNotesExpanded);
+  const toggleRelatedNotes = useUIStore((s) => s.toggleRelatedNotes);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [tooltip, setTooltip] = useState<{
     x: number; y: number; path: string;
@@ -151,7 +153,7 @@ export function RelatedNotesFooter() {
     <div className="related-notes-footer" ref={footerRef}>
       <button
         className="related-notes-toggle"
-        onClick={() => setExpanded((e) => !e)}
+        onClick={toggleRelatedNotes}
       >
         <span>{expanded ? "\u25BE" : "\u25B8"}</span>
         Related Notes ({related.length})
