@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getAPI } from "../../api/bridge";
 import type { NodeSummary } from "../../api/types";
 import { useEditorStore } from "../../stores/editorStore";
@@ -21,6 +21,48 @@ export function RelatedNotesFooter() {
   } | null>(null);
   const tooltipCacheRef = useRef<Map<string, NodeSummary>>(new Map());
   const footerRef = useRef<HTMLDivElement>(null);
+
+  // Resizable height for expanded content area
+  const STORAGE_KEY = "brainmap:relatedNotesHeight";
+  const DEFAULT_HEIGHT = 180;
+  const MIN_HEIGHT = 80;
+  const MAX_HEIGHT = 500;
+  const [contentHeight, setContentHeight] = useState(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, Number(stored))) : DEFAULT_HEIGHT;
+  });
+  const dragRef = useRef<{ startY: number; startH: number } | null>(null);
+
+  const onDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragRef.current = { startY: e.clientY, startH: contentHeight };
+    const onMove = (ev: MouseEvent) => {
+      if (!dragRef.current) return;
+      const delta = dragRef.current.startY - ev.clientY; // drag up = grow
+      const next = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, dragRef.current.startH + delta));
+      setContentHeight(next);
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      if (dragRef.current) {
+        const delta = dragRef.current.startY - 0; // just save current
+        localStorage.setItem(STORAGE_KEY, String(contentHeight));
+      }
+      dragRef.current = null;
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [contentHeight]);
+
+  // Persist height after drag ends (contentHeight changes during drag)
+  const persistTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    clearTimeout(persistTimeoutRef.current);
+    persistTimeoutRef.current = setTimeout(() => {
+      localStorage.setItem(STORAGE_KEY, String(contentHeight));
+    }, 300);
+  }, [contentHeight]);
 
   // Invalidate tooltip cache when graph data changes (e.g. after frontmatter edit)
   useEffect(() => {
@@ -151,6 +193,9 @@ export function RelatedNotesFooter() {
 
   return (
     <div className="related-notes-footer" ref={footerRef}>
+      {expanded && (
+        <div className="related-notes-resize-handle" onMouseDown={onDragStart} />
+      )}
       <button
         className="related-notes-toggle"
         onClick={toggleRelatedNotes}
@@ -159,7 +204,7 @@ export function RelatedNotesFooter() {
         Related Notes ({related.length})
       </button>
       {expanded && (
-        <div className="related-notes-groups">
+        <div className="related-notes-groups" style={{ height: contentHeight, overflow: "auto" }}>
           {renderGroup("Outgoing", outgoing)}
           {renderGroup("Incoming", incoming)}
         </div>

@@ -2345,6 +2345,17 @@ body {
   background: var(--bg-secondary);
   flex-shrink: 0;
 }
+.related-notes-resize-handle {
+  height: 4px;
+  cursor: ns-resize;
+  background: transparent;
+  transition: background 0.15s;
+}
+.related-notes-resize-handle:hover,
+.related-notes-resize-handle:active {
+  background: var(--accent);
+  opacity: 0.5;
+}
 .related-notes-toggle {
   width: 100%;
   text-align: left;
