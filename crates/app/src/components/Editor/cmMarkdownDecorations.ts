@@ -26,6 +26,8 @@ export interface FencedBlock {
   startLine: number;
   /** Line number of closing fence (or last doc line if unclosed) */
   endLine: number;
+  /** Language identifier from the opening fence (e.g., "mermaid", "typescript"), if present */
+  lang?: string;
 }
 
 const FENCE_OPEN_RE = /^(`{3,}|~{3,})/;
@@ -40,6 +42,7 @@ export function scanFencedBlocks(doc: Text): FencedBlock[] {
   let fenceChar = "";
   let fenceLen = 0;
   let startLine = 0;
+  let currentLang: string | undefined;
 
   for (let i = 1; i <= doc.lines; i++) {
     const text = doc.line(i).text;
@@ -51,6 +54,8 @@ export function scanFencedBlocks(doc: Text): FencedBlock[] {
         fenceChar = fenceMatch[1][0];
         fenceLen = fenceMatch[1].length;
         startLine = i;
+        const afterFence = text.slice(fenceMatch[1].length).trim();
+        currentLang = afterFence || undefined;
       } else {
         // Closing fence must use same char and at least same length
         const trimmed = text.trimEnd();
@@ -59,10 +64,11 @@ export function scanFencedBlocks(doc: Text): FencedBlock[] {
           trimmed.length >= fenceLen &&
           trimmed === fenceChar.repeat(trimmed.length)
         ) {
-          blocks.push({ startLine, endLine: i });
+          blocks.push({ startLine, endLine: i, lang: currentLang });
           inFence = false;
           fenceChar = "";
           fenceLen = 0;
+          currentLang = undefined;
         }
       }
     }
@@ -70,7 +76,7 @@ export function scanFencedBlocks(doc: Text): FencedBlock[] {
 
   // Unclosed fence extends to document end
   if (inFence) {
-    blocks.push({ startLine, endLine: doc.lines });
+    blocks.push({ startLine, endLine: doc.lines, lang: currentLang });
   }
 
   return blocks;

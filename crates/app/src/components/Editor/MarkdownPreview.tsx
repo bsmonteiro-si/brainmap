@@ -1,14 +1,71 @@
-import React, { useMemo, useEffect, useRef } from "react";
+import React, { useMemo, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 import { resolveNotePath, isLocalNoteLink, ensureMdExtension } from "../../utils/resolveNotePath";
+import { useUIStore, THEME_BASE } from "../../stores/uiStore";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { CALLOUT_TYPES, CALLOUT_FALLBACK, CALLOUT_RE } from "./calloutTypes";
 import { remarkCalloutMerge } from "./remarkCalloutMerge";
 import { remarkInlineSource } from "./remarkInlineSource";
 import { preprocessCallouts, encodeLinkSpaces } from "./calloutPreprocess";
+
+/** Recursively extract text content from React children (for math rendering). */
+function extractTextContent(nodes: React.ReactNode[]): string {
+  let text = "";
+  for (const node of nodes) {
+    if (typeof node === "string") {
+      text += node;
+    } else if (typeof node === "number") {
+      text += String(node);
+    } else if (React.isValidElement(node) && node.props.children) {
+      text += extractTextContent(React.Children.toArray(node.props.children));
+    }
+  }
+  return text;
+}
+
+// ---------------------------------------------------------------------------
+// Mermaid preview block (lazy-loaded)
+// ---------------------------------------------------------------------------
+
+let mermaidInitTheme: string | null = null;
+
+function MermaidPreviewBlock({ source }: { source: string }) {
+  const [svgHtml, setSvgHtml] = useState<string>("");
+  const [error, setError] = useState<string>("");
+  const effectiveTheme = useUIStore((s) => s.effectiveEditorTheme);
+  const isDark = THEME_BASE[effectiveTheme] === "dark";
+  const theme = isDark ? "dark" : "default";
+
+  useEffect(() => {
+    let cancelled = false;
+    const id = `mermaid-preview-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    import("mermaid").then((mod) => {
+      const mm = mod.default;
+      if (mermaidInitTheme !== theme) {
+        mm.initialize({ startOnLoad: false, theme, securityLevel: "strict" });
+        mermaidInitTheme = theme;
+      }
+      return mm.render(id, source);
+    }).then(
+      ({ svg }) => { if (!cancelled) setSvgHtml(svg); },
+      (e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : String(e)); },
+    );
+    return () => { cancelled = true; };
+  }, [source, theme]);
+
+  if (error) {
+    return <div className="mermaid-error">Mermaid error: {error}</div>;
+  }
+  if (!svgHtml) {
+    return <div className="mermaid-loading">Rendering diagram&hellip;</div>;
+  }
+  return <div className="mermaid-preview" dangerouslySetInnerHTML={{ __html: svgHtml }} />;
+}
 
 interface Props {
   content: string;
@@ -163,6 +220,36 @@ export function MarkdownPreview({ content, notePath }: Props) {
         const typeLabel = typeDef?.label || type;
         const IconComponent = typeDef?.Icon;
 
+        // Math callout: render body with KaTeX
+        if (type === "math") {
+          const bodyText = extractTextContent(restChildren).trim();
+          let mathHtml: string;
+          try {
+            mathHtml = katex.renderToString(bodyText, {
+              displayMode: true,
+              throwOnError: false,
+            });
+          } catch {
+            mathHtml = `<span class="katex-error">${bodyText}</span>`;
+          }
+          return (
+            <div
+              className="callout callout-math"
+              style={{ "--callout-color": color } as React.CSSProperties}
+            >
+              <div className="callout-header" style={{ color }}>
+                {IconComponent && <IconComponent size={16} />}
+                <span className="callout-type-label">{typeLabel}</span>
+                {title && <span className="callout-title">{title}</span>}
+              </div>
+              <div
+                className="callout-body callout-math-body"
+                dangerouslySetInnerHTML={{ __html: mathHtml }}
+              />
+            </div>
+          );
+        }
+
         return (
           <div
             className="callout"
@@ -177,6 +264,24 @@ export function MarkdownPreview({ content, notePath }: Props) {
               <div className="callout-body">{restChildren}</div>
             )}
           </div>
+        );
+      },
+      code: ({
+        className,
+        children,
+        ...props
+      }: React.HTMLAttributes<HTMLElement> & { children?: React.ReactNode }) => {
+        const match = className?.match(/language-(\w+)/);
+        if (match?.[1] === "mermaid") {
+          const source = extractTextContent(
+            React.Children.toArray(children),
+          ).trim();
+          return <MermaidPreviewBlock source={source} />;
+        }
+        return (
+          <code className={className} {...props}>
+            {children}
+          </code>
         );
       },
     }),

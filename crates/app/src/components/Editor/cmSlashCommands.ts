@@ -55,6 +55,13 @@ const ICON_PATHS: Record<string, SvgElement[]> = {
     ["polyline", { points: "16 18 22 12 16 6" }],
     ["polyline", { points: "8 6 2 12 8 18" }],
   ],
+  "git-fork": [
+    ["circle", { cx: "12", cy: "18", r: "3" }],
+    ["circle", { cx: "6", cy: "6", r: "3" }],
+    ["circle", { cx: "18", cy: "6", r: "3" }],
+    ["path", { d: "M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" }],
+    ["path", { d: "M12 12v3" }],
+  ],
   minus: [
     ["path", { d: "M5 12h14" }],
   ],
@@ -96,6 +103,14 @@ const ICON_PATHS: Record<string, SvgElement[]> = {
     ["path", { d: "M6.453 15h11.094" }],
     ["path", { d: "M8.5 2h7" }],
   ],
+  "book-a": [
+    ["path", { d: "M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" }],
+    ["path", { d: "m8 13 4-7 4 7" }],
+    ["path", { d: "M9.1 11h5.7" }],
+  ],
+  sigma: [
+    ["path", { d: "M18 7V5a1 1 0 0 0-1-1H6.5a.5.5 0 0 0-.4.8l4.5 6a2 2 0 0 1 0 2.4l-4.5 6a.5.5 0 0 0 .4.8H17a1 1 0 0 0 1-1v-2" }],
+  ],
 };
 
 function renderSvgElement(el: SvgElement): string {
@@ -131,10 +146,14 @@ const CALLOUT_ICON_MAP: Record<string, string> = {
   question: "help-circle",
   "key-insight": "lightbulb",
   example: "flask-conical",
+  definition: "book-a",
+  math: "sigma",
 };
 
-/** Callout types that also have an inline `/keyword` command in the BrainMap section. */
+/** Callout types that have an inline `/keyword` command (gets a `-callout` suffix in auto-gen). */
 const INLINE_COMMAND_TYPES = new Set(["source", "example"]);
+/** Callout types with a fully custom command (excluded from auto-generation). */
+const SKIP_AUTO_GEN_TYPES = new Set(["math"]);
 
 // ---------------------------------------------------------------------------
 // Slash command definitions
@@ -247,6 +266,15 @@ export const SLASH_COMMANDS: SlashCommandDef[] = [
     apply: (v, from, to) => replaceWith(v, from, to, "```\n\n```", 4),
   },
   {
+    keyword: "mermaid",
+    label: "Mermaid Diagram",
+    detail: "Mermaid diagram block",
+    section: "Blocks",
+    icon: "git-fork",
+    apply: (v, from, to) =>
+      replaceWith(v, from, to, "```mermaid\ngraph TD\n    A[Start] --> B[End]\n```", 14),
+  },
+  {
     keyword: "hr",
     label: "Divider",
     detail: "Horizontal rule",
@@ -294,9 +322,28 @@ export const SLASH_COMMANDS: SlashCommandDef[] = [
     apply: (v, from, to) =>
       replaceWith(v, from, to, '[!example ""]', '[!example "'.length),
   },
+  {
+    keyword: "math",
+    label: "Math Block",
+    detail: "LaTeX equation (KaTeX)",
+    section: "BrainMap",
+    icon: "sigma",
+    apply: (v, from, to) => {
+      const template = "[!math] {\n\\sum_{i=1}^n x_i\n}";
+      // Place cursor on the LaTeX body line
+      const cursorOffset = "[!math] {\n".length;
+      replaceWith(v, from, to, template, cursorOffset);
+      // Select the placeholder so the user can type over it
+      const bodyStart = from + cursorOffset;
+      const bodyEnd = bodyStart + "\\sum_{i=1}^n x_i".length;
+      v.dispatch({
+        selection: EditorSelection.range(bodyStart, bodyEnd),
+      });
+    },
+  },
 
   // ── Callouts (generated from calloutTypes.ts) ──
-  ...CALLOUT_TYPE_ENTRIES.map(([type, def]) => ({
+  ...CALLOUT_TYPE_ENTRIES.filter(([type]) => !SKIP_AUTO_GEN_TYPES.has(type)).map(([type, def]) => ({
     keyword: INLINE_COMMAND_TYPES.has(type) ? `${type}-callout` : type,
     label: `${def.label} Callout`,
     detail: `${def.label} callout block`,

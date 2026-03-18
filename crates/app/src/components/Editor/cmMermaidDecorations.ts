@@ -1,0 +1,246 @@
+/**
+ * CodeMirror 6 extension that renders mermaid fenced code blocks as SVG
+ * diagrams when the cursor is outside the block, and shows raw source
+ * when the cursor is inside (same cursor-aware pattern as TableWidget).
+ */
+import {
+  EditorView,
+  Decoration,
+  WidgetType,
+  type DecorationSet,
+} from "@codemirror/view";
+import {
+  RangeSetBuilder,
+  StateField,
+  StateEffect,
+  type Extension,
+} from "@codemirror/state";
+import type { EditorState } from "@codemirror/state";
+import { scanFencedBlocks } from "./cmMarkdownDecorations";
+
+// ---------------------------------------------------------------------------
+// Lazy mermaid loading + initialization
+// ---------------------------------------------------------------------------
+
+type MermaidModule = { default: { initialize: (config: object) => void; render: (id: string, source: string) => Promise<{ svg: string }> } };
+
+let mermaidMod: MermaidModule["default"] | null = null;
+let mermaidLoading: Promise<void> | null = null;
+
+async function ensureMermaid(isDark: boolean): Promise<MermaidModule["default"]> {
+  if (mermaidMod) return mermaidMod;
+  if (!mermaidLoading) {
+    mermaidLoading = import("mermaid").then((mod) => {
+      mermaidMod = mod.default;
+      mermaidMod.initialize({
+        startOnLoad: false,
+        theme: isDark ? "dark" : "default",
+        securityLevel: "strict",
+      });
+    });
+  }
+  await mermaidLoading;
+  return mermaidMod!;
+}
+
+// ---------------------------------------------------------------------------
+// SVG render cache
+// ---------------------------------------------------------------------------
+
+type CacheEntry = { svg: string } | { error: string };
+const svgCache = new Map<string, CacheEntry>();
+const pendingRenders = new Set<string>();
+
+let renderCounter = 0;
+
+async function renderMermaid(source: string, view: EditorView, isDark: boolean): Promise<void> {
+  if (svgCache.has(source) || pendingRenders.has(source)) return;
+  pendingRenders.add(source);
+  try {
+    const mm = await ensureMermaid(isDark);
+    const id = `mermaid-${++renderCounter}`;
+    const { svg } = await mm.render(id, source);
+    svgCache.set(source, { svg });
+  } catch (e: unknown) {
+    svgCache.set(source, { error: e instanceof Error ? e.message : String(e) });
+  } finally {
+    pendingRenders.delete(source);
+  }
+  // Evict old entries if cache grows too large
+  if (svgCache.size > 50) {
+    const keys = Array.from(svgCache.keys());
+    for (let i = 0; i < keys.length - 40; i++) svgCache.delete(keys[i]);
+  }
+  // Signal the StateField to rebuild decorations with the now-cached SVG.
+  // Guard against destroyed views (user switched notes or theme changed).
+  try {
+    view.dispatch({ effects: mermaidRenderEffect.of(null) });
+  } catch {
+    // View was destroyed — ignore
+  }
+}
+
+// ---------------------------------------------------------------------------
+// HTML escaping for error messages
+// ---------------------------------------------------------------------------
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// ---------------------------------------------------------------------------
+// MermaidWidget
+// ---------------------------------------------------------------------------
+
+class MermaidWidget extends WidgetType {
+  constructor(
+    readonly source: string,
+    readonly cached: CacheEntry | undefined,
+  ) {
+    super();
+  }
+
+  eq(other: MermaidWidget): boolean {
+    if (this.source !== other.source) return false;
+    // Must also compare cache state so CM re-renders DOM when async render completes
+    if (this.cached === other.cached) return true;
+    if (!this.cached || !other.cached) return false;
+    if ("svg" in this.cached && "svg" in other.cached) return this.cached.svg === other.cached.svg;
+    if ("error" in this.cached && "error" in other.cached) return this.cached.error === other.cached.error;
+    return false;
+  }
+
+  toDOM(): HTMLElement {
+    const wrapper = document.createElement("div");
+    wrapper.className = "cm-mermaid-widget";
+
+    if (!this.cached) {
+      wrapper.innerHTML = '<div class="cm-mermaid-loading">Rendering diagram\u2026</div>';
+    } else if ("error" in this.cached) {
+      wrapper.innerHTML = `<div class="cm-mermaid-error">Mermaid error: ${escapeHtml(this.cached.error)}</div>`;
+    } else {
+      wrapper.innerHTML = this.cached.svg;
+      const svg = wrapper.querySelector("svg");
+      if (svg) {
+        svg.style.maxWidth = "100%";
+        svg.style.height = "auto";
+      }
+    }
+
+    return wrapper;
+  }
+
+  get estimatedHeight(): number {
+    return 200;
+  }
+
+  ignoreEvent(): boolean {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// StateField
+// ---------------------------------------------------------------------------
+
+const mermaidRenderEffect = StateEffect.define<null>();
+
+interface MermaidDecoState {
+  cursorLine: number;
+  decos: DecorationSet;
+  isDark: boolean;
+}
+
+function buildMermaidDecos(state: EditorState, cursorLine: number, isDark: boolean, view: EditorView | null): DecorationSet {
+  const doc = state.doc;
+  const fencedBlocks = scanFencedBlocks(doc);
+  const mermaidBlocks = fencedBlocks.filter((b) => b.lang === "mermaid");
+
+  if (mermaidBlocks.length === 0) return Decoration.none;
+
+  const builder = new RangeSetBuilder<Decoration>();
+
+  for (const block of mermaidBlocks) {
+    const cursorInBlock = cursorLine >= block.startLine && cursorLine <= block.endLine;
+
+    if (cursorInBlock) {
+      // Show raw source — fenced code line decorations are applied by cmMarkdownDecorations
+      continue;
+    }
+
+    // Extract mermaid source (lines between opening and closing fences)
+    const sourceLines: string[] = [];
+    for (let ln = block.startLine + 1; ln < block.endLine; ln++) {
+      sourceLines.push(doc.line(ln).text);
+    }
+    const source = sourceLines.join("\n").trim();
+    if (!source) continue;
+
+    // Trigger async render if not cached
+    const cached = svgCache.get(source);
+    if (!cached && view) {
+      renderMermaid(source, view, isDark);
+    }
+
+    const from = doc.line(block.startLine).from;
+    const to = doc.line(block.endLine).to;
+    builder.add(
+      from,
+      to,
+      Decoration.replace({
+        widget: new MermaidWidget(source, cached),
+        block: true,
+      }),
+    );
+  }
+
+  return builder.finish();
+}
+
+function createMermaidField(isDark: boolean) {
+  return StateField.define<MermaidDecoState>({
+    create(state) {
+      const cursorLine = state.doc.lineAt(state.selection.main.head).number;
+      return {
+        cursorLine,
+        decos: buildMermaidDecos(state, cursorLine, isDark, null),
+        isDark,
+      };
+    },
+    update(value, tr) {
+      const cursorLine = tr.state.doc.lineAt(tr.state.selection.main.head).number;
+      const hasRenderEffect = tr.effects.some((e) => e.is(mermaidRenderEffect));
+      if (!tr.docChanged && cursorLine === value.cursorLine && !hasRenderEffect) {
+        return value;
+      }
+      return {
+        cursorLine,
+        decos: buildMermaidDecos(tr.state, cursorLine, value.isDark, tr.view),
+        isDark: value.isDark,
+      };
+    },
+    provide: (f) => EditorView.decorations.from(f, (v) => v.decos),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Public extension factory
+// ---------------------------------------------------------------------------
+
+/** Clear the SVG cache (e.g., on theme change). */
+export function clearMermaidCache(): void {
+  svgCache.clear();
+  // Reset mermaid module so it re-initializes with new theme
+  mermaidMod = null;
+  mermaidLoading = null;
+}
+
+export function mermaidDecorations(isDark: boolean): Extension {
+  return [createMermaidField(isDark)];
+}
+
+// ---------------------------------------------------------------------------
+// Exports for testing
+// ---------------------------------------------------------------------------
+
+export { MermaidWidget, buildMermaidDecos, svgCache, mermaidRenderEffect };

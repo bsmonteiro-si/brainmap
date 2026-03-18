@@ -2,11 +2,12 @@ import { describe, it, expect } from "vitest";
 import { SLASH_COMMANDS, filterSlashCommands } from "./cmSlashCommands";
 import { CALLOUT_TYPE_ENTRIES } from "./calloutTypes";
 
-const STATIC_COMMAND_COUNT = 13; // headings(3) + lists(3) + blocks(5) + inline source(1) + inline example(1)
+const STATIC_COMMAND_COUNT = 15; // headings(3) + lists(3) + blocks(6) + inline source(1) + inline example(1) + math(1)
+const SKIP_AUTO_GEN_COUNT = 1; // math (has custom command, excluded from auto-gen)
 
 describe("SLASH_COMMANDS registry", () => {
   it("has the expected number of commands", () => {
-    expect(SLASH_COMMANDS.length).toBe(STATIC_COMMAND_COUNT + CALLOUT_TYPE_ENTRIES.length);
+    expect(SLASH_COMMANDS.length).toBe(STATIC_COMMAND_COUNT + CALLOUT_TYPE_ENTRIES.length - SKIP_AUTO_GEN_COUNT);
   });
 
   it("every command has required fields", () => {
@@ -32,6 +33,8 @@ describe("SLASH_COMMANDS registry", () => {
     expect(keywords).toContain("question");
     expect(keywords).toContain("key-insight");
     expect(keywords).toContain("example-callout");
+    expect(keywords).toContain("definition");
+    expect(keywords).toContain("math");
   });
 
   it("includes standard markdown commands", () => {
@@ -44,6 +47,7 @@ describe("SLASH_COMMANDS registry", () => {
     expect(keywords).toContain("task");
     expect(keywords).toContain("quote");
     expect(keywords).toContain("code");
+    expect(keywords).toContain("mermaid");
     expect(keywords).toContain("hr");
     expect(keywords).toContain("table");
     expect(keywords).toContain("link");

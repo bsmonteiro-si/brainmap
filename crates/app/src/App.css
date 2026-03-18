@@ -1143,6 +1143,34 @@ body {
   border-left: 1px solid var(--border-color);
   border-right: 1px solid var(--border-color);
 }
+/* ── Mermaid diagram widget (CodeMirror) ── */
+.editor-body .cm-editor .cm-mermaid-widget {
+  padding: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  text-align: center;
+  margin: 4px 0;
+}
+.editor-body .cm-editor .cm-mermaid-widget svg {
+  max-width: 100%;
+  height: auto;
+}
+.editor-body .cm-editor .cm-mermaid-loading {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 20px;
+}
+.editor-body .cm-editor .cm-mermaid-error {
+  color: var(--danger);
+  font-size: 0.85em;
+  font-family: ui-monospace, 'Menlo', monospace;
+  white-space: pre-wrap;
+  text-align: left;
+  padding: 8px;
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  border-radius: 4px;
+}
 .editor-body .cm-editor .cm-inline-code {
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
@@ -2387,6 +2415,28 @@ body {
   color: var(--text-primary);
 }
 
+/* ── Mermaid in MarkdownPreview ── */
+.md-preview .mermaid-preview {
+  text-align: center;
+  margin: 1em 0;
+}
+.md-preview .mermaid-preview svg {
+  max-width: 100%;
+  height: auto;
+}
+.md-preview .mermaid-error {
+  color: var(--danger);
+  font-size: 0.85em;
+  font-family: ui-monospace, 'Menlo', monospace;
+  padding: 8px;
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  border-radius: 4px;
+}
+.md-preview .mermaid-loading {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 .md-preview blockquote {
   border-left: 3px solid var(--accent);
   margin: 0 0 1em;
@@ -2439,6 +2489,36 @@ body {
 }
 .md-preview .callout-body p { margin: 0; }
 .md-preview .callout-body p + p { margin-top: 0.5em; }
+/* Editor math preview widget */
+.cm-math-preview {
+  padding: 8px 16px;
+  background: color-mix(in srgb, #e74c3c 3%, transparent);
+  border-left: 3px solid #e74c3c;
+  border-radius: 0 0 6px 0;
+  margin-left: 6px;
+  margin-bottom: 2px;
+}
+.cm-math-preview .katex-display,
+.cm-math-preview .katex-display > .katex {
+  margin: 0;
+  text-align: left !important;
+}
+
+/* Preview math callout */
+.md-preview .callout-math-body {
+  padding: 12px 16px;
+  overflow-x: auto;
+}
+.md-preview .callout-math-body .katex-display,
+.md-preview .callout-math-body .katex-display > .katex {
+  margin: 0;
+  text-align: left !important;
+}
+.md-preview .callout-math-body .katex-error {
+  color: #e74c3c;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.85em;
+}
 
 /* Callout picker popover */
 .callout-picker-wrapper {

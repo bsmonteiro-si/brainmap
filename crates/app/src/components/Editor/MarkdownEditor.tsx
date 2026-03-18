@@ -23,6 +23,7 @@ import { listNestingKeymap } from "./cmListNesting";
 import { smartPaste } from "./cmSmartPaste";
 import { createSlashAutocompletion } from "./cmSlashCommands";
 import { headingFoldService } from "./cmHeadingFold";
+import { mermaidDecorations, clearMermaidCache } from "./cmMermaidDecorations";
 
 const ACCENT = "#4a9eff";
 const ACCENT_DARK = "#5aaeFF";
@@ -133,6 +134,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
     ];
 
     if (!raw) {
+      clearMermaidCache();
       extensions.push(
         markdown({ extensions: GFM }),
         syntaxHighlighting(buildMarkdownHighlight(isDark)),
@@ -143,6 +145,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
         checkboxDecorations(),
         bulletDecorations(),
         headingFoldService(),
+        mermaidDecorations(isDark),
       );
       if (wsRoot) {
         extensions.push(editorContextMenu(wsRoot.replace(/\/$/, "") + "/" + notePath, findTableRange, formatTableInView));

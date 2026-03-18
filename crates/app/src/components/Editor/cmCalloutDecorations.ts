@@ -15,6 +15,8 @@ import {
 import { RangeSetBuilder, StateField, type Text, type Extension } from "@codemirror/state";
 import { foldService, codeFolding, foldKeymap } from "@codemirror/language";
 import { keymap } from "@codemirror/view";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 import { CALLOUT_TYPES, CALLOUT_FALLBACK } from "./calloutTypes";
 
 // ---------------------------------------------------------------------------
@@ -70,6 +72,16 @@ const CALLOUT_ICON_PATHS: Record<string, SvgElement[]> = {
     ["path", { d: "M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2" }],
     ["path", { d: "M6.453 15h11.094" }],
     ["path", { d: "M8.5 2h7" }],
+  ],
+  definition: [
+    // BookA
+    ["path", { d: "M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" }],
+    ["path", { d: "m8 13 4-7 4 7" }],
+    ["path", { d: "M9.1 11h5.7" }],
+  ],
+  math: [
+    // Sigma
+    ["path", { d: "M18 7V5a1 1 0 0 0-1-1H6.5a.5.5 0 0 0-.4.8l4.5 6a2 2 0 0 1 0 2.4l-4.5 6a.5.5 0 0 0 .4.8H17a1 1 0 0 0 1-1v-2" }],
   ],
 };
 
@@ -294,6 +306,38 @@ class CalloutHeaderWidget extends WidgetType {
   }
 }
 
+class MathPreviewWidget extends WidgetType {
+  constructor(readonly latex: string) {
+    super();
+  }
+
+  eq(other: MathPreviewWidget): boolean {
+    return this.latex === other.latex;
+  }
+
+  toDOM(): HTMLElement {
+    const wrapper = document.createElement("div");
+    wrapper.className = "cm-math-preview";
+    try {
+      katex.render(this.latex, wrapper, {
+        displayMode: true,
+        throwOnError: false,
+      });
+    } catch {
+      wrapper.textContent = this.latex;
+    }
+    return wrapper;
+  }
+
+  get estimatedHeight() {
+    return 40;
+  }
+
+  ignoreEvent(): boolean {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Compute CSS classes for a given line within a callout
 // ---------------------------------------------------------------------------
@@ -390,13 +434,26 @@ function buildDecorations(
 
     // Body lines (include closingLineNum for unclosed callouts since it's the last body line)
     const bodyEnd = r.closed ? closingLineNum : closingLineNum + 1;
+    const cursorInCallout =
+      cursorLine >= headerLineNum && cursorLine <= closingLineNum;
+    const isMathHidden =
+      r.type === "math" && r.closed && r.bodyLineCount > 0 && !cursorInCallout;
+
     for (let ln = headerLineNum + 1; ln < bodyEnd; ln++) {
       const line = doc.line(ln);
-      const classes = computeLineClasses(
-        ln, headerLineNum, closingLineNum,
-        r.bodyLineCount, r.closed, cursorOnClosing,
-      );
-      builder.add(line.from, line.from, lineDeco(classes, color));
+      if (isMathHidden) {
+        // Hide body line — the MathPreviewWidget shows rendered math instead
+        builder.add(line.from, line.to, Decoration.replace({
+          widget: new ZeroHeightWidget(),
+          block: true,
+        }));
+      } else {
+        const classes = computeLineClasses(
+          ln, headerLineNum, closingLineNum,
+          r.bodyLineCount, r.closed, cursorOnClosing,
+        );
+        builder.add(line.from, line.from, lineDeco(classes, color));
+      }
     }
 
     // Closing line
@@ -418,6 +475,23 @@ function buildDecorations(
           r.bodyLineCount, r.closed, cursorOnClosing,
         );
         builder.add(r.closingLineFrom, r.closingLineFrom, lineDeco(classes, color));
+      }
+    }
+
+    // Math preview widget: render KaTeX below closing brace when cursor is outside
+    if (isMathHidden) {
+      // Extract body text from lines between header and closing brace
+      let bodyText = "";
+      for (let ln = headerLineNum + 1; ln < closingLineNum; ln++) {
+        bodyText += doc.line(ln).text + "\n";
+      }
+      bodyText = bodyText.trim();
+      if (bodyText) {
+        builder.add(r.closingLineTo, r.closingLineTo, Decoration.widget({
+          widget: new MathPreviewWidget(bodyText),
+          block: true,
+          side: 1,
+        }));
       }
     }
 

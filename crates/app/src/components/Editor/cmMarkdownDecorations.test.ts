@@ -10,52 +10,52 @@ describe("scanFencedBlocks", () => {
   it("finds a basic fenced code block with backticks", () => {
     const d = doc("before\n```\ncode\n```\nafter");
     const blocks = scanFencedBlocks(d);
-    expect(blocks).toEqual([{ startLine: 2, endLine: 4 }]);
+    expect(blocks).toEqual([{ startLine: 2, endLine: 4, lang: undefined }]);
   });
 
   it("finds a fenced code block with tildes", () => {
     const d = doc("~~~\ncode\n~~~");
     const blocks = scanFencedBlocks(d);
-    expect(blocks).toEqual([{ startLine: 1, endLine: 3 }]);
+    expect(blocks).toEqual([{ startLine: 1, endLine: 3, lang: undefined }]);
   });
 
   it("finds a fenced code block with language annotation", () => {
     const d = doc("```typescript\nconst x = 1;\n```");
     const blocks = scanFencedBlocks(d);
-    expect(blocks).toEqual([{ startLine: 1, endLine: 3 }]);
+    expect(blocks).toEqual([{ startLine: 1, endLine: 3, lang: "typescript" }]);
   });
 
   it("handles nested fences with different lengths", () => {
     const d = doc("````\n```\ninner\n```\n````");
     const blocks = scanFencedBlocks(d);
-    expect(blocks).toEqual([{ startLine: 1, endLine: 5 }]);
+    expect(blocks).toEqual([{ startLine: 1, endLine: 5, lang: undefined }]);
   });
 
   it("handles unclosed fence extending to doc end", () => {
     const d = doc("```\ncode\nmore code");
     const blocks = scanFencedBlocks(d);
-    expect(blocks).toEqual([{ startLine: 1, endLine: 3 }]);
+    expect(blocks).toEqual([{ startLine: 1, endLine: 3, lang: undefined }]);
   });
 
   it("finds multiple fenced blocks", () => {
     const d = doc("```\na\n```\ntext\n~~~\nb\n~~~");
     const blocks = scanFencedBlocks(d);
     expect(blocks).toEqual([
-      { startLine: 1, endLine: 3 },
-      { startLine: 5, endLine: 7 },
+      { startLine: 1, endLine: 3, lang: undefined },
+      { startLine: 5, endLine: 7, lang: undefined },
     ]);
   });
 
   it("does not close backtick fence with tildes", () => {
     const d = doc("```\ncode\n~~~\nstill code\n```");
     const blocks = scanFencedBlocks(d);
-    expect(blocks).toEqual([{ startLine: 1, endLine: 5 }]);
+    expect(blocks).toEqual([{ startLine: 1, endLine: 5, lang: undefined }]);
   });
 
   it("requires closing fence to be at least same length", () => {
     const d = doc("````\ncode\n```\nstill code\n````");
     const blocks = scanFencedBlocks(d);
-    expect(blocks).toEqual([{ startLine: 1, endLine: 5 }]);
+    expect(blocks).toEqual([{ startLine: 1, endLine: 5, lang: undefined }]);
   });
 });
 
@@ -146,7 +146,7 @@ describe("classifyLines", () => {
     it("passes through to scanFencedBlocks", () => {
       const d = doc("```\ncode\n```");
       const cls = classifyLines(d);
-      expect(cls.fencedBlocks).toEqual([{ startLine: 1, endLine: 3 }]);
+      expect(cls.fencedBlocks).toEqual([{ startLine: 1, endLine: 3, lang: undefined }]);
     });
   });
 
