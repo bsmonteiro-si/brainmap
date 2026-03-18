@@ -32,6 +32,8 @@
   --glass-bg-hover: rgba(0, 0, 0, 0.06);
   --glass-btn-bg: rgba(0, 0, 0, 0.04);
   --glass-btn-border: rgba(0, 0, 0, 0.1);
+  --selection-bg: rgba(74, 158, 255, 0.20);
+  --selection-bg-focused: rgba(74, 158, 255, 0.30);
 }
 
 /* Derived font-size variables — must be in a standalone :root so they re-evaluate
@@ -63,6 +65,8 @@
   --glass-bg-hover: rgba(255, 255, 255, 0.12);
   --glass-btn-bg: rgba(255, 255, 255, 0.06);
   --glass-btn-border: rgba(255, 255, 255, 0.1);
+  --selection-bg: rgba(74, 158, 255, 0.45);
+  --selection-bg-focused: rgba(74, 158, 255, 0.55);
 }
 
 /* ── Dracula ─────────────────────────────────────────────────── */
@@ -87,6 +91,8 @@
   --glass-bg-hover: rgba(255, 255, 255, 0.12);
   --glass-btn-bg: rgba(255, 255, 255, 0.06);
   --glass-btn-border: rgba(255, 255, 255, 0.1);
+  --selection-bg: rgba(189, 147, 249, 0.30);
+  --selection-bg-focused: rgba(189, 147, 249, 0.40);
 }
 
 /* ── Solarized Light ─────────────────────────────────────────── */
@@ -111,6 +117,8 @@
   --glass-bg-hover: rgba(0, 0, 0, 0.06);
   --glass-btn-bg: rgba(0, 0, 0, 0.04);
   --glass-btn-border: rgba(0, 0, 0, 0.1);
+  --selection-bg: rgba(38, 139, 210, 0.20);
+  --selection-bg-focused: rgba(38, 139, 210, 0.30);
 }
 
 /* ── Solarized Dark ──────────────────────────────────────────── */
@@ -135,6 +143,8 @@
   --glass-bg-hover: rgba(255, 255, 255, 0.12);
   --glass-btn-bg: rgba(255, 255, 255, 0.06);
   --glass-btn-border: rgba(255, 255, 255, 0.1);
+  --selection-bg: rgba(38, 139, 210, 0.35);
+  --selection-bg-focused: rgba(38, 139, 210, 0.45);
 }
 
 /* ── Nord ────────────────────────────────────────────────────── */
@@ -159,6 +169,8 @@
   --glass-bg-hover: rgba(255, 255, 255, 0.12);
   --glass-btn-bg: rgba(255, 255, 255, 0.06);
   --glass-btn-border: rgba(255, 255, 255, 0.1);
+  --selection-bg: rgba(136, 192, 208, 0.30);
+  --selection-bg-focused: rgba(136, 192, 208, 0.40);
 }
 
 /* ── Tokyo Night ─────────────────────────────────────────────── */
@@ -183,6 +195,8 @@
   --glass-bg-hover: rgba(255, 255, 255, 0.12);
   --glass-btn-bg: rgba(255, 255, 255, 0.06);
   --glass-btn-border: rgba(255, 255, 255, 0.1);
+  --selection-bg: rgba(122, 162, 247, 0.35);
+  --selection-bg-focused: rgba(122, 162, 247, 0.45);
 }
 
 /* ── One Dark ────────────────────────────────────────────────── */
@@ -207,6 +221,8 @@
   --glass-bg-hover: rgba(255, 255, 255, 0.12);
   --glass-btn-bg: rgba(255, 255, 255, 0.06);
   --glass-btn-border: rgba(255, 255, 255, 0.1);
+  --selection-bg: rgba(82, 139, 255, 0.35);
+  --selection-bg-focused: rgba(82, 139, 255, 0.45);
 }
 
 /* ── Base ────────────────────────────────────────────────────── */
@@ -1079,7 +1095,10 @@ body {
   border-left-color: var(--accent) !important;
 }
 .editor-body .cm-editor .cm-selectionBackground {
-  background-color: color-mix(in srgb, var(--accent) 20%, transparent) !important;
+  background-color: var(--selection-bg) !important;
+}
+.editor-body .cm-editor.cm-focused .cm-selectionBackground {
+  background-color: var(--selection-bg-focused) !important;
 }
 .editor-body .cm-editor .cm-content {
   padding-left: clamp(12px, 3%, 36px);

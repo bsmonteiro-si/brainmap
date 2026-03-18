@@ -4,7 +4,6 @@ import { EditorState } from "@codemirror/state";
 import { markdown } from "@codemirror/lang-markdown";
 import { GFM } from "@lezer/markdown";
 import { defaultKeymap, history, historyKeymap, redo, indentWithTab } from "@codemirror/commands";
-import { oneDark } from "@codemirror/theme-one-dark";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
 import { search, searchKeymap } from "@codemirror/search";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
@@ -27,6 +26,30 @@ import { headingFoldService } from "./cmHeadingFold";
 
 const ACCENT = "#4a9eff";
 const ACCENT_DARK = "#5aaeFF";
+
+/** Custom dark theme that defers to CSS variables for selection colors
+ *  instead of the bundled oneDark which hard-codes them. */
+const darkEditorTheme = EditorView.theme({
+  "&": {
+    backgroundColor: "var(--bg-primary)",
+    color: "var(--text-primary)",
+  },
+  ".cm-content": { caretColor: "var(--accent)" },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--accent)" },
+  "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground": {
+    backgroundColor: "var(--selection-bg)",
+  },
+  "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+    backgroundColor: "var(--selection-bg-focused)",
+  },
+  ".cm-activeLine": { backgroundColor: "color-mix(in srgb, var(--accent) 5%, transparent)" },
+  ".cm-gutters": {
+    backgroundColor: "var(--bg-secondary)",
+    color: "var(--text-muted)",
+    borderRight: "1px solid var(--border-color)",
+  },
+  ".cm-activeLineGutter": { backgroundColor: "var(--bg-tertiary)" },
+}, { dark: true });
 
 function buildMarkdownHighlight(isDark: boolean) {
   const accent = isDark ? ACCENT_DARK : ACCENT;
@@ -143,7 +166,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
     }
 
     if (isDark) {
-      extensions.push(oneDark);
+      extensions.push(darkEditorTheme);
     }
 
     const state = EditorState.create({
