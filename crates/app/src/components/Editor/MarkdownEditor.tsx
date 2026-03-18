@@ -3,9 +3,11 @@ import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { markdown } from "@codemirror/lang-markdown";
 import { GFM } from "@lezer/markdown";
-import { defaultKeymap, history, historyKeymap, redo } from "@codemirror/commands";
+import { defaultKeymap, history, historyKeymap, redo, indentWithTab } from "@codemirror/commands";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
+import { search, searchKeymap } from "@codemirror/search";
+import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { tags } from "@lezer/highlight";
 import { useUIStore, THEME_BASE } from "../../stores/uiStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
@@ -17,6 +19,7 @@ import { listSpacing } from "./cmListSpacing";
 import { markdownDecorations } from "./cmMarkdownDecorations";
 import { checkboxDecorations } from "./cmCheckboxDecorations";
 import { bulletDecorations } from "./cmBulletDecorations";
+import { listNestingKeymap } from "./cmListNesting";
 
 const ACCENT = "#4a9eff";
 const ACCENT_DARK = "#5aaeFF";
@@ -111,7 +114,19 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
     } else {
       extensions.push(
         history(),
-        keymap.of([...formattingKeymap, { key: "Mod-y", run: redo, preventDefault: true }, ...historyKeymap, ...defaultKeymap]),
+        keymap.of([
+          ...formattingKeymap,
+          { key: "Mod-y", run: redo, preventDefault: true },
+          ...closeBracketsKeymap,
+          ...searchKeymap,
+          ...listNestingKeymap,
+          indentWithTab,
+          ...historyKeymap,
+          ...defaultKeymap,
+        ]),
+        EditorState.languageData.of(() => [{ closeBrackets: { brackets: ["(", "[", "{", "`"] } }]),
+        closeBrackets(),
+        search(),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             onChangeRef.current(update.state.doc.toString());

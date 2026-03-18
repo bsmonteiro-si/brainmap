@@ -2,6 +2,17 @@
 
 Feature history moved from CLAUDE.md. Organized by phase and feature area.
 
+## Editor Phase A — Foundational Editing
+
+Four foundational CodeMirror 6 features added to close the gap with standard text editors:
+
+- **Find & Replace**: Cmd+F opens find panel, Cmd+H opens find-and-replace. Styled to match all 8 app themes.
+- **List auto-continuation**: Pressing Enter after `- item` or `1. item` auto-continues with the next marker. Double-Enter on an empty marker removes it. Blockquote continuation (`> `) also works. Provided by `markdown()` which includes `markdownKeymap` at `Prec.high`.
+- **Bracket auto-close**: Typing `(`, `[`, `{`, or `` ` `` auto-inserts the closing pair. Quotes (`"`, `'`) intentionally excluded to avoid interfering with prose.
+- **Tab indent/outdent with marker cycling**: Tab on ordered list lines indents and cycles the marker style (IntelliJ-style): `1.` → `a.` → `i.` → `1.` based on nesting depth. Shift+Tab reverses. On non-list lines, Tab/Shift+Tab indent/outdent normally.
+
+New deps: `@codemirror/search`, `@codemirror/autocomplete`.
+
 ## Phase 1c — Desktop App
 
 UX improvements shipped: fcose/dagre graph layouts, edge label toggle, resizable panels (react-resizable-panels v4), file tree (Cmd+B), focus mode (button / Escape), related notes footer, debug cleanup. Additional opportunities implemented: node sizing by in-degree, color legend overlay (Legend toggle in graph toolbar), hover tooltips on graph nodes.
