@@ -1,4 +1,6 @@
 pub mod commands;
+#[cfg(target_os = "macos")]
+pub mod dock_menu;
 pub mod dto;
 pub mod handlers;
 pub mod state;
@@ -22,6 +24,11 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .manage(AppState::new())
+        .setup(|app| {
+            #[cfg(target_os = "macos")]
+            dock_menu::init(&app.handle());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::open_workspace,
             commands::close_workspace,
@@ -54,8 +61,10 @@ pub fn run() {
             commands::write_plain_file,
             commands::write_raw_note,
             commands::reveal_in_file_manager,
+            commands::open_in_default_app,
             commands::duplicate_note,
             commands::write_log,
+            commands::update_dock_menu,
         ])
         .run(tauri::generate_context!())
         .expect("error while running BrainMap");

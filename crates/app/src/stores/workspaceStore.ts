@@ -59,6 +59,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       const stats = await api.getStats();
       log.info("stores::workspace", "stats loaded", { node_count: stats.node_count, edge_count: stats.edge_count });
       useUIStore.getState().clearHiddenEdgeTypes();
+      useUIStore.getState().loadCustomFileOrder(path);
       set({ info, stats, isLoading: false });
     } catch (e) {
       log.error("stores::workspace", "failed to open workspace", { path, error: String(e) });
@@ -68,6 +69,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   closeWorkspace: () => {
     if (!get().info) return;
+    // Persist custom file order before clearing state
+    const wsRoot = get().info?.root;
+    if (wsRoot) useUIStore.getState().saveCustomFileOrder(wsRoot);
     useEditorStore.getState().clear();
     useGraphStore.getState().reset();
     useUIStore.getState().resetWorkspaceState();
@@ -119,6 +123,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         cacheCurrentState(currentSegmentId);
       }
 
+      // Persist custom file order for the outgoing segment
+      if (currentSegment) {
+        useUIStore.getState().saveCustomFileOrder(currentSegment.path);
+      }
+
       // 4. Switch backend active workspace / open if needed
       const api = await getAPI();
 
@@ -162,6 +171,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         useEditorStore.getState().clear();
         useGraphStore.getState().reset();
         useUIStore.getState().resetWorkspaceState();
+        useUIStore.getState().loadCustomFileOrder(targetSegment.path);
         useUndoStore.getState().clear();
         useNavigationStore.getState().reset();
         useTabStore.getState().reset();
@@ -209,6 +219,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         await new Promise((r) => setTimeout(r, 50));
       }
     }
+
+    // Persist custom file order before closing
+    useUIStore.getState().saveCustomFileOrder(targetSegment.path);
 
     // Remove from open segment list (so switchSegment won't try to switch back here)
     segStore.removeOpenSegment(segmentId);

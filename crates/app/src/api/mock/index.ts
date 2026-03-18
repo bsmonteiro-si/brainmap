@@ -151,7 +151,7 @@ export class MockBridge implements BrainMapAPI {
     eventBus.emit({
       type: "node-created",
       path: params.path,
-      node: { path: params.path, title: params.title, note_type: params.note_type, tags: params.tags ?? null },
+      node: { path: params.path, title: params.title, note_type: params.note_type, tags: params.tags ?? null, modified: null },
     });
     return params.path;
   }
@@ -182,7 +182,7 @@ export class MockBridge implements BrainMapAPI {
     eventBus.emit({
       type: "node-updated",
       path: params.path,
-      node: { path: note.path, title: note.title, note_type: note.note_type, tags: note.tags.length > 0 ? note.tags : null },
+      node: { path: note.path, title: note.title, note_type: note.note_type, tags: note.tags.length > 0 ? note.tags : null, modified: note.modified },
     });
   }
 
@@ -350,6 +350,39 @@ export class MockBridge implements BrainMapAPI {
       eventBus.emit({ type: "node-deleted", path: p });
     }
     return { deleted_paths };
+  }
+
+  async moveNote(oldPath: string, newPath: string): Promise<{ new_path: string; rewritten_paths: string[] }> {
+    await mockDelay("default");
+    const note = mockState.notes.get(oldPath);
+    if (!note) throw new Error(`Note not found: ${oldPath}`);
+    mockState.notes.delete(oldPath);
+    note.path = newPath;
+    mockState.notes.set(newPath, note);
+    return { new_path: newPath, rewritten_paths: [] };
+  }
+
+  async moveFolder(oldFolder: string, newFolder: string): Promise<{ new_folder: string; moved_notes: [string, string][]; rewritten_paths: string[] }> {
+    await mockDelay("default");
+    return { new_folder: newFolder, moved_notes: [], rewritten_paths: [] };
+  }
+
+  async revealInFileManager(_absolutePath: string): Promise<void> {
+    // No-op in mock
+  }
+
+  async openInDefaultApp(_absolutePath: string): Promise<void> {
+    // No-op in mock
+  }
+
+  async duplicateNote(path: string): Promise<NoteDetail> {
+    await mockDelay("default");
+    const note = mockState.notes.get(path);
+    if (!note) throw new Error(`Note not found: ${path}`);
+    const copyPath = path.replace(".md", " (copy).md");
+    const copy = { ...note, path: copyPath };
+    mockState.notes.set(copyPath, copy);
+    return copy;
   }
 
   onEvent(callback: (event: WorkspaceEvent) => void): () => void {

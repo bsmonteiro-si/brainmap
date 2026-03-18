@@ -6,7 +6,7 @@ export type ComponentTheme = "inherit" | ThemeName;
 type GraphMode = "navigate" | "edit";
 export type GraphLayout = "force" | "hierarchical" | "radial" | "concentric" | "grouped";
 
-export type FileSortOrder = "name-asc" | "name-desc" | "modified-desc" | "modified-asc";
+export type FileSortOrder = "custom" | "name-asc" | "name-desc" | "modified-desc" | "modified-asc";
 export type SourceStyle = "underline" | "pill" | "icon" | "quotes";
 export const SOURCE_STYLE_OPTIONS: { value: SourceStyle; label: string }[] = [
   { value: "underline", label: "Underline + label" },
@@ -142,6 +142,9 @@ interface PersistedPrefs {
   sourceStyle?: SourceStyle;
   fileSortOrder?: FileSortOrder;
   autoRevealFile?: boolean;
+  lineWrapping?: boolean;
+  spellCheck?: boolean;
+  editorIndentSize?: number;
 }
 
 type CreateNoteMode = "default" | "create-and-link";
@@ -191,6 +194,10 @@ interface UIState {
   treeExpandedFolders: Set<string>;
   fileSortOrder: FileSortOrder;
   autoRevealFile: boolean;
+  lineWrapping: boolean;
+  spellCheck: boolean;
+  editorIndentSize: number;
+  moveDialogTarget: { path: string; isFolder: boolean } | null;
   hiddenEdgeTypes: Set<string>;
   panelSizes: PanelSizes;
   graphFocusPath: string | null;
@@ -217,7 +224,12 @@ interface UIState {
   sourceStyle: SourceStyle;
   emptyFolders: Set<string>;
   homeNotePath: string | null;
+  customFileOrder: Record<string, string[]>;
 
+  setCustomFileOrder: (folderPath: string, orderedPaths: string[]) => void;
+  saveCustomFileOrder: (segmentPath: string) => void;
+  loadCustomFileOrder: (segmentPath: string) => void;
+  clearCustomFileOrder: () => void;
   setHomeNote: (path: string) => void;
   clearHomeNote: () => void;
   toggleLineNumbers: () => void;
@@ -246,6 +258,11 @@ interface UIState {
   collapseAllFolders: () => void;
   setFileSortOrder: (order: FileSortOrder) => void;
   setAutoRevealFile: (v: boolean) => void;
+  setLineWrapping: (v: boolean) => void;
+  setSpellCheck: (v: boolean) => void;
+  setEditorIndentSize: (v: number) => void;
+  openMoveDialog: (target: { path: string; isFolder: boolean }) => void;
+  closeMoveDialog: () => void;
   expandPathToFile: (filePath: string) => void;
   toggleEdgeType: (rel: string) => void;
   clearHiddenEdgeTypes: () => void;
@@ -411,6 +428,10 @@ export const useUIStore = create<UIState>((set, get) => ({
   treeExpandedFolders: new Set<string>(),
   fileSortOrder: storedPrefs.fileSortOrder ?? "name-asc" as FileSortOrder,
   autoRevealFile: storedPrefs.autoRevealFile ?? true,
+  lineWrapping: storedPrefs.lineWrapping ?? true,
+  spellCheck: storedPrefs.spellCheck ?? true,
+  editorIndentSize: storedPrefs.editorIndentSize ?? 4,
+  moveDialogTarget: null,
   hiddenEdgeTypes: new Set<string>(),
   panelSizes: storedSizes,
   showMinimap: false,
@@ -437,6 +458,39 @@ export const useUIStore = create<UIState>((set, get) => ({
   relatedNotesExpanded: storedPrefs.relatedNotesExpanded ?? false,
   emptyFolders: new Set<string>(),
   homeNotePath: null,
+  customFileOrder: {},
+
+  setCustomFileOrder: (folderPath: string, orderedPaths: string[]) => {
+    set((s) => ({
+      customFileOrder: { ...s.customFileOrder, [folderPath]: orderedPaths },
+    }));
+  },
+
+  saveCustomFileOrder: (segmentPath: string) => {
+    try {
+      const { customFileOrder } = get();
+      if (Object.keys(customFileOrder).length === 0) {
+        localStorage.removeItem(`brainmap:fileOrder:${segmentPath}`);
+      } else {
+        localStorage.setItem(`brainmap:fileOrder:${segmentPath}`, JSON.stringify(customFileOrder));
+      }
+    } catch { /* ignore persistence errors */ }
+  },
+
+  loadCustomFileOrder: (segmentPath: string) => {
+    try {
+      const raw = localStorage.getItem(`brainmap:fileOrder:${segmentPath}`);
+      if (raw) {
+        set({ customFileOrder: JSON.parse(raw) });
+      } else {
+        set({ customFileOrder: {} });
+      }
+    } catch {
+      set({ customFileOrder: {} });
+    }
+  },
+
+  clearCustomFileOrder: () => set({ customFileOrder: {} }),
 
   setHomeNote: (path: string) => {
     set({ homeNotePath: path });
@@ -540,6 +594,24 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ autoRevealFile: v });
     savePrefs({ autoRevealFile: v });
   },
+
+  setLineWrapping: (v: boolean) => {
+    set({ lineWrapping: v });
+    savePrefs({ lineWrapping: v });
+  },
+
+  setSpellCheck: (v: boolean) => {
+    set({ spellCheck: v });
+    savePrefs({ spellCheck: v });
+  },
+
+  setEditorIndentSize: (v: number) => {
+    set({ editorIndentSize: v });
+    savePrefs({ editorIndentSize: v });
+  },
+
+  openMoveDialog: (target) => set({ moveDialogTarget: target }),
+  closeMoveDialog: () => set({ moveDialogTarget: null }),
 
   expandPathToFile: (filePath: string) =>
     set((s) => {
@@ -673,6 +745,7 @@ export const useUIStore = create<UIState>((set, get) => ({
     activeLeftTab: "files" as LeftTab,
     leftPanelCollapsed: false,
     homeNotePath: null,
+    customFileOrder: {},
   }),
 
   resetFontPrefs: () => {

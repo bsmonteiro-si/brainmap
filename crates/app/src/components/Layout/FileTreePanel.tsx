@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useLayoutEffect, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Crosshair } from "lucide-react";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { useUIStore } from "../../stores/uiStore";
@@ -13,7 +13,7 @@ import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 import { ChevronIcon, FolderTreeIcon, NoteTypeIcon } from "./fileTreeIcons";
 import { fuzzyMatch, highlightFuzzyMatch } from "../../utils/fuzzyMatch";
 import { log } from "../../utils/logger";
-import { computeNewPath, isValidDrop } from "../../utils/fileTreeDnd";
+import { computeNewPath, isValidDrop, getParentFolder, isSameFolder, computeReorderedList, initCustomOrderFromTree, computeDropZone } from "../../utils/fileTreeDnd";
 import { computeRenamePath, validateRenameNameFormat } from "../../utils/fileTreeRename";
 
 interface TreeNode {
@@ -42,7 +42,7 @@ function computeNoteCounts(nodes: TreeNode[]): void {
   }
 }
 
-export function buildTree(nodes: Map<string, NodeDto>, emptyFolders?: Set<string>, workspaceFiles?: string[], sortOrder?: string): TreeNode[] {
+export function buildTree(nodes: Map<string, NodeDto>, emptyFolders?: Set<string>, workspaceFiles?: string[], sortOrder?: string, customOrder?: Record<string, string[]>): TreeNode[] {
   const folderMap = new Map<string, TreeNode>();
   const roots: TreeNode[] = [];
 
@@ -150,26 +150,51 @@ export function buildTree(nodes: Map<string, NodeDto>, emptyFolders?: Set<string
     }
   }
 
-  function sortChildren(items: TreeNode[], sortOrder: string): TreeNode[] {
-    return [...items]
-      .sort((a, b) => {
+  function sortChildren(items: TreeNode[], sortOrder: string, parentPath: string): TreeNode[] {
+    let sorted: TreeNode[];
+
+    if (sortOrder === "custom" && customOrder && customOrder[parentPath]) {
+      const order = customOrder[parentPath];
+      const indexMap = new Map<string, number>();
+      for (let i = 0; i < order.length; i++) indexMap.set(order[i], i);
+
+      sorted = [...items].sort((a, b) => {
+        // Folders always first
+        if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
+        const ai = indexMap.get(a.fullPath);
+        const bi = indexMap.get(b.fullPath);
+        if (ai !== undefined && bi !== undefined) return ai - bi;
+        if (ai !== undefined) return -1;
+        if (bi !== undefined) return 1;
+        return a.name.localeCompare(b.name);
+      });
+    } else {
+      sorted = [...items].sort((a, b) => {
         // Folders always first
         if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
         switch (sortOrder) {
+          case "custom": // custom with no order for this folder — fall back to name-asc
+          case "name-asc":
+            return a.name.localeCompare(b.name);
           case "name-desc":
             return b.name.localeCompare(a.name);
           case "modified-desc":
             return (b.modified ?? "").localeCompare(a.modified ?? "");
           case "modified-asc":
             return (a.modified ?? "").localeCompare(b.modified ?? "");
-          default: // name-asc
+          default:
             return a.name.localeCompare(b.name);
         }
-      })
-      .map((n) => ({ ...n, children: sortChildren(n.children, sortOrder) }));
+      });
+    }
+
+    return sorted.map((n) => ({
+      ...n,
+      children: sortChildren(n.children, sortOrder, n.fullPath),
+    }));
   }
 
-  const sorted = sortChildren(roots, sortOrder ?? "name-asc");
+  const sorted = sortChildren(roots, sortOrder ?? "name-asc", "");
   computeNoteCounts(sorted);
   return sorted;
 }
@@ -322,6 +347,26 @@ function ContextMenu({
     }
   };
 
+  const handleOpenInDefaultApp = async () => {
+    if (!state.node) return;
+    onClose();
+    const wsRoot = useWorkspaceStore.getState().info?.root;
+    if (!wsRoot) return;
+    const absolutePath = `${wsRoot.replace(/\/$/, "")}/${state.node.fullPath}`;
+    try {
+      const api = await getAPI();
+      await api.openInDefaultApp(absolutePath);
+    } catch (e) {
+      log.error("files", "failed to open in default app", { error: String(e) });
+    }
+  };
+
+  const handleMoveTo = () => {
+    if (!state.node) return;
+    onClose();
+    useUIStore.getState().openMoveDialog({ path: state.node.fullPath, isFolder: state.node.isFolder });
+  };
+
   // Determine label for the file-level "new note" item
   const isRootLevelFile =
     state.node !== null &&
@@ -354,6 +399,9 @@ function ContextMenu({
           </div>
           <div className="context-menu-item" onClick={handleRename}>
             Rename
+          </div>
+          <div className="context-menu-item" onClick={handleMoveTo}>
+            Move to...
           </div>
           <div className="context-menu-separator" />
           <div className="context-menu-item" onClick={handleShowInFinder}>
@@ -399,9 +447,15 @@ function ContextMenu({
           <div className="context-menu-item" onClick={handleDuplicate}>
             Duplicate
           </div>
+          <div className="context-menu-item" onClick={handleMoveTo}>
+            Move to...
+          </div>
           <div className="context-menu-separator" />
           <div className="context-menu-item" onClick={handleShowInFinder}>
             Show in Finder
+          </div>
+          <div className="context-menu-item" onClick={handleOpenInDefaultApp}>
+            Open in Default App
           </div>
           <div className="context-menu-item" onClick={handleCopyRelativePath}>
             Copy Relative Path
@@ -423,8 +477,15 @@ function ContextMenu({
             Rename
           </div>
           <div className="context-menu-separator" />
+          <div className="context-menu-item" onClick={handleMoveTo}>
+            Move to...
+          </div>
+          <div className="context-menu-separator" />
           <div className="context-menu-item" onClick={handleShowInFinder}>
             Show in Finder
+          </div>
+          <div className="context-menu-item" onClick={handleOpenInDefaultApp}>
+            Open in Default App
           </div>
           <div className="context-menu-item" onClick={handleCopyRelativePath}>
             Copy Relative Path
@@ -522,10 +583,11 @@ function FileTreeNode({
   dragOverPath,
   onDragStart,
   onDragEnd,
-  onFolderDragOver,
   onFolderDragEnter,
   onFolderDragLeave,
-  onFolderDrop,
+  onItemDragOver,
+  onItemDrop,
+  reorderIndicator,
   renamingPath,
   onRenameConfirm,
   onRenameCancel,
@@ -540,10 +602,11 @@ function FileTreeNode({
   dragOverPath: string | null;
   onDragStart: (e: React.DragEvent, node: TreeNode) => void;
   onDragEnd: () => void;
-  onFolderDragOver: (e: React.DragEvent, folderPath: string) => void;
   onFolderDragEnter: (e: React.DragEvent, folderPath: string) => void;
   onFolderDragLeave: (e: React.DragEvent) => void;
-  onFolderDrop: (e: React.DragEvent, folderPath: string) => void;
+  onItemDragOver: (e: React.DragEvent, node: TreeNode) => void;
+  onItemDrop: (e: React.DragEvent, node: TreeNode) => void;
+  reorderIndicator: { parentFolder: string; targetPath: string; position: "before" | "after" } | null;
   renamingPath: string | null;
   onRenameConfirm: (oldPath: string, newName: string, isFolder: boolean) => void;
   onRenameCancel: () => void;
@@ -574,13 +637,15 @@ function FileTreeNode({
     const isDragging = draggedPath === node.fullPath;
     const isDragOver = dragOverPath === node.fullPath;
     const isRenaming = renamingPath === node.fullPath;
+    const isReorderAbove = reorderIndicator?.targetPath === node.fullPath && reorderIndicator.position === "before";
+    const isReorderBelow = reorderIndicator?.targetPath === node.fullPath && reorderIndicator.position === "after";
 
     return (
       <div>
         <div
           role="button"
           tabIndex={0}
-          className={`tree-item tree-folder${isDragging ? " dragging" : ""}${isDragOver ? " drag-over" : ""}`}
+          className={`tree-item tree-folder${isDragging ? " dragging" : ""}${isDragOver ? " drag-over" : ""}${isReorderAbove ? " reorder-above" : ""}${isReorderBelow ? " reorder-below" : ""}`}
           style={{ paddingLeft: 8 }}
           data-tree-path={node.fullPath}
           draggable={!isRenaming}
@@ -589,10 +654,10 @@ function FileTreeNode({
           onContextMenu={isRenaming ? undefined : (e) => onContextMenu(e, node)}
           onDragStart={isRenaming ? undefined : (e) => onDragStart(e, node)}
           onDragEnd={isRenaming ? undefined : onDragEnd}
-          onDragOver={isRenaming ? undefined : (e) => onFolderDragOver(e, node.fullPath)}
+          onDragOver={isRenaming ? undefined : (e) => onItemDragOver(e, node)}
           onDragEnter={isRenaming ? undefined : (e) => onFolderDragEnter(e, node.fullPath)}
           onDragLeave={isRenaming ? undefined : onFolderDragLeave}
-          onDrop={isRenaming ? undefined : (e) => onFolderDrop(e, node.fullPath)}
+          onDrop={isRenaming ? undefined : (e) => onItemDrop(e, node)}
         >
           <IndentGuides depth={depth} />
           <ChevronIcon isOpen={isExpanded} />
@@ -635,10 +700,11 @@ function FileTreeNode({
                   dragOverPath={dragOverPath}
                   onDragStart={onDragStart}
                   onDragEnd={onDragEnd}
-                  onFolderDragOver={onFolderDragOver}
                   onFolderDragEnter={onFolderDragEnter}
                   onFolderDragLeave={onFolderDragLeave}
-                  onFolderDrop={onFolderDrop}
+                  onItemDragOver={onItemDragOver}
+                  onItemDrop={onItemDrop}
+                  reorderIndicator={reorderIndicator}
                   renamingPath={renamingPath}
                   onRenameConfirm={onRenameConfirm}
                   onRenameCancel={onRenameCancel}
@@ -675,12 +741,14 @@ function FileTreeNode({
 
   const isDragging = draggedPath === node.fullPath;
   const isRenaming = renamingPath === node.fullPath;
+  const isReorderAbove = reorderIndicator?.targetPath === node.fullPath && reorderIndicator.position === "before";
+  const isReorderBelow = reorderIndicator?.targetPath === node.fullPath && reorderIndicator.position === "after";
 
   return (
     <div
       role="button"
       tabIndex={0}
-      className={`tree-item tree-file${isActive ? " active" : ""}${!isBrainMapNote ? " tree-file--plain" : ""}${isDragging ? " dragging" : ""}`}
+      className={`tree-item tree-file${isActive ? " active" : ""}${!isBrainMapNote ? " tree-file--plain" : ""}${isDragging ? " dragging" : ""}${isReorderAbove ? " reorder-above" : ""}${isReorderBelow ? " reorder-below" : ""}`}
       style={{ paddingLeft: 8 }}
       data-tree-path={node.fullPath}
       draggable={!isRenaming}
@@ -694,6 +762,8 @@ function FileTreeNode({
       onContextMenu={isRenaming ? undefined : (e) => onContextMenu(e, node)}
       onDragStart={isRenaming ? undefined : (e) => onDragStart(e, node)}
       onDragEnd={isRenaming ? undefined : onDragEnd}
+      onDragOver={isRenaming ? undefined : (e) => onItemDragOver(e, node)}
+      onDrop={isRenaming ? undefined : (e) => onItemDrop(e, node)}
     >
       <IndentGuides depth={depth} />
       <NoteTypeIcon noteType={node.note_type} fileName={node.name} />
@@ -750,21 +820,32 @@ export function FileTreePanel() {
 
   const emptyFolders = useUIStore((s) => s.emptyFolders);
   const fileSortOrder = useUIStore((s) => s.fileSortOrder);
+  const customFileOrder = useUIStore((s) => s.customFileOrder);
   const autoRevealFile = useUIStore((s) => s.autoRevealFile);
   const activeNotePath = useEditorStore((s) => s.activeNote?.path);
+  const activePlainFilePath = useEditorStore((s) => s.activePlainFile?.path);
+  const activeFilePath = activeNotePath ?? activePlainFilePath;
   const workspaceFiles = useGraphStore((s) => s.workspaceFiles);
+
+  // ── Reorder state ──
+  const [reorderIndicator, setReorderIndicator] = useState<{
+    parentFolder: string;
+    targetPath: string;
+    position: "before" | "after";
+  } | null>(null);
+  const reorderIndicatorRef = useRef(reorderIndicator);
 
   // Auto-reveal active file in tree
   useEffect(() => {
-    if (!autoRevealFile || !activeNotePath) return;
-    useUIStore.getState().expandPathToFile(activeNotePath);
+    if (!autoRevealFile || !activeFilePath) return;
+    useUIStore.getState().expandPathToFile(activeFilePath);
     // Scroll into view after a frame to allow tree to re-render
     requestAnimationFrame(() => {
-      const el = document.querySelector(`[data-tree-path="${CSS.escape(activeNotePath)}"]`);
+      const el = document.querySelector(`[data-tree-path="${CSS.escape(activeFilePath)}"]`);
       el?.scrollIntoView({ block: "nearest" });
     });
-  }, [activeNotePath, autoRevealFile]);
-  const tree = useMemo(() => buildTree(nodes, emptyFolders, workspaceFiles, fileSortOrder), [nodes, emptyFolders, workspaceFiles, fileSortOrder]);
+  }, [activeFilePath, autoRevealFile]);
+  const tree = useMemo(() => buildTree(nodes, emptyFolders, workspaceFiles, fileSortOrder, customFileOrder), [nodes, emptyFolders, workspaceFiles, fileSortOrder, customFileOrder]);
 
   const filtered = useMemo(
     () => (filter.trim() ? fuzzyFilterTree(tree, filter.trim()) : tree),
@@ -795,6 +876,8 @@ export function FileTreePanel() {
     setDraggedIsFolder(false);
     setDragOverPath(null);
     setRootDragOver(false);
+    setReorderIndicator(null);
+    reorderIndicatorRef.current = null;
     rootDragEnterCounterRef.current = 0;
     if (autoExpandTimerRef.current) {
       clearTimeout(autoExpandTimerRef.current);
@@ -802,12 +885,6 @@ export function FileTreePanel() {
     }
   }, []);
 
-  const handleFolderDragOver = useCallback((e: React.DragEvent, folderPath: string) => {
-    if (!draggedPath) return;
-    if (!isValidDrop(draggedPath, draggedIsFolder, folderPath)) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  }, [draggedPath, draggedIsFolder]);
 
   const handleFolderDragEnter = useCallback((e: React.DragEvent, folderPath: string) => {
     e.preventDefault();
@@ -843,6 +920,56 @@ export function FileTreePanel() {
       autoExpandTimerRef.current = null;
     }
   }, []);
+
+  // Unified drag-over handler for reorder detection (both file & folder rows)
+  const handleItemDragOver = useCallback((e: React.DragEvent, node: TreeNode) => {
+    if (!draggedPath || draggedPath === node.fullPath) return;
+
+    // Disable reorder when filter is active
+    if (filter.trim()) return;
+
+    const areSiblings = isSameFolder(draggedPath, node.fullPath);
+
+    if (areSiblings) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const zone = computeDropZone(rect, e.clientY, node.isFolder);
+
+      if (zone === "into") {
+        // Fall through to folder drop-into behavior
+        if (node.isFolder && isValidDrop(draggedPath, draggedIsFolder, node.fullPath)) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+          setDragOverPath(node.fullPath);
+          // Clear reorder indicator
+          if (reorderIndicatorRef.current !== null) {
+            reorderIndicatorRef.current = null;
+            setReorderIndicator(null);
+          }
+        }
+        return;
+      }
+
+      // Reorder within same folder
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      const parentFolder = getParentFolder(node.fullPath);
+      const next = { parentFolder, targetPath: node.fullPath, position: zone };
+      const prev = reorderIndicatorRef.current;
+      if (!prev || prev.targetPath !== next.targetPath || prev.position !== next.position) {
+        reorderIndicatorRef.current = next;
+        setReorderIndicator(next);
+      }
+      // Clear folder drag-over highlight when doing reorder
+      if (dragOverPath) setDragOverPath(null);
+      return;
+    }
+
+    // Not siblings — for folders, delegate to existing folder-drop behavior
+    if (node.isFolder && isValidDrop(draggedPath, draggedIsFolder, node.fullPath)) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    }
+  }, [draggedPath, draggedIsFolder, filter, dragOverPath]);
 
   /**
    * Shared move/rename orchestration: saves dirty state, calls API,
@@ -942,14 +1069,111 @@ export function FileTreePanel() {
     const newPath = computeNewPath(oldPath, targetFolder, isFolder);
     if (newPath === oldPath) return;
 
+    let success: boolean;
     if (isFolder) {
       const folderName = oldPath.split("/").pop()!;
       const newFolder = targetFolder === "" ? folderName : `${targetFolder}/${folderName}`;
-      await executeMoveOrRename(oldPath, newFolder, true);
+      success = await executeMoveOrRename(oldPath, newFolder, true);
     } else {
-      await executeMoveOrRename(oldPath, newPath, false);
+      success = await executeMoveOrRename(oldPath, newPath, false);
+    }
+
+    // Update custom file order: remove from source, append to target
+    if (success) {
+      const ui = useUIStore.getState();
+      const sourceFolder = getParentFolder(oldPath);
+      const sourceOrder = ui.customFileOrder[sourceFolder];
+      if (sourceOrder) {
+        ui.setCustomFileOrder(sourceFolder, sourceOrder.filter((p) => p !== oldPath));
+      }
+      const targetOrder = ui.customFileOrder[targetFolder];
+      if (targetOrder) {
+        ui.setCustomFileOrder(targetFolder, [...targetOrder, newPath]);
+      }
+
+      // For folder moves, migrate the folder's own key and descendant keys
+      if (isFolder) {
+        const actualNewPath = computeNewPath(oldPath, targetFolder, true);
+        const oldPrefix = oldPath + "/";
+        const newPrefix = actualNewPath + "/";
+        const updates: Record<string, string[]> = {};
+        const deletes: string[] = [];
+        for (const [key, arr] of Object.entries(ui.customFileOrder)) {
+          if (key === oldPath) {
+            updates[actualNewPath] = arr.map((p) => p.startsWith(oldPrefix) ? newPrefix + p.slice(oldPrefix.length) : p);
+            deletes.push(key);
+          } else if (key.startsWith(oldPrefix)) {
+            const newKey = newPrefix + key.slice(oldPrefix.length);
+            updates[newKey] = arr.map((p) => p.startsWith(oldPrefix) ? newPrefix + p.slice(oldPrefix.length) : p);
+            deletes.push(key);
+          }
+        }
+        if (deletes.length > 0) {
+          const next = { ...ui.customFileOrder };
+          for (const k of deletes) delete next[k];
+          Object.assign(next, updates);
+          useUIStore.setState({ customFileOrder: next });
+        }
+      }
     }
   }, [executeMoveOrRename]);
+
+  // Unified drop handler for reorder (must be after executeMoveItem)
+  const handleItemDrop = useCallback((e: React.DragEvent, node: TreeNode) => {
+    e.preventDefault();
+    const indicator = reorderIndicatorRef.current;
+    const dragged = draggedPath;
+
+    if (indicator && indicator.targetPath === node.fullPath && dragged) {
+      // This is a reorder drop
+      handleDragEnd();
+
+      const parentFolder = indicator.parentFolder;
+
+      // Get current order from the tree (find the right children array)
+      const findChildren = (items: TreeNode[], targetParent: string): TreeNode[] | null => {
+        if (targetParent === "") return items;
+        for (const n of items) {
+          if (n.isFolder && n.fullPath === targetParent) return n.children;
+          if (n.isFolder && n.children.length > 0) {
+            const found = findChildren(n.children, targetParent);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      const siblings = findChildren(tree, parentFolder);
+      if (!siblings) return;
+
+      const currentOrder = customFileOrder[parentFolder]
+        ?? initCustomOrderFromTree(siblings);
+
+      const newOrder = computeReorderedList(
+        currentOrder,
+        dragged,
+        node.fullPath,
+        indicator.position,
+      );
+
+      useUIStore.getState().setCustomFileOrder(parentFolder, newOrder);
+      if (fileSortOrder !== "custom") {
+        useUIStore.getState().setFileSortOrder("custom");
+      }
+      return;
+    }
+
+    // Not a reorder — delegate to folder drop
+    const path = e.dataTransfer.getData("application/brainmap-path");
+    const isFolderStr = e.dataTransfer.getData("application/brainmap-is-folder");
+    const isFolder = isFolderStr === "1";
+
+    handleDragEnd();
+
+    if (node.isFolder && path && isValidDrop(path, isFolder, node.fullPath)) {
+      executeMoveItem(path, node.fullPath, isFolder);
+    }
+  }, [handleDragEnd, tree, customFileOrder, draggedPath, fileSortOrder, executeMoveItem]);
 
   const executeRenameItem = useCallback(async (oldPath: string, newName: string, isFolder: boolean) => {
     const trimmed = newName.trim();
@@ -1031,21 +1255,44 @@ export function FileTreePanel() {
       if (efChanged) useUIStore.setState({ emptyFolders: nextEf });
     }
 
+    // Update custom file order: replace old path with new path
+    if (success) {
+      const parentFolder = getParentFolder(oldPath);
+      const ui = useUIStore.getState();
+      const order = ui.customFileOrder[parentFolder];
+      if (order) {
+        const updated = order.map((p) => p === oldPath ? newPath : p);
+        ui.setCustomFileOrder(parentFolder, updated);
+      }
+
+      // For folder renames, also migrate the folder's own key and descendant keys
+      if (isFolder) {
+        const oldPrefix = oldPath + "/";
+        const newPrefix = newPath + "/";
+        const updates: Record<string, string[]> = {};
+        const deletes: string[] = [];
+        for (const [key, arr] of Object.entries(ui.customFileOrder)) {
+          if (key === oldPath) {
+            updates[newPath] = arr.map((p) => p.startsWith(oldPrefix) ? newPrefix + p.slice(oldPrefix.length) : p);
+            deletes.push(key);
+          } else if (key.startsWith(oldPrefix)) {
+            const newKey = newPrefix + key.slice(oldPrefix.length);
+            updates[newKey] = arr.map((p) => p.startsWith(oldPrefix) ? newPrefix + p.slice(oldPrefix.length) : p);
+            deletes.push(key);
+          }
+        }
+        if (deletes.length > 0) {
+          const next = { ...ui.customFileOrder };
+          for (const k of deletes) delete next[k];
+          Object.assign(next, updates);
+          useUIStore.setState({ customFileOrder: next });
+        }
+      }
+    }
+
     setRenamingPath(null);
   }, [executeMoveOrRename]);
 
-  const handleFolderDrop = useCallback((e: React.DragEvent, folderPath: string) => {
-    e.preventDefault();
-    const path = e.dataTransfer.getData("application/brainmap-path");
-    const isFolderStr = e.dataTransfer.getData("application/brainmap-is-folder");
-    const isFolder = isFolderStr === "1";
-
-    handleDragEnd();
-
-    if (path && isValidDrop(path, isFolder, folderPath)) {
-      executeMoveItem(path, folderPath, isFolder);
-    }
-  }, [executeMoveItem, handleDragEnd]);
 
   // Root drop handlers (drop to workspace root)
   const handleRootDragOver = useCallback((e: React.DragEvent) => {
@@ -1280,12 +1527,30 @@ export function FileTreePanel() {
         >
           ⌄
         </button>
+        <button
+          className="file-tree-toolbar-btn"
+          title="Select Opened File"
+          disabled={!activeFilePath}
+          onClick={() => {
+            const { activeNote, activePlainFile } = useEditorStore.getState();
+            const path = activeNote?.path ?? activePlainFile?.path;
+            if (!path) return;
+            useUIStore.getState().expandPathToFile(path);
+            requestAnimationFrame(() => {
+              const el = document.querySelector(`[data-tree-path="${CSS.escape(path)}"]`);
+              el?.scrollIntoView({ block: "nearest" });
+            });
+          }}
+        >
+          <Crosshair size={14} />
+        </button>
         <select
           className="file-tree-sort-select"
           value={useUIStore.getState().fileSortOrder}
           onChange={(e) => useUIStore.getState().setFileSortOrder(e.target.value as any)}
           title="Sort order"
         >
+          <option value="custom">Custom</option>
           <option value="name-asc">Name A→Z</option>
           <option value="name-desc">Name Z→A</option>
           <option value="modified-desc">Modified ↓</option>
@@ -1323,10 +1588,11 @@ export function FileTreePanel() {
             dragOverPath={dragOverPath}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
-            onFolderDragOver={handleFolderDragOver}
             onFolderDragEnter={handleFolderDragEnter}
             onFolderDragLeave={handleFolderDragLeave}
-            onFolderDrop={handleFolderDrop}
+            onItemDragOver={handleItemDragOver}
+            onItemDrop={handleItemDrop}
+            reorderIndicator={reorderIndicator}
             renamingPath={renamingPath}
             onRenameConfirm={executeRenameItem}
             onRenameCancel={handleRenameCancel}

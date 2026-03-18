@@ -199,3 +199,71 @@ describe("fuzzyFilterTree", () => {
     expect(result[0].matchIndices).toBeUndefined();
   });
 });
+
+describe("buildTree with custom sort order", () => {
+  it("sorts children by custom order", () => {
+    const nodes = new Map<string, NodeDto>([
+      ["Alpha.md", makeNode("Alpha")],
+      ["Beta.md", makeNode("Beta")],
+      ["Gamma.md", makeNode("Gamma")],
+    ]);
+    const customOrder = { "": ["Gamma.md", "Alpha.md", "Beta.md"] };
+    const tree = buildTree(nodes, undefined, undefined, "custom", customOrder);
+    expect(tree.map((n) => n.fullPath)).toEqual(["Gamma.md", "Alpha.md", "Beta.md"]);
+  });
+
+  it("appends new files (not in custom order) alphabetically at end", () => {
+    const nodes = new Map<string, NodeDto>([
+      ["Alpha.md", makeNode("Alpha")],
+      ["Beta.md", makeNode("Beta")],
+      ["New.md", makeNode("New")],
+    ]);
+    const customOrder = { "": ["Beta.md", "Alpha.md"] };
+    const tree = buildTree(nodes, undefined, undefined, "custom", customOrder);
+    expect(tree.map((n) => n.fullPath)).toEqual(["Beta.md", "Alpha.md", "New.md"]);
+  });
+
+  it("ignores stale paths in custom order (deleted files)", () => {
+    const nodes = new Map<string, NodeDto>([
+      ["Alpha.md", makeNode("Alpha")],
+    ]);
+    const customOrder = { "": ["Deleted.md", "Alpha.md", "AlsoDeleted.md"] };
+    const tree = buildTree(nodes, undefined, undefined, "custom", customOrder);
+    expect(tree.map((n) => n.fullPath)).toEqual(["Alpha.md"]);
+  });
+
+  it("folders-first rule still applies within custom sort", () => {
+    const nodes = new Map<string, NodeDto>([
+      ["Dir/Note.md", makeNode("Note")],
+      ["Alpha.md", makeNode("Alpha")],
+    ]);
+    // Custom order puts Alpha before Dir, but folders-first should win
+    const customOrder = { "": ["Alpha.md", "Dir"] };
+    const tree = buildTree(nodes, undefined, undefined, "custom", customOrder);
+    expect(tree[0].isFolder).toBe(true);
+    expect(tree[0].fullPath).toBe("Dir");
+    expect(tree[1].fullPath).toBe("Alpha.md");
+  });
+
+  it("falls back to name-asc when custom order is empty for a folder", () => {
+    const nodes = new Map<string, NodeDto>([
+      ["Beta.md", makeNode("Beta")],
+      ["Alpha.md", makeNode("Alpha")],
+    ]);
+    const customOrder = {}; // no order for root
+    const tree = buildTree(nodes, undefined, undefined, "custom", customOrder);
+    expect(tree.map((n) => n.fullPath)).toEqual(["Alpha.md", "Beta.md"]);
+  });
+
+  it("applies custom order recursively to nested folders", () => {
+    const nodes = new Map<string, NodeDto>([
+      ["Dir/Z.md", makeNode("Z")],
+      ["Dir/A.md", makeNode("A")],
+      ["Dir/M.md", makeNode("M")],
+    ]);
+    const customOrder = { "Dir": ["Dir/M.md", "Dir/Z.md", "Dir/A.md"] };
+    const tree = buildTree(nodes, undefined, undefined, "custom", customOrder);
+    const dirChildren = tree[0].children;
+    expect(dirChildren.map((n) => n.fullPath)).toEqual(["Dir/M.md", "Dir/Z.md", "Dir/A.md"]);
+  });
+});

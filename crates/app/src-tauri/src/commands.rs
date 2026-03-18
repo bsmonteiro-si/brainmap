@@ -731,6 +731,36 @@ pub fn reveal_in_file_manager(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn open_in_default_app(path: String) -> Result<(), String> {
+    let p = std::path::Path::new(&path);
+    if !p.exists() {
+        return Err(format!("Path not found: {}", path));
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open file: {}", e))?;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/c", "start", "", &path])
+            .spawn()
+            .map_err(|e| format!("Failed to open file: {}", e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open file: {}", e))?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub fn duplicate_note(state: State<'_, AppState>, path: String) -> Result<NoteDetailDto, String> {
     state.with_active_mut(|ws| {
         // Read original note content
@@ -775,4 +805,22 @@ pub fn write_log(level: String, target: String, msg: String, fields: Option<Stri
         "DEBUG" => debug!(target = %target, fields = %fields_str, "[frontend] {}", msg),
         _ => info!(target = %target, fields = %fields_str, "[frontend] {}", msg),
     }
+}
+
+// -- Dock menu (macOS) -------------------------------------------------------
+
+#[cfg(target_os = "macos")]
+pub use crate::dock_menu::DockSegmentInfo;
+
+#[cfg(not(target_os = "macos"))]
+#[derive(serde::Deserialize)]
+pub struct DockSegmentInfo {
+    pub name: String,
+    pub path: String,
+}
+
+#[tauri::command]
+pub fn update_dock_menu(segments: Vec<DockSegmentInfo>) {
+    #[cfg(target_os = "macos")]
+    crate::dock_menu::update(segments);
 }

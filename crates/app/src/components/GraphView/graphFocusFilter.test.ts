@@ -3,7 +3,7 @@ import { filterGraphByFocus } from "./graphFocusFilter";
 import type { NodeDto, EdgeDto } from "../../api/types";
 
 function makeNode(path: string): NodeDto {
-  return { path, title: path, note_type: "concept", tags: null };
+  return { path, title: path, note_type: "concept", tags: null, modified: null };
 }
 
 function makeEdge(source: string, target: string, rel = "related-to"): EdgeDto {

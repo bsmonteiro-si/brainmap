@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { loadStoredSegments, useSegmentStore } from "./segmentStore";
+import { loadStoredSegments, useSegmentStore, pickDockSegments, type Segment } from "./segmentStore";
 
 const STORAGE_KEY = "brainmap:segments";
 
@@ -188,5 +188,75 @@ describe("openSegmentIds management", () => {
     const open = useSegmentStore.getState().getOpenSegments();
     expect(open).toHaveLength(1);
     expect(open[0].id).toBe(segment.id);
+  });
+});
+
+describe("pickDockSegments", () => {
+  function makeSegment(name: string, path: string, lastOpenedAt: string): Segment {
+    return {
+      id: crypto.randomUUID(),
+      name,
+      path,
+      lastOpenedAt,
+      createdAt: "2024-01-01T00:00:00.000Z",
+    };
+  }
+
+  it("returns empty array for empty input", () => {
+    expect(pickDockSegments([])).toEqual([]);
+  });
+
+  it("returns all segments when fewer than max", () => {
+    const segments = [
+      makeSegment("A", "/a", "2024-06-01T00:00:00.000Z"),
+      makeSegment("B", "/b", "2024-06-02T00:00:00.000Z"),
+    ];
+    const result = pickDockSegments(segments);
+    expect(result).toHaveLength(2);
+    // Most recent first
+    expect(result[0]).toEqual({ name: "B", path: "/b" });
+    expect(result[1]).toEqual({ name: "A", path: "/a" });
+  });
+
+  it("caps at max (default 10)", () => {
+    const segments = Array.from({ length: 15 }, (_, i) =>
+      makeSegment(`Seg-${i}`, `/path/${i}`, new Date(2024, 0, i + 1).toISOString()),
+    );
+    const result = pickDockSegments(segments);
+    expect(result).toHaveLength(10);
+    // Most recent should be the last ones (highest date)
+    expect(result[0].name).toBe("Seg-14");
+  });
+
+  it("respects custom max", () => {
+    const segments = [
+      makeSegment("A", "/a", "2024-01-01T00:00:00.000Z"),
+      makeSegment("B", "/b", "2024-01-02T00:00:00.000Z"),
+      makeSegment("C", "/c", "2024-01-03T00:00:00.000Z"),
+    ];
+    const result = pickDockSegments(segments, 2);
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ name: "C", path: "/c" });
+    expect(result[1]).toEqual({ name: "B", path: "/b" });
+  });
+
+  it("sorts by lastOpenedAt descending", () => {
+    const segments = [
+      makeSegment("Old", "/old", "2024-01-01T00:00:00.000Z"),
+      makeSegment("New", "/new", "2024-12-31T00:00:00.000Z"),
+      makeSegment("Mid", "/mid", "2024-06-15T00:00:00.000Z"),
+    ];
+    const result = pickDockSegments(segments);
+    expect(result.map((s) => s.name)).toEqual(["New", "Mid", "Old"]);
+  });
+
+  it("does not mutate the input array", () => {
+    const segments = [
+      makeSegment("B", "/b", "2024-06-02T00:00:00.000Z"),
+      makeSegment("A", "/a", "2024-06-01T00:00:00.000Z"),
+    ];
+    const original = [...segments];
+    pickDockSegments(segments);
+    expect(segments).toEqual(original);
   });
 });

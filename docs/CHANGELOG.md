@@ -2,6 +2,16 @@
 
 Feature history moved from CLAUDE.md. Organized by phase and feature area.
 
+## Final Polish — Settings & File Management
+
+Five remaining features:
+
+- **Move to... modal**: Right-click file/folder → "Move to..." opens a dialog with folder search/autocomplete. Select a destination folder to move the item.
+- **Open in Default App**: Right-click → "Open in Default App" opens the file in its system default application via Tauri shell plugin.
+- **Spell checking**: Native browser spell check enabled via `spellcheck="true"` on CodeMirror content. Toggle in Settings.
+- **Line wrap toggle**: `EditorView.lineWrapping` now conditional on Settings toggle (default: on).
+- **Indent size**: Configurable indent size (2/4/8 spaces) via `indentUnit` facet. Select in Settings.
+
 ## Files Panel — Phase A
 
 Eight file management features to close the Obsidian gap:

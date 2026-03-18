@@ -243,13 +243,17 @@ class TableWidget extends WidgetType {
 }
 
 // ---------------------------------------------------------------------------
-// Inline source citation marks (no replace widgets — preserves CM hit-testing)
+// Inline citation marks (no replace widgets — preserves CM hit-testing)
 // ---------------------------------------------------------------------------
-const INLINE_SOURCE_RE = /\[!source\s+([^\]]+)\]/g;
+const INLINE_CITATION_RE = /\[!(source|example)\s+([^\]]+)\]/g;
 
 const sourceTagMark = Decoration.mark({ class: "cm-source-tag" });
 const sourceContentMark = Decoration.mark({ class: "cm-source-content" });
 const sourceBracketMark = Decoration.mark({ class: "cm-source-bracket" });
+
+const exampleTagMark = Decoration.mark({ class: "cm-example-tag" });
+const exampleContentMark = Decoration.mark({ class: "cm-example-content" });
+const exampleBracketMark = Decoration.mark({ class: "cm-example-bracket" });
 
 // ---------------------------------------------------------------------------
 // Decoration builders
@@ -375,7 +379,7 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
       if (node.name === "Link") {
         // Track as skip range for inline source scanning (unless it IS an inline source)
         const linkText = state.sliceDoc(node.from, node.to);
-        if (!linkText.startsWith("[!source")) {
+        if (!linkText.startsWith("[!source") && !linkText.startsWith("[!example")) {
           sourceSkipRanges.push([node.from, node.to]);
         }
         const linkLine = doc.lineAt(node.from).number;

@@ -63,6 +63,12 @@ export function SettingsModal() {
   const setEditorLineNumbersDefault = useUIStore((s) => s.setEditorLineNumbersDefault);
   const sourceStyle = useUIStore((s) => s.sourceStyle);
   const setSourceStyle = useUIStore((s) => s.setSourceStyle);
+  const lineWrapping = useUIStore((s) => s.lineWrapping);
+  const setLineWrapping = useUIStore((s) => s.setLineWrapping);
+  const spellCheck = useUIStore((s) => s.spellCheck);
+  const setSpellCheck = useUIStore((s) => s.setSpellCheck);
+  const editorIndentSize = useUIStore((s) => s.editorIndentSize);
+  const setEditorIndentSize = useUIStore((s) => s.setEditorIndentSize);
   const resetFontPrefs = useUIStore((s) => s.resetFontPrefs);
   const tooltipFontSize = useUIStore((s) => s.tooltipFontSize);
   const tooltipPillSize = useUIStore((s) => s.tooltipPillSize);
@@ -87,6 +93,8 @@ export function SettingsModal() {
   const setDefaultTabSize = useUIStore((s) => s.setDefaultTabSize);
   const resetLayoutPrefs = useUIStore((s) => s.resetLayoutPrefs);
   const panelSizes = useUIStore((s) => s.panelSizes);
+  const autoRevealFile = useUIStore((s) => s.autoRevealFile);
+  const setAutoRevealFile = useUIStore((s) => s.setAutoRevealFile);
 
   const getContentSize = (tab: LeftTab) =>
     panelSizes[tab]?.content ?? BUILTIN_TAB_SIZES[tab].content;
@@ -173,6 +181,22 @@ export function SettingsModal() {
             </button>
           </div>
 
+          {/* ── Files Panel ── */}
+          <div className="settings-section">
+            <div className="settings-section-title">Files Panel</div>
+            <div className="settings-row" style={{ alignItems: "center" }}>
+              <span className="settings-label">Auto-reveal</span>
+              <label className="settings-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={autoRevealFile}
+                  onChange={(e) => setAutoRevealFile(e.target.checked)}
+                />
+                Reveal active file in tree
+              </label>
+            </div>
+          </div>
+
           {/* ── Editor Font ── */}
           <div className="settings-section">
             <div className="settings-section-title">Editor Font</div>
@@ -217,6 +241,41 @@ export function SettingsModal() {
                   {SOURCE_STYLE_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
+                </select>
+              </div>
+            </div>
+            <div className="settings-row" style={{ alignItems: "center" }}>
+              <span className="settings-label">Line wrapping</span>
+              <label className="settings-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={lineWrapping}
+                  onChange={(e) => setLineWrapping(e.target.checked)}
+                />
+                Wrap long lines
+              </label>
+            </div>
+            <div className="settings-row" style={{ alignItems: "center" }}>
+              <span className="settings-label">Spell check</span>
+              <label className="settings-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={spellCheck}
+                  onChange={(e) => setSpellCheck(e.target.checked)}
+                />
+                Enable spell checking
+              </label>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Indent size</span>
+              <div className="settings-control">
+                <select
+                  value={editorIndentSize}
+                  onChange={(e) => setEditorIndentSize(Number(e.target.value))}
+                >
+                  <option value={2}>2 spaces</option>
+                  <option value={4}>4 spaces</option>
+                  <option value={8}>8 spaces</option>
                 </select>
               </div>
             </div>

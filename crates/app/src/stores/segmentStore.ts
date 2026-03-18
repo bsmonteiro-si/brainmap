@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { invoke } from "@tauri-apps/api/core";
 
 export interface Segment {
   id: string;           // crypto.randomUUID() at creation
@@ -61,7 +62,34 @@ function persistSegments(segments: Segment[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(segments));
 }
 
+/** Pick top N segments for the dock menu, sorted by most recently opened. */
+export function pickDockSegments(
+  segments: Segment[],
+  max = 10,
+): { name: string; path: string }[] {
+  return [...segments]
+    .sort(
+      (a, b) =>
+        new Date(b.lastOpenedAt).getTime() - new Date(a.lastOpenedAt).getTime(),
+    )
+    .slice(0, max)
+    .map((s) => ({ name: s.name, path: s.path }));
+}
+
+/** Sync the macOS dock menu with current segments. Best-effort, never throws. */
+async function syncDockMenu(segments: Segment[]): Promise<void> {
+  try {
+    await invoke("update_dock_menu", {
+      segments: pickDockSegments(segments),
+    });
+  } catch {
+    // Dock menu is a nice-to-have; silently ignore errors (e.g., non-macOS).
+  }
+}
+
 const storedSegments = loadStoredSegments();
+// Sync dock menu on app startup.
+syncDockMenu(storedSegments);
 
 export const useSegmentStore = create<SegmentStore>((set, get) => ({
   segments: storedSegments,
@@ -81,6 +109,7 @@ export const useSegmentStore = create<SegmentStore>((set, get) => ({
     };
     const next = [...get().segments, segment];
     persistSegments(next);
+    syncDockMenu(next);
     set({ segments: next });
     return { segment, created: true };
   },
@@ -89,6 +118,7 @@ export const useSegmentStore = create<SegmentStore>((set, get) => ({
     const { segments, activeSegmentId } = get();
     const next = segments.filter((s) => s.id !== id);
     persistSegments(next);
+    syncDockMenu(next);
     set({
       segments: next,
       activeSegmentId: activeSegmentId === id ? null : activeSegmentId,
@@ -100,6 +130,7 @@ export const useSegmentStore = create<SegmentStore>((set, get) => ({
       s.id === id ? { ...s, lastOpenedAt: new Date().toISOString() } : s
     );
     persistSegments(next);
+    syncDockMenu(next);
     set({ segments: next });
   },
 

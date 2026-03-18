@@ -78,6 +78,7 @@ export interface SegmentSnapshot {
   activeLeftTab: LeftTab;
   leftPanelCollapsed: boolean;
   homeNotePath: string | null;
+  customFileOrder: Record<string, string[]>;
 }
 
 // ── Module-level cache ────────────────────────────────────────────────
@@ -160,6 +161,7 @@ export function captureSnapshot(): SegmentSnapshot {
     activeLeftTab: ui.activeLeftTab,
     leftPanelCollapsed: ui.leftPanelCollapsed,
     homeNotePath: ui.homeNotePath,
+    customFileOrder: { ...ui.customFileOrder },
   };
 }
 
@@ -237,6 +239,7 @@ export function restoreSnapshot(snapshot: SegmentSnapshot): void {
     activeLeftTab: snapshot.activeLeftTab,
     leftPanelCollapsed: snapshot.leftPanelCollapsed,
     homeNotePath: snapshot.homeNotePath,
+    customFileOrder: { ...snapshot.customFileOrder },
   });
 }
 

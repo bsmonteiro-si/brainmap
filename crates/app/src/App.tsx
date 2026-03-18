@@ -12,12 +12,16 @@ import { useTabStore, isUntitledTab } from "./stores/tabStore";
 import { closeTabAndNavigateNext } from "./stores/tabActions";
 import { promptUnsavedChanges } from "./stores/unsavedChangesPrompt";
 import { hasDirtyUntitledTabs, applyEventToSnapshot } from "./stores/segmentStateCache";
+import { listen } from "@tauri-apps/api/event";
 import { getAPI } from "./api/bridge";
+import { pickFolder } from "./api/pickFolder";
+import { openSegmentByPath, openFolderAsSegment } from "./stores/segmentActions";
 import { SegmentPicker } from "./components/Layout/SegmentPicker";
 import { AppLayout } from "./components/Layout/AppLayout";
 import { CommandPalette } from "./components/CommandPalette/CommandPalette";
 import { CreateNoteDialog } from "./components/Editor/CreateNoteDialog";
 import { CreateFolderDialog } from "./components/Layout/CreateFolderDialog";
+import { MoveToDialog } from "./components/Layout/MoveToDialog";
 import { SettingsModal } from "./components/Settings/SettingsModal";
 import { UndoToast } from "./components/Layout/UndoToast";
 import { UnsavedChangesDialog } from "./components/Layout/UnsavedChangesDialog";
@@ -271,6 +275,34 @@ function App() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
+  // Listen for dock menu events (macOS dock right-click → segment open/switch).
+  useEffect(() => {
+    let cancelled = false;
+    const unlisteners: (() => void)[] = [];
+
+    listen<{ path: string }>("brainmap://dock-open-segment", (e) => {
+      openSegmentByPath(e.payload.path);
+    }).then((fn) => {
+      if (cancelled) fn();
+      else unlisteners.push(fn);
+    });
+
+    listen("brainmap://dock-open-folder", async () => {
+      const path = await pickFolder();
+      if (path) {
+        await openFolderAsSegment(path);
+      }
+    }).then((fn) => {
+      if (cancelled) fn();
+      else unlisteners.push(fn);
+    });
+
+    return () => {
+      cancelled = true;
+      unlisteners.forEach((fn) => fn());
+    };
+  }, []);
+
   // Apply theme
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", effectiveTheme);
@@ -327,6 +359,7 @@ function App() {
       {createFolderDialogOpen && <CreateFolderDialog />}
       {settingsOpen && <SettingsModal />}
       {unsavedChangesDialogOpen && <UnsavedChangesDialog />}
+      <MoveToDialog />
       <UndoToast />
     </div>
   );

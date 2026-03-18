@@ -116,6 +116,7 @@ export interface BrainMapAPI {
   moveNote(oldPath: string, newPath: string): Promise<{ new_path: string; rewritten_paths: string[] }>;
   moveFolder(oldFolder: string, newFolder: string): Promise<{ new_folder: string; moved_notes: [string, string][]; rewritten_paths: string[] }>;
   revealInFileManager(absolutePath: string): Promise<void>;
+  openInDefaultApp(absolutePath: string): Promise<void>;
   duplicateNote(path: string): Promise<NoteDetailDto>;
   onEvent(callback: (event: WorkspaceEvent) => void): () => void;
 }

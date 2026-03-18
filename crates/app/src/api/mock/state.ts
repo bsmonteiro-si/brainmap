@@ -101,6 +101,7 @@ export class MockState {
       title: n.title,
       note_type: n.note_type,
       tags: n.tags.length > 0 ? n.tags : null,
+      modified: n.modified,
     }));
   }
 
@@ -133,7 +134,7 @@ export class MockState {
     const resultNodes: NodeDto[] = Array.from(visited)
       .map((p) => this.notes.get(p))
       .filter((n): n is MockNote => n !== undefined)
-      .map((n) => ({ path: n.path, title: n.title, note_type: n.note_type, tags: n.tags.length > 0 ? n.tags : null }));
+      .map((n) => ({ path: n.path, title: n.title, note_type: n.note_type, tags: n.tags.length > 0 ? n.tags : null, modified: n.modified }));
 
     return { nodes: resultNodes, edges: resultEdges };
   }

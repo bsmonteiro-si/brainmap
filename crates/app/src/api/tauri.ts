@@ -166,6 +166,10 @@ export class TauriBridge implements BrainMapAPI {
     return invoke("reveal_in_file_manager", { path: absolutePath });
   }
 
+  async openInDefaultApp(absolutePath: string): Promise<void> {
+    return invoke("open_in_default_app", { path: absolutePath });
+  }
+
   async duplicateNote(path: string): Promise<NoteDetail> {
     return invoke("duplicate_note", { path });
   }
