@@ -1332,6 +1332,111 @@ body {
   margin-left: 1px;
 }
 
+/* ==========================================================================
+   Inline example citations [!example ...] — 4 toggleable styles
+   Scoped by [data-example-style] on <html>
+   ========================================================================== */
+
+/* --- Style 1: "underline" — subtle underline + label, no background --- */
+[data-example-style="underline"] .editor-body .cm-editor .cm-example-tag {
+  font-size: 0;
+  color: transparent;
+}
+[data-example-style="underline"] .editor-body .cm-editor .cm-example-tag::after {
+  content: "example";
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #17a2b8;
+  opacity: 0.6;
+  margin-right: 3px;
+}
+[data-example-style="underline"] .editor-body .cm-editor .cm-example-content {
+  border-bottom: 1px solid color-mix(in srgb, #17a2b8 30%, transparent);
+  color: var(--text-secondary);
+}
+[data-example-style="underline"] .editor-body .cm-editor .cm-example-bracket {
+  font-size: 0;
+  color: transparent;
+}
+
+/* --- Style 2: "pill" — rounded pill badge + plain text --- */
+[data-example-style="pill"] .editor-body .cm-editor .cm-example-tag {
+  font-size: 0;
+  color: transparent;
+}
+[data-example-style="pill"] .editor-body .cm-editor .cm-example-tag::after {
+  content: "example";
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #17a2b8;
+  background: color-mix(in srgb, #17a2b8 15%, transparent);
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-right: 4px;
+  vertical-align: baseline;
+}
+[data-example-style="pill"] .editor-body .cm-editor .cm-example-content {
+  color: var(--text-secondary);
+}
+[data-example-style="pill"] .editor-body .cm-editor .cm-example-bracket {
+  font-size: 0;
+  color: transparent;
+}
+
+/* --- Style 3: "icon" — flask icon + monospace content --- */
+[data-example-style="icon"] .editor-body .cm-editor .cm-example-tag {
+  font-size: 0;
+  color: transparent;
+}
+[data-example-style="icon"] .editor-body .cm-editor .cm-example-tag::after {
+  content: "\1F9EA";
+  font-size: 0.85rem;
+  margin-right: 3px;
+}
+[data-example-style="icon"] .editor-body .cm-editor .cm-example-content {
+  color: var(--text-secondary);
+}
+[data-example-style="icon"] .editor-body .cm-editor .cm-example-bracket {
+  font-size: 0;
+  color: transparent;
+}
+
+/* --- Style 4: "quotes" — quotation marks + muted monospace + superscript ex --- */
+[data-example-style="quotes"] .editor-body .cm-editor .cm-example-tag {
+  font-size: 0;
+  color: transparent;
+}
+[data-example-style="quotes"] .editor-body .cm-editor .cm-example-tag::after {
+  content: "\201C";
+  font-size: 1.1rem;
+  color: #17a2b8;
+  opacity: 0.7;
+}
+[data-example-style="quotes"] .editor-body .cm-editor .cm-example-content {
+  color: var(--text-secondary);
+}
+[data-example-style="quotes"] .editor-body .cm-editor .cm-example-bracket {
+  font-size: 0;
+  color: transparent;
+}
+[data-example-style="quotes"] .editor-body .cm-editor .cm-example-bracket::before {
+  content: "\201D";
+  font-size: 1.1rem;
+  color: #17a2b8;
+  opacity: 0.7;
+}
+[data-example-style="quotes"] .editor-body .cm-editor .cm-example-bracket::after {
+  content: "ex";
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #17a2b8;
+  opacity: 0.5;
+  vertical-align: super;
+  margin-left: 1px;
+}
+
 /* Preview inline source */
 .inline-source {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
@@ -1352,8 +1457,7 @@ body {
 .inline-example {
   background: color-mix(in srgb, #17a2b8 10%, transparent);
   border-bottom: 1.5px solid #17a2b8;
-  font-family: var(--font-mono, monospace);
-  font-size: 0.95em;
+  font-style: italic;
   color: var(--text-secondary);
 }
 .inline-example-tag {
