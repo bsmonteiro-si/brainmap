@@ -4,7 +4,7 @@ import { EditorState } from "@codemirror/state";
 import { markdown } from "@codemirror/lang-markdown";
 import { GFM } from "@lezer/markdown";
 import { defaultKeymap, history, historyKeymap, redo, indentWithTab } from "@codemirror/commands";
-import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
+import { syntaxHighlighting, HighlightStyle, indentUnit } from "@codemirror/language";
 import { search, searchKeymap } from "@codemirror/search";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { tags } from "@lezer/highlight";
@@ -96,9 +96,10 @@ interface Props {
   restoreScrollTop?: number;
   restoreCursorPos?: number;
   readOnly?: boolean;
+  raw?: boolean;
 }
 
-export function MarkdownEditor({ notePath, content, onChange, onViewReady, restoreScrollTop, restoreCursorPos, readOnly }: Props) {
+export function MarkdownEditor({ notePath, content, onChange, onViewReady, restoreScrollTop, restoreCursorPos, readOnly, raw }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
@@ -109,6 +110,9 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
   const editorFontSize = useUIStore((s) => s.editorFontSize);
   const uiZoom = useUIStore((s) => s.uiZoom);
   const showLineNumbers = useUIStore((s) => s.showLineNumbers);
+  const lineWrapping = useUIStore((s) => s.lineWrapping);
+  const spellCheck = useUIStore((s) => s.spellCheck);
+  const editorIndentSize = useUIStore((s) => s.editorIndentSize);
   const wsRoot = useWorkspaceStore((s) => s.info?.root);
 
   // Keep refs up-to-date
@@ -122,19 +126,28 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
 
     const isDark = THEME_BASE[effectiveTheme] === "dark";
     const extensions = [
-      markdown({ extensions: GFM }),
-      EditorView.lineWrapping,
+      ...(lineWrapping ? [EditorView.lineWrapping] : []),
       ...(showLineNumbers ? [lineNumbers()] : []),
-      syntaxHighlighting(buildMarkdownHighlight(isDark)),
-      linkNavigation(notePath),
-      calloutDecorations(),
-      listSpacing(),
-      markdownDecorations(),
-      checkboxDecorations(),
-      bulletDecorations(),
-      headingFoldService(),
-      ...(wsRoot ? [editorContextMenu(wsRoot.replace(/\/$/, "") + "/" + notePath, findTableRange, formatTableInView)] : []),
+      ...(spellCheck ? [EditorView.contentAttributes.of({ spellcheck: "true" })] : []),
+      indentUnit.of(" ".repeat(editorIndentSize)),
     ];
+
+    if (!raw) {
+      extensions.push(
+        markdown({ extensions: GFM }),
+        syntaxHighlighting(buildMarkdownHighlight(isDark)),
+        linkNavigation(notePath),
+        calloutDecorations(),
+        listSpacing(),
+        markdownDecorations(),
+        checkboxDecorations(),
+        bulletDecorations(),
+        headingFoldService(),
+      );
+      if (wsRoot) {
+        extensions.push(editorContextMenu(wsRoot.replace(/\/$/, "") + "/" + notePath, findTableRange, formatTableInView));
+      }
+    }
 
     if (readOnly) {
       extensions.push(EditorState.readOnly.of(true));
@@ -143,26 +156,27 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
       extensions.push(
         history(),
         keymap.of([
-          ...formattingKeymap,
+          ...(raw ? [] : formattingKeymap),
           { key: "Mod-y", run: redo, preventDefault: true },
           ...closeBracketsKeymap,
           ...searchKeymap,
-          ...listNestingKeymap,
+          ...(raw ? [] : listNestingKeymap),
           indentWithTab,
           ...historyKeymap,
           ...defaultKeymap,
         ]),
         EditorState.languageData.of(() => [{ closeBrackets: { brackets: ["(", "[", "{", "`"] } }]),
         closeBrackets(),
-        createSlashAutocompletion(),
         search(),
-        smartPaste(),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             onChangeRef.current(update.state.doc.toString());
           }
         }),
       );
+      if (!raw) {
+        extensions.push(createSlashAutocompletion(), smartPaste());
+      }
     }
 
     if (isDark) {
@@ -202,7 +216,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
       viewRef.current = null;
       onViewReady?.(null);
     };
-  }, [notePath, effectiveTheme, uiZoom, editorFontFamily, editorFontSize, readOnly, wsRoot, showLineNumbers]);
+  }, [notePath, effectiveTheme, uiZoom, editorFontFamily, editorFontSize, readOnly, raw, wsRoot, showLineNumbers, lineWrapping, spellCheck, editorIndentSize]);
 
   // Sync external content changes (e.g., after save or conflict resolution)
   // without recreating the editor
