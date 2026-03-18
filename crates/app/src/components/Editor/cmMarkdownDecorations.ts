@@ -11,7 +11,6 @@ import {
   EditorView,
   Decoration,
   WidgetType,
-  ViewPlugin,
   type DecorationSet,
 } from "@codemirror/view";
 import { RangeSetBuilder, StateField, type Text, type Extension } from "@codemirror/state";
@@ -466,7 +465,7 @@ const markdownDecoField = StateField.define<{ cursorLine: number; cursorPos: num
 // ---------------------------------------------------------------------------
 
 /** Find the line range of a table containing the given line number. Returns null if not in a table. */
-function findTableRange(doc: Text, lineNum: number): { start: number; end: number } | null {
+export function findTableRange(doc: Text, lineNum: number): { start: number; end: number } | null {
   if (!doc.line(lineNum).text.trimStart().startsWith("|")) return null;
   let start = lineNum;
   while (start > 1 && doc.line(start - 1).text.trimStart().startsWith("|")) start--;
@@ -476,7 +475,7 @@ function findTableRange(doc: Text, lineNum: number): { start: number; end: numbe
 }
 
 /** Format the table at the given line range in the editor. */
-function formatTableInView(view: EditorView, range: { start: number; end: number }): boolean {
+export function formatTableInView(view: EditorView, range: { start: number; end: number }): boolean {
   const doc = view.state.doc;
   const from = doc.line(range.start).from;
   const to = doc.line(range.end).to;
@@ -508,88 +507,11 @@ const tableFormatClickHandler = EditorView.domEventHandlers({
   },
 });
 
-// ---------------------------------------------------------------------------
-// Right-click "Format Table" context menu
-// ---------------------------------------------------------------------------
-let ctxMenuEl: HTMLDivElement | null = null;
-let ctxDismiss: (() => void) | null = null;
-
-function removeCtxMenu() {
-  if (ctxDismiss) { ctxDismiss(); ctxDismiss = null; }
-  else if (ctxMenuEl) { ctxMenuEl.remove(); ctxMenuEl = null; }
-}
-
-function showFormatTableMenu(view: EditorView, x: number, y: number, range: { start: number; end: number }) {
-  removeCtxMenu();
-
-  const menu = document.createElement("div");
-  menu.className = "context-menu";
-  menu.style.left = `${x}px`;
-  menu.style.top = `${y}px`;
-
-  const item = document.createElement("div");
-  item.className = "context-menu-item";
-  item.textContent = "Format Table";
-  item.addEventListener("mousedown", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    formatTableInView(view, range);
-    dismiss();
-  });
-
-  menu.appendChild(item);
-  document.body.appendChild(menu);
-  ctxMenuEl = menu;
-
-  // Clamp to viewport
-  requestAnimationFrame(() => {
-    if (!ctxMenuEl) return;
-    const rect = ctxMenuEl.getBoundingClientRect();
-    if (rect.right > window.innerWidth) ctxMenuEl.style.left = `${window.innerWidth - rect.width - 4}px`;
-    if (rect.bottom > window.innerHeight) ctxMenuEl.style.top = `${window.innerHeight - rect.height - 4}px`;
-  });
-
-  const dismiss = () => {
-    if (ctxMenuEl) { ctxMenuEl.remove(); ctxMenuEl = null; }
-    ctxDismiss = null;
-    document.removeEventListener("mousedown", onOutside);
-    document.removeEventListener("keydown", onEsc);
-    view.scrollDOM.removeEventListener("scroll", dismiss);
-  };
-  ctxDismiss = dismiss;
-
-  const onOutside = (e: MouseEvent) => { if (ctxMenuEl && !ctxMenuEl.contains(e.target as Node)) dismiss(); };
-  const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") dismiss(); };
-
-  requestAnimationFrame(() => {
-    document.addEventListener("mousedown", onOutside);
-    document.addEventListener("keydown", onEsc);
-    view.scrollDOM.addEventListener("scroll", dismiss, { once: true });
-  });
-}
-
-const tableContextMenu = EditorView.domEventHandlers({
-  contextmenu(event: MouseEvent, view: EditorView) {
-    // Skip when text is selected — let copyReferenceMenu handle it
-    const sel = view.state.selection.main;
-    if (sel.from !== sel.to) { removeCtxMenu(); return false; }
-
-    const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
-    if (pos === null) { removeCtxMenu(); return false; }
-    const lineNum = view.state.doc.lineAt(pos).number;
-    const range = findTableRange(view.state.doc, lineNum);
-    if (!range) { removeCtxMenu(); return false; }
-    event.preventDefault();
-    showFormatTableMenu(view, event.clientX, event.clientY, range);
-    return true;
-  },
-});
-
-const tableCtxCleanup = ViewPlugin.define(() => ({ destroy() { removeCtxMenu(); } }));
+// Table context menu removed — consolidated into cmContextMenu.ts
 
 // ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 export function markdownDecorations(): Extension {
-  return [markdownDecoField, tableFormatClickHandler, tableContextMenu, tableCtxCleanup];
+  return [markdownDecoField, tableFormatClickHandler];
 }

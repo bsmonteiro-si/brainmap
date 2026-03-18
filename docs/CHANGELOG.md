@@ -2,6 +2,27 @@
 
 Feature history moved from CLAUDE.md. Organized by phase and feature area.
 
+## Editor Phase C2 — Polish
+
+Three editor polish features:
+
+- **Heading folding**: Content under headings can be collapsed/expanded via fold gutter arrows. Folds from heading to the next heading at same-or-higher level. Skips headings inside fenced code blocks.
+- **Unified context menu**: Right-click shows a single context-aware menu: Cut/Copy/Paste, formatting options when text is selected, Copy File Reference, and Format Table when cursor is in a table. Replaces two separate context menus.
+- **Table insertion**: Toolbar button inserts a 3×3 markdown table at cursor.
+
+## Editor Phase C — Slash Command Menu
+
+Notion-style slash command menu for the CodeMirror editor:
+
+- **Slash commands**: Type `/` at line start or after whitespace to open a command palette. Commands are grouped into sections: Headings, Lists, Blocks, BrainMap, and Callouts.
+- **16 commands**: Heading 1–3, Bullet/Numbered/Task list, Blockquote, Code block, Divider, Table, Link, Inline Source citation, and all 4 callout types (AI Answer, Source, Question, Key Insight).
+- **Fuzzy filtering**: Type after `/` to filter by keyword or label (e.g., `/so` shows "Inline Source" and "Source Callout").
+- **No false triggers**: The `/` only activates at line start or after whitespace — URLs like `https://` and paths like `and/or` are ignored.
+- **Visual polish**: Lucide SVG icons per command (13 unique), `/keyword` badges, callout-colored icon backgrounds, subtle accent-tinted selection highlight, grouped section headers. Uses CM6's `addToOptions` and `optionClass` APIs.
+- Reuses existing formatting helpers (`setHeading`, `toggleLinePrefix`, `insertCallout`, etc.) and callout type definitions from `calloutTypes.ts`.
+
+New file: `cmSlashCommands.ts` (command definitions, SVG icon registry, completion source, autocompletion factory). 20 unit tests.
+
 ## Editor Phase A — Foundational Editing
 
 Four foundational CodeMirror 6 features added to close the gap with standard text editors:

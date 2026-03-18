@@ -282,6 +282,30 @@ export function insertAtCursor(view: EditorView, text: string): boolean {
 }
 
 /**
+ * Insert a 3×3 markdown table at cursor position.
+ */
+export function insertTable(view: EditorView): boolean {
+  const { state } = view;
+  const pos = state.selection.main.from;
+  const line = state.doc.lineAt(pos);
+  const needsNewline = line.text.trim().length > 0;
+  const prefix = needsNewline ? "\n\n" : "";
+  const table = `${prefix}| Header 1 | Header 2 | Header 3 |\n| -------- | -------- | -------- |\n|          |          |          |\n`;
+
+  // Place cursor in first data cell
+  const tableStart = pos + prefix.length;
+  const thirdLineOffset = "| Header 1 | Header 2 | Header 3 |\n| -------- | -------- | -------- |\n| ".length;
+  const cursorPos = tableStart + thirdLineOffset;
+
+  view.dispatch({
+    changes: { from: pos, to: pos, insert: table },
+    selection: { anchor: cursorPos },
+  });
+  view.focus();
+  return true;
+}
+
+/**
  * CodeMirror keybindings for markdown formatting.
  */
 export const formattingKeymap: KeyBinding[] = [

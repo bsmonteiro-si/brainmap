@@ -7,22 +7,23 @@ import { defaultKeymap, history, historyKeymap, redo, indentWithTab } from "@cod
 import { oneDark } from "@codemirror/theme-one-dark";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
 import { search, searchKeymap } from "@codemirror/search";
-import { autocompletion, closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
+import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { tags } from "@lezer/highlight";
 import { useUIStore, THEME_BASE } from "../../stores/uiStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { linkNavigation } from "./cmLinkNavigation";
 import { formattingKeymap } from "./cmFormatting";
 import { calloutDecorations } from "./cmCalloutDecorations";
-import { copyReferenceMenu } from "./cmCopyReference";
+import { editorContextMenu } from "./cmContextMenu";
+import { findTableRange, formatTableInView } from "./cmMarkdownDecorations";
 import { listSpacing } from "./cmListSpacing";
 import { markdownDecorations } from "./cmMarkdownDecorations";
 import { checkboxDecorations } from "./cmCheckboxDecorations";
 import { bulletDecorations } from "./cmBulletDecorations";
 import { listNestingKeymap } from "./cmListNesting";
 import { smartPaste } from "./cmSmartPaste";
-import { noteCompletionSource } from "./cmNoteAutocomplete";
-import { slashCommandSource } from "./cmSlashCommands";
+import { createSlashAutocompletion } from "./cmSlashCommands";
+import { headingFoldService } from "./cmHeadingFold";
 
 const ACCENT = "#4a9eff";
 const ACCENT_DARK = "#5aaeFF";
@@ -108,7 +109,8 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
       markdownDecorations(),
       checkboxDecorations(),
       bulletDecorations(),
-      ...(wsRoot ? [copyReferenceMenu(wsRoot.replace(/\/$/, "") + "/" + notePath)] : []),
+      headingFoldService(),
+      ...(wsRoot ? [editorContextMenu(wsRoot.replace(/\/$/, "") + "/" + notePath, findTableRange, formatTableInView)] : []),
     ];
 
     if (readOnly) {
@@ -129,7 +131,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
         ]),
         EditorState.languageData.of(() => [{ closeBrackets: { brackets: ["(", "[", "{", "`"] } }]),
         closeBrackets(),
-        autocompletion({ override: [noteCompletionSource, slashCommandSource], activateOnTyping: true }),
+        createSlashAutocompletion(),
         search(),
         smartPaste(),
         EditorView.updateListener.of((update) => {

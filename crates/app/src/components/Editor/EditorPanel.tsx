@@ -62,6 +62,29 @@ export function EditorPanel() {
     };
   }, [activePath]);
 
+  // Cycle inline source style with Ctrl+Shift+S (temporary for previewing styles)
+  useEffect(() => {
+    const STYLES = ["underline", "pill", "icon", "quotes"];
+    const key = "brainmap:sourceStyle";
+    // Apply saved style on mount
+    const saved = localStorage.getItem(key) || STYLES[0];
+    document.documentElement.setAttribute("data-source-style", saved);
+
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === "S") {
+        e.preventDefault();
+        const current = document.documentElement.getAttribute("data-source-style") || STYLES[0];
+        const idx = STYLES.indexOf(current);
+        const next = STYLES[(idx + 1) % STYLES.length];
+        document.documentElement.setAttribute("data-source-style", next);
+        localStorage.setItem(key, next);
+        console.log(`[source-style] → ${next}`);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
+
   // PDF tab — self-contained viewer component, no editorStore state needed
   const activeTab = activeTabId ? tabs.find((t) => t.id === activeTabId) : null;
   if (activeTab?.kind === "pdf") {

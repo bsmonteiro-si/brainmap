@@ -8,6 +8,7 @@ import {
   insertLink,
   insertAtCursor,
   insertCallout,
+  insertTable,
 } from "./cmFormatting";
 import { CALLOUT_TYPE_ENTRIES } from "./calloutTypes";
 
@@ -37,6 +38,7 @@ const BUTTONS: (ToolbarButton | "sep")[] = [
   "sep",
   { label: "\uD83D\uDD17", title: "Link (Cmd+K)", action: (v) => insertLink(v) },
   { label: "\u2015", title: "Horizontal Rule", action: (v) => insertAtCursor(v, "\n---\n") },
+  { label: "\u2637", title: "Insert Table", action: (v) => insertTable(v) },
 ];
 
 export function EditorToolbar({ editorView }: Props) {

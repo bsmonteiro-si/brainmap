@@ -1,10 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { SLASH_COMMANDS, filterSlashCommands } from "./cmSlashCommands";
+import { CALLOUT_TYPE_ENTRIES } from "./calloutTypes";
+
+const STATIC_COMMAND_COUNT = 12; // headings(3) + lists(3) + blocks(5) + inline source(1)
 
 describe("SLASH_COMMANDS registry", () => {
   it("has the expected number of commands", () => {
-    // 3 headings + 3 lists + 5 blocks + 1 inline source + 4 callouts = 16
-    expect(SLASH_COMMANDS.length).toBe(16);
+    expect(SLASH_COMMANDS.length).toBe(STATIC_COMMAND_COUNT + CALLOUT_TYPE_ENTRIES.length);
   });
 
   it("every command has required fields", () => {
@@ -13,6 +15,7 @@ describe("SLASH_COMMANDS registry", () => {
       expect(cmd.label).toBeTruthy();
       expect(cmd.detail).toBeTruthy();
       expect(cmd.section).toBeTruthy();
+      expect(cmd.icon).toBeTruthy();
       expect(typeof cmd.apply).toBe("function");
     }
   });
