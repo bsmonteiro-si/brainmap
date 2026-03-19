@@ -103,6 +103,8 @@ export function TabBar() {
 
   const [ctxMenu, setCtxMenu] = useState<TabContextMenuState | null>(null);
   const closeCtxMenu = useCallback(() => setCtxMenu(null), []);
+  const [dragTabId, setDragTabId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
 
   if (tabs.length === 0) return null;
 
@@ -184,6 +186,40 @@ export function TabBar() {
     }
   };
 
+  const handleDragStart = (e: React.DragEvent, tabId: string) => {
+    setDragTabId(tabId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", tabId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, tabId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragTabId && tabId !== dragTabId) {
+      setDropTargetId(tabId);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!(e.currentTarget as Node).contains(e.relatedTarget as Node)) {
+      setDropTargetId(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, tabId: string) => {
+    e.preventDefault();
+    if (dragTabId && dragTabId !== tabId) {
+      useTabStore.getState().reorderTab(dragTabId, tabId);
+    }
+    setDragTabId(null);
+    setDropTargetId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDragTabId(null);
+    setDropTargetId(null);
+  };
+
   const handleNewTab = () => {
     useEditorStore.getState().openUntitledTab();
   };
@@ -195,10 +231,16 @@ export function TabBar() {
           key={tab.id}
           role="tab"
           aria-selected={tab.id === activeTabId}
-          className={`tab-item${tab.id === activeTabId ? " tab-item--active" : ""}`}
+          className={`tab-item${tab.id === activeTabId ? " tab-item--active" : ""}${dragTabId === tab.id ? " tab-item--dragging" : ""}${dropTargetId === tab.id ? " tab-item--drop-target" : ""}`}
+          draggable
           onClick={() => handleActivate(tab.id)}
           onAuxClick={(e) => handleAuxClick(e, tab.id)}
           onContextMenu={(e) => handleContextMenu(e, tab.id)}
+          onDragStart={(e) => handleDragStart(e, tab.id)}
+          onDragOver={(e) => handleDragOver(e, tab.id)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, tab.id)}
+          onDragEnd={handleDragEnd}
           title={tab.kind === "untitled" ? tab.title : tab.path}
         >
           <NoteTypeIcon noteType={tab.kind === "untitled" ? undefined : (tab.noteType ?? undefined)} fileName={tab.kind === "untitled" ? undefined : tab.path?.split("/").pop()} size={14} />

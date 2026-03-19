@@ -381,3 +381,48 @@ describe("renamePathPrefix", () => {
     expect(useTabStore.getState().tabs[0].id).toBe("X/B/C/note.md");
   });
 });
+
+describe("reorderTab", () => {
+  beforeEach(() => {
+    useTabStore.getState().openTab("a.md", "note", "A", null);
+    useTabStore.getState().openTab("b.md", "note", "B", null);
+    useTabStore.getState().openTab("c.md", "note", "C", null);
+    useTabStore.getState().openTab("d.md", "note", "D", null);
+  });
+
+  it("no-op when fromId equals toId", () => {
+    useTabStore.getState().reorderTab("b.md", "b.md");
+    expect(useTabStore.getState().tabs.map((t) => t.id)).toEqual(["a.md", "b.md", "c.md", "d.md"]);
+  });
+
+  it("no-op when fromId is not found", () => {
+    useTabStore.getState().reorderTab("missing.md", "b.md");
+    expect(useTabStore.getState().tabs.map((t) => t.id)).toEqual(["a.md", "b.md", "c.md", "d.md"]);
+  });
+
+  it("no-op when toId is not found", () => {
+    useTabStore.getState().reorderTab("b.md", "missing.md");
+    expect(useTabStore.getState().tabs.map((t) => t.id)).toEqual(["a.md", "b.md", "c.md", "d.md"]);
+  });
+
+  it("moves tab forward (left to right)", () => {
+    useTabStore.getState().reorderTab("a.md", "c.md");
+    expect(useTabStore.getState().tabs.map((t) => t.id)).toEqual(["b.md", "c.md", "a.md", "d.md"]);
+  });
+
+  it("moves tab backward (right to left)", () => {
+    useTabStore.getState().reorderTab("c.md", "a.md");
+    expect(useTabStore.getState().tabs.map((t) => t.id)).toEqual(["c.md", "a.md", "b.md", "d.md"]);
+  });
+
+  it("swaps adjacent tabs", () => {
+    useTabStore.getState().reorderTab("b.md", "c.md");
+    expect(useTabStore.getState().tabs.map((t) => t.id)).toEqual(["a.md", "c.md", "b.md", "d.md"]);
+  });
+
+  it("does not change activeTabId", () => {
+    useTabStore.getState().activateTab("b.md");
+    useTabStore.getState().reorderTab("b.md", "d.md");
+    expect(useTabStore.getState().activeTabId).toBe("b.md");
+  });
+});

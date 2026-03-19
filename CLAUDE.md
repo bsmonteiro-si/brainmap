@@ -36,7 +36,7 @@ Frontmatter: `title`, `type`, `tags`, `status`, `created`, `modified`, `source`,
 
 ## Reference Docs
 
-**Before implementing**, check `docs/extension-guides/` for step-by-step recipes: `add-cli-command`, `add-edge-type`, `add-mcp-tool`, `add-note-type`, `add-tauri-command`, `add-zustand-store`. Follow the guide if one matches your task. **Before making architectural decisions**, check `docs/decisions/` for prior ADRs. Error recovery: `docs/error-recovery.md`. Changelog: `docs/CHANGELOG.md`.
+**Before implementing**, check `docs/extension-guides/` for step-by-step recipes: `add-callout-type`, `add-inline-command`, `add-cli-command`, `add-cm-preview-widget`, `add-edge-type`, `add-mcp-tool`, `add-note-type`, `add-tauri-command`, `add-zustand-store`. Follow the guide if one matches your task. **Before making architectural decisions**, check `docs/decisions/` for prior ADRs. Error recovery: `docs/error-recovery.md`. Changelog: `docs/CHANGELOG.md`.
 
 ## Review Agents
 

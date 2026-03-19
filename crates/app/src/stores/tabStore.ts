@@ -44,6 +44,7 @@ interface TabStoreState {
   updateTabState: (id: string, partial: Partial<TabState>) => void;
   getTab: (id: string) => TabState | undefined;
   renamePath: (oldPath: string, newPath: string, newTitle?: string) => void;
+  reorderTab: (fromId: string, toId: string) => void;
   renamePathPrefix: (oldPrefix: string, newPrefix: string) => void;
   reset: () => void;
 }
@@ -163,6 +164,18 @@ export const useTabStore = create<TabStoreState>((set, get) => ({
 
   getTab: (id) => {
     return get().tabs.find((t) => t.id === id);
+  },
+
+  reorderTab: (fromId, toId) => {
+    if (fromId === toId) return;
+    const { tabs } = get();
+    const fromIdx = tabs.findIndex((t) => t.id === fromId);
+    const toIdx = tabs.findIndex((t) => t.id === toId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const next = [...tabs];
+    const [moved] = next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, moved);
+    set({ tabs: next });
   },
 
   renamePath: (oldPath, newPath, newTitle?) => {
