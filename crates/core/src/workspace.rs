@@ -912,6 +912,20 @@ impl Workspace {
             let abs_target = old_rp.resolve_relative(&link.target);
             link.target = compute_relative_target(&new_rp, &abs_target);
         }
+        // When renaming (same parent directory) and the title matches the old
+        // filename stem, update the title to match the new stem. This preserves
+        // custom titles that the user has set independently of the filename.
+        if old_rp.parent() == new_rp.parent() {
+            let old_stem = Path::new(old_rp.as_str())
+                .file_stem()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_default();
+            if note.frontmatter.title == old_stem {
+                if let Some(new_stem) = Path::new(new_rp.as_str()).file_stem() {
+                    note.frontmatter.title = new_stem.to_string_lossy().to_string();
+                }
+            }
+        }
         note.path = new_rp.clone();
         note.frontmatter.modified = Local::now().date_naive();
         let content = parser::serialize_note(&note)?;

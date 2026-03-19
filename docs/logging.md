@@ -43,16 +43,17 @@ BRAINMAP_LOG=brainmap_core::workspace=trace,brainmap_core::index=debug
 |-----------|--------------|---------------|-------------|
 | CLI | `warn` | Human-readable (compact) | No |
 | MCP (serve) | `info` | JSON | Yes (`<workspace>/.brainmap/logs/`) |
-| Tauri | `info` | Human-readable (compact) | No |
+| Tauri | `info` (`debug` for frontend) | Human-readable (compact) | Yes (`~/.brainmap/logs/`) |
 
 ## Log Destinations
 
 ### File Logs
 
-- **Location**: `<workspace>/.brainmap/logs/brainmap.log`
+- **Location**: `~/.brainmap/logs/brainmap.log` (Tauri), `<workspace>/.brainmap/logs/brainmap.log` (MCP)
 - **Rotation**: Daily (via `tracing-appender`)
 - **Cleanup**: Call `cleanup_old_logs(dir, 3)` to remove files older than 3 days
 - **Format**: JSON (NDJSON)
+- **Includes**: Both backend and frontend logs (frontend logs forwarded via `write_log` Tauri command)
 
 ### Stderr
 
@@ -66,14 +67,19 @@ Never used for logs — reserved for MCP protocol messages and CLI output.
 
 ### Frontend
 
-Uses `console` methods with `[brainmap] {JSON}` prefix:
+Uses `console` methods with `[brainmap] {JSON}` prefix **and** forwards to the backend for file persistence:
 
 ```typescript
 import { log } from "../utils/logger";
 
 log.info("stores::workspace", "workspace opened", { root: "/path" });
-// Output: [brainmap] {"ts":"...","level":"INFO","target":"stores::workspace","msg":"workspace opened","fields":{"root":"/path"}}
+// Console: [brainmap] {"ts":"...","level":"INFO","target":"stores::workspace","msg":"workspace opened","fields":{"root":"/path"}}
+// File:    also written to ~/.brainmap/logs/brainmap.log via write_log Tauri command
 ```
+
+**Frontend → Backend bridge**: Every `log.*()` call invokes the `write_log` Tauri command, which re-emits via Rust `tracing` macros with tracing target `frontend` and the original component target in the `origin` field. The Tauri default filter is `info,frontend=debug`, so all frontend log levels (including `debug`) are persisted to the log file.
+
+If the Tauri bridge is unavailable (e.g., running in a plain browser during development), logs only go to the browser console.
 
 ## Log Levels
 

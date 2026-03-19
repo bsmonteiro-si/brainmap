@@ -263,3 +263,67 @@ fn test_move_folder_nonexistent() {
     let err = ws.move_folder("NonexistentFolder", "Somewhere").unwrap_err();
     assert!(format!("{err}").contains("NonexistentFolder") || format!("{err}").contains("not found"));
 }
+
+// ── move_note title update tests ────────────────────────────────
+
+#[test]
+fn test_move_note_same_dir_updates_title() {
+    let (_tmp, mut ws) = temp_workspace();
+
+    let old_path = "Concepts/Confounding.md";
+    let original_title = ws.read_note(old_path).unwrap().frontmatter.title.clone();
+    assert_eq!(original_title, "Confounding");
+
+    // Rename within the same directory
+    let new_path = "Concepts/Confounding Variable.md";
+    ws.move_note(old_path, new_path).unwrap();
+
+    // Frontmatter title should match the new filename stem
+    let note = ws.read_note(new_path).unwrap();
+    assert_eq!(note.frontmatter.title, "Confounding Variable");
+
+    // Graph node title should also be updated
+    let rp = brainmap_core::model::RelativePath::new(new_path);
+    let node_data = ws.graph.get_node(&rp).unwrap();
+    assert_eq!(node_data.title, "Confounding Variable");
+}
+
+#[test]
+fn test_move_note_different_dir_preserves_title() {
+    let (_tmp, mut ws) = temp_workspace();
+
+    let old_path = "Concepts/Confounding.md";
+    let original_title = ws.read_note(old_path).unwrap().frontmatter.title.clone();
+
+    // Move to a different directory
+    let new_path = "The Book of Why/Confounding.md";
+    ws.move_note(old_path, new_path).unwrap();
+
+    // Title should be preserved (not changed to filename stem)
+    let note = ws.read_note(new_path).unwrap();
+    assert_eq!(note.frontmatter.title, original_title);
+}
+
+#[test]
+fn test_move_note_same_dir_preserves_custom_title() {
+    let (tmp, mut ws) = temp_workspace();
+
+    let old_path = "Concepts/Confounding.md";
+    // Set a custom title that differs from the filename stem
+    let file_path = tmp.path().join(old_path);
+    let content = std::fs::read_to_string(&file_path).unwrap();
+    let updated = content.replace("title: Confounding", "title: \"Confounding Variables Explained\"");
+    std::fs::write(&file_path, &updated).unwrap();
+    ws.reload_file(old_path).unwrap();
+
+    let note = ws.read_note(old_path).unwrap();
+    assert_eq!(note.frontmatter.title, "Confounding Variables Explained");
+
+    // Rename within the same directory
+    let new_path = "Concepts/Confounders.md";
+    ws.move_note(old_path, new_path).unwrap();
+
+    // Custom title should be preserved (not overwritten with filename stem)
+    let note = ws.read_note(new_path).unwrap();
+    assert_eq!(note.frontmatter.title, "Confounding Variables Explained");
+}

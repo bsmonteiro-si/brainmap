@@ -17,7 +17,7 @@ pub fn run() {
         log_dir,
         stderr_enabled: true,
         stderr_json: false,
-        default_level: "info",
+        default_level: "info,frontend=debug",
     });
 
     tauri::Builder::default()

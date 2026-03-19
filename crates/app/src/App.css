@@ -1145,12 +1145,15 @@ body {
 }
 /* ── Mermaid diagram widget (CodeMirror) ── */
 .editor-body .cm-editor .cm-mermaid-widget {
-  padding: 12px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
+  padding: 8px 4px;
   text-align: center;
-  margin: 4px 0;
+}
+/* Inside callouts: inherit the callout border/background from the preceding callout line */
+.editor-body .cm-editor .cm-line.cm-callout-line + .cm-mermaid-widget {
+  border-left: 3px solid var(--callout-color);
+  border-right: 1px solid color-mix(in srgb, var(--callout-color) 15%, transparent);
+  background: color-mix(in srgb, var(--callout-color) 5%, transparent);
+  padding-left: 14px;
 }
 .editor-body .cm-editor .cm-mermaid-widget svg {
   max-width: 100%;

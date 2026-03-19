@@ -800,10 +800,10 @@ pub fn duplicate_note(state: State<'_, AppState>, path: String) -> Result<NoteDe
 pub fn write_log(level: String, target: String, msg: String, fields: Option<String>) {
     let fields_str = fields.as_deref().unwrap_or("");
     match level.as_str() {
-        "ERROR" => error!(target = %target, fields = %fields_str, "[frontend] {}", msg),
-        "WARN" => warn!(target = %target, fields = %fields_str, "[frontend] {}", msg),
-        "DEBUG" => debug!(target = %target, fields = %fields_str, "[frontend] {}", msg),
-        _ => info!(target = %target, fields = %fields_str, "[frontend] {}", msg),
+        "ERROR" => error!(target: "frontend", origin = %target, fields = %fields_str, "{}", msg),
+        "WARN" => warn!(target: "frontend", origin = %target, fields = %fields_str, "{}", msg),
+        "DEBUG" => debug!(target: "frontend", origin = %target, fields = %fields_str, "{}", msg),
+        _ => info!(target: "frontend", origin = %target, fields = %fields_str, "{}", msg),
     }
 }
 

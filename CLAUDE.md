@@ -32,11 +32,11 @@ Frontmatter: `title`, `type`, `tags`, `status`, `created`, `modified`, `source`,
 
 ## Logging
 
-`BRAINMAP_LOG` env (tracing EnvFilter). Defaults: CLI=warn, MCP=info, Tauri=info. Logs: `~/.brainmap/logs/`. Frontend: `import { log } from "../utils/logger"`. **Check logs first** when debugging. See `docs/logging.md`.
+`BRAINMAP_LOG` env (tracing EnvFilter). Defaults: CLI=warn, MCP=info, Tauri=`info,frontend=debug`. Logs: `~/.brainmap/logs/` (backend + frontend). Frontend logs are forwarded to backend via `write_log` Tauri command (tracing target `frontend`, original component in `origin` field). All frontend log levels including `debug` are persisted to the log file. Frontend: `import { log } from "../utils/logger"`. **Check logs first** when debugging — frontend issues are in the same log file. See `docs/logging.md`.
 
 ## Reference Docs
 
-Extension guides: `docs/extension-guides/`. ADRs: `docs/decisions/`. Error recovery: `docs/error-recovery.md`. Changelog: `docs/CHANGELOG.md`.
+**Before implementing**, check `docs/extension-guides/` for step-by-step recipes: `add-cli-command`, `add-edge-type`, `add-mcp-tool`, `add-note-type`, `add-tauri-command`, `add-zustand-store`. Follow the guide if one matches your task. **Before making architectural decisions**, check `docs/decisions/` for prior ADRs. Error recovery: `docs/error-recovery.md`. Changelog: `docs/CHANGELOG.md`.
 
 ## Review Agents
 
