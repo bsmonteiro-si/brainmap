@@ -324,7 +324,7 @@ function ContextMenu({
   const handleCopyRelativePath = () => {
     if (!state.node) return;
     onClose();
-    navigator.clipboard.writeText(state.node.fullPath).catch(() => {});
+    navigator.clipboard.writeText(`"${state.node.fullPath}"`).catch(() => {});
   };
 
   const handleCopyAbsolutePath = () => {
@@ -332,7 +332,7 @@ function ContextMenu({
     onClose();
     const wsRoot = useWorkspaceStore.getState().info?.root;
     if (!wsRoot) return;
-    navigator.clipboard.writeText(`${wsRoot.replace(/\/$/, "")}/${state.node.fullPath}`).catch(() => {});
+    navigator.clipboard.writeText(`"${wsRoot.replace(/\/$/, "")}/${state.node.fullPath}"`).catch(() => {});
   };
 
   const handleDuplicate = async () => {

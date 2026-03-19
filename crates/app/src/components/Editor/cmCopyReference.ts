@@ -14,9 +14,9 @@ export function buildReference(
   const startLine = lineAt(fromPos).number;
   const endLine = lineAt(toPos).number;
   if (startLine === endLine) {
-    return `${absolutePath}#L${startLine}`;
+    return `"${absolutePath}#L${startLine}"`;
   }
-  return `${absolutePath}#L${startLine}-${endLine}`;
+  return `"${absolutePath}#L${startLine}-${endLine}"`;
 }
 
 /**
