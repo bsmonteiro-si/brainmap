@@ -332,7 +332,7 @@ export function SettingsModal() {
                   <input
                     type="range"
                     min={0}
-                    max={40}
+                    max={50}
                     step={5}
                     value={boldTint}
                     onChange={(e) => setBoldTint(Number(e.target.value))}
@@ -348,7 +348,7 @@ export function SettingsModal() {
                   <input
                     type="range"
                     min={0}
-                    max={40}
+                    max={50}
                     step={5}
                     value={italicTint}
                     onChange={(e) => setItalicTint(Number(e.target.value))}
