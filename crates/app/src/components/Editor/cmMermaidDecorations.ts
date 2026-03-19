@@ -126,6 +126,7 @@ class MermaidWidget extends WidgetType {
       wrapper.style.borderRight = `1px solid color-mix(in srgb, ${this.calloutColor} 15%, transparent)`;
       wrapper.style.background = `color-mix(in srgb, ${this.calloutColor} 5%, transparent)`;
       wrapper.style.paddingLeft = "14px";
+      wrapper.style.marginLeft = "6px";
     }
 
     if (!this.cached) {
