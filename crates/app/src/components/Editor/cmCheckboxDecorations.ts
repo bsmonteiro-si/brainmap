@@ -17,13 +17,15 @@ import { RangeSetBuilder, StateField, type Text, type Extension } from "@codemir
 // ---------------------------------------------------------------------------
 // Regex
 // ---------------------------------------------------------------------------
-const CHECKBOX_RE = /^(\s*(?:[-*+]|\d+[.)]) )\[([ xX])\]/;
+const CHECKBOX_RE = /^(\s*(?:[-*+]|\d+[.)]) )\[([ xX]?)\]/;
 
 // ---------------------------------------------------------------------------
 // Scanner (exported for testing)
 // ---------------------------------------------------------------------------
 export interface CheckboxMatch {
   lineNumber: number;
+  /** Character offset of the list marker (e.g. `-`) — start of the replaced range */
+  markerFrom: number;
   /** Character offset of `[` in the document */
   bracketFrom: number;
   /** Character offset after `]` in the document */
@@ -38,14 +40,18 @@ export function scanCheckboxes(doc: Text): CheckboxMatch[] {
     const line = doc.line(i);
     const match = line.text.match(CHECKBOX_RE);
     if (match) {
+      const indent = match[1].length - match[1].trimStart().length;
+      const markerFrom = line.from + indent;
       const prefix = match[1];
       const bracketFrom = line.from + prefix.length;
-      const bracketTo = bracketFrom + 3; // `[x]` is 3 chars
+      const bracketLen = match[2].length === 0 ? 2 : 3; // `[]` is 2, `[x]`/`[ ]` is 3
+      const bracketTo = bracketFrom + bracketLen;
       results.push({
         lineNumber: i,
+        markerFrom,
         bracketFrom,
         bracketTo,
-        checked: match[2] !== " ",
+        checked: match[2] === "x" || match[2] === "X",
       });
     }
   }
@@ -88,7 +94,7 @@ function buildDecorations(doc: Text, cursorLine: number): DecorationSet {
   for (const m of matches) {
     if (m.lineNumber === cursorLine) continue;
     builder.add(
-      m.bracketFrom,
+      m.markerFrom,
       m.bracketTo,
       Decoration.replace({ widget: new CheckboxWidget(m.checked) }),
     );
@@ -126,13 +132,17 @@ const checkboxClickHandler = EditorView.domEventHandlers({
 
     event.preventDefault();
 
-    // posAtDOM returns the start of the replace decoration (the `[` of `[ ]`/`[x]`)
-    const bracketFrom = view.posAtDOM(target);
-    const bracketTo = bracketFrom + 3;
+    // posAtDOM returns the start of the replace decoration (the list marker)
+    const decoFrom = view.posAtDOM(target);
+    const line = view.state.doc.lineAt(decoFrom);
+    const match = line.text.match(CHECKBOX_RE);
+    if (!match) return false;
+    const bracketFrom = line.from + match[1].length;
+    const bracketLen = match[2].length === 0 ? 2 : 3;
+    const bracketTo = bracketFrom + bracketLen;
     const bracketContent = view.state.sliceDoc(bracketFrom, bracketTo);
-    // Verify we're actually looking at a checkbox bracket
-    if (bracketContent[0] !== "[" || bracketContent[2] !== "]") return false;
-    const isChecked = bracketContent[1] !== " ";
+    if (bracketContent[0] !== "[") return false;
+    const isChecked = match[2] === "x" || match[2] === "X";
     const replacement = isChecked ? "[ ]" : "[x]";
 
     view.dispatch({

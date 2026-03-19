@@ -13,6 +13,11 @@ import { remarkCalloutMerge } from "./remarkCalloutMerge";
 import { remarkInlineSource } from "./remarkInlineSource";
 import { preprocessCallouts, encodeLinkSpaces } from "./calloutPreprocess";
 
+/** Normalize bare `[]` to `[ ]` in task list items so remark-gfm recognises them. */
+function normalizeCheckboxes(md: string): string {
+  return md.replace(/^(\s*(?:[-*+]|\d+[.)]) )\[\]/gm, "$1[ ]");
+}
+
 /** Recursively extract text content from React children (for math rendering). */
 function extractTextContent(nodes: React.ReactNode[]): string {
   let text = "";
@@ -291,7 +296,7 @@ export function MarkdownPreview({ content, notePath }: Props) {
   return (
     <div className="md-preview" ref={containerRef}>
       <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={[rehypeRaw]} components={components}>
-        {encodeLinkSpaces(preprocessCallouts(content))}
+        {encodeLinkSpaces(preprocessCallouts(normalizeCheckboxes(content)))}
       </ReactMarkdown>
     </div>
   );

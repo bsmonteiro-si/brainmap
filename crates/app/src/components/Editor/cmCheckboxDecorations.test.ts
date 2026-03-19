@@ -62,6 +62,7 @@ describe("scanCheckboxes", () => {
   it("computes correct bracket offsets", () => {
     const d = doc("- [ ] todo");
     const matches = scanCheckboxes(d);
+    expect(matches[0].markerFrom).toBe(0);  // "-" starts at 0
     expect(matches[0].bracketFrom).toBe(2); // "- " is 2 chars
     expect(matches[0].bracketTo).toBe(5);   // "[ ]" is 3 chars
   });
@@ -69,8 +70,17 @@ describe("scanCheckboxes", () => {
   it("computes correct offsets for indented checkbox", () => {
     const d = doc("  - [ ] nested");
     const matches = scanCheckboxes(d);
+    expect(matches[0].markerFrom).toBe(2);  // indent is 2, marker starts at 2
     expect(matches[0].bracketFrom).toBe(4); // "  - " is 4 chars
     expect(matches[0].bracketTo).toBe(7);
+  });
+
+  it("computes correct markerFrom for numbered list", () => {
+    const d = doc("1. [ ] first");
+    const matches = scanCheckboxes(d);
+    expect(matches[0].markerFrom).toBe(0);
+    expect(matches[0].bracketFrom).toBe(3); // "1. " is 3 chars
+    expect(matches[0].bracketTo).toBe(6);
   });
 
   it("finds multiple checkboxes", () => {
@@ -80,6 +90,15 @@ describe("scanCheckboxes", () => {
     expect(matches[0].checked).toBe(false);
     expect(matches[1].checked).toBe(true);
     expect(matches[2].checked).toBe(false);
+  });
+
+  it("detects bare [] (no space inside) as unchecked", () => {
+    const d = doc("- [] todo");
+    const matches = scanCheckboxes(d);
+    expect(matches).toHaveLength(1);
+    expect(matches[0].checked).toBe(false);
+    expect(matches[0].bracketFrom).toBe(2);
+    expect(matches[0].bracketTo).toBe(4); // `[]` is 2 chars
   });
 
   it("does not match without list marker", () => {

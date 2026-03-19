@@ -12,6 +12,8 @@ import { RangeSetBuilder, StateField, type Text, type Extension } from "@codemir
 import { BULLET_PRESETS, type BulletStyle } from "../../stores/uiStore";
 
 const BULLET_RE = /^(\s*)([-*+]) /;
+/** Lines that are task-list checkboxes — bullet is replaced by the checkbox widget. */
+const CHECKBOX_RE = /^(\s*(?:[-*+]|\d+[.)]) )\[([ xX]?)\]/;
 
 /** Hardcoded to match cmListNesting.ts INDENT = "    " (4 spaces). */
 const INDENT_SIZE = 4;
@@ -58,7 +60,7 @@ export function scanBullets(doc: Text): BulletMatch[] {
   for (let i = 1; i <= doc.lines; i++) {
     const line = doc.line(i);
     const m = line.text.match(BULLET_RE);
-    if (m) {
+    if (m && !CHECKBOX_RE.test(line.text)) {
       const indent = m[1].length;
       results.push({
         lineNumber: i,
