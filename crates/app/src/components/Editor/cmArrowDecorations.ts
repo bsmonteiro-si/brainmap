@@ -6,7 +6,6 @@
  *   ->  → →   (right arrow)
  *   <-  → ←   (left arrow)
  *   =>  → ⇒   (double right arrow)
- *   <=  → ⇐   (double left arrow — only when not followed by >)
  *   <=> → ⇔   (double bidirectional)
  */
 import {
@@ -16,6 +15,7 @@ import {
   type DecorationSet,
 } from "@codemirror/view";
 import { RangeSetBuilder, StateField, type Text, type Extension } from "@codemirror/state";
+import type { ArrowType } from "../../stores/uiStore";
 
 class ArrowWidget extends WidgetType {
   constructor(readonly char: string) { super(); }
@@ -44,61 +44,64 @@ function getWidget(char: string): ArrowWidget {
   return w;
 }
 
-interface ArrowMatch {
+export interface ArrowMatch {
   lineNumber: number;
   from: number;
   to: number;
   char: string;
+  /** The raw ASCII sequence, e.g. "->" */
+  raw: ArrowType;
 }
 
-const ARROW_PATTERNS: [RegExp, string][] = [
-  [/<=>/g, "⇔"],
-  [/<->/g, "↔"],
-  [/=>/g,  "⇒"],
-  [/->/g,  "→"],
-  [/<-/g,  "←"],
-  // <= is intentionally omitted — too ambiguous with "less than or equal"
+/** All patterns ordered longest-first to prevent overlapping matches. */
+const ALL_ARROW_PATTERNS: { re: RegExp; char: string; raw: ArrowType }[] = [
+  { re: /<=>/g, char: "⇔", raw: "<=>" },
+  { re: /<->/g, char: "↔", raw: "<->" },
+  { re: /=>/g,  char: "⇒", raw: "=>" },
+  { re: /->/g,  char: "→", raw: "->" },
+  { re: /<-/g,  char: "←", raw: "<-" },
 ];
 
-export function scanArrows(doc: Text): ArrowMatch[] {
+export function scanArrows(doc: Text, enabledTypes?: ArrowType[]): ArrowMatch[] {
+  const patterns = enabledTypes
+    ? ALL_ARROW_PATTERNS.filter((p) => enabledTypes.includes(p.raw))
+    : ALL_ARROW_PATTERNS;
+
   const results: ArrowMatch[] = [];
   for (let i = 1; i <= doc.lines; i++) {
     const line = doc.line(i);
     const text = line.text;
-    // Track which character positions have already been matched to avoid overlaps
     const matched = new Set<number>();
 
-    for (const [re, char] of ARROW_PATTERNS) {
+    for (const { re, char, raw } of patterns) {
       re.lastIndex = 0;
       let m: RegExpExecArray | null;
       while ((m = re.exec(text)) !== null) {
         const start = m.index;
         const end = start + m[0].length;
-        // Skip if any position in this match is already claimed
         let overlap = false;
         for (let p = start; p < end; p++) {
           if (matched.has(p)) { overlap = true; break; }
         }
         if (overlap) continue;
-        // Mark positions as claimed
         for (let p = start; p < end; p++) matched.add(p);
         results.push({
           lineNumber: i,
           from: line.from + start,
           to: line.from + end,
           char,
+          raw,
         });
       }
     }
   }
-  // Sort by document position for RangeSetBuilder
   results.sort((a, b) => a.from - b.from);
   return results;
 }
 
-export function buildArrowDecorations(doc: Text, cursorLine: number): DecorationSet {
+export function buildArrowDecorations(doc: Text, cursorLine: number, enabledTypes?: ArrowType[]): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
-  for (const m of scanArrows(doc)) {
+  for (const m of scanArrows(doc, enabledTypes)) {
     if (m.lineNumber === cursorLine) continue;
     builder.add(
       m.from,
@@ -109,16 +112,16 @@ export function buildArrowDecorations(doc: Text, cursorLine: number): Decoration
   return builder.finish();
 }
 
-export function arrowDecorations(): Extension {
+export function arrowDecorations(enabledTypes?: ArrowType[]): Extension {
   return StateField.define<{ cursorLine: number; decos: DecorationSet }>({
     create(state) {
       const cursorLine = state.doc.lineAt(state.selection.main.head).number;
-      return { cursorLine, decos: buildArrowDecorations(state.doc, cursorLine) };
+      return { cursorLine, decos: buildArrowDecorations(state.doc, cursorLine, enabledTypes) };
     },
     update(value, tr) {
       const cursorLine = tr.state.doc.lineAt(tr.state.selection.main.head).number;
       if (!tr.docChanged && cursorLine === value.cursorLine) return value;
-      return { cursorLine, decos: buildArrowDecorations(tr.state.doc, cursorLine) };
+      return { cursorLine, decos: buildArrowDecorations(tr.state.doc, cursorLine, enabledTypes) };
     },
     provide: (f) => EditorView.decorations.from(f, (v) => v.decos),
   });

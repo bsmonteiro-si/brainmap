@@ -85,6 +85,27 @@ describe("scanArrows", () => {
   });
 });
 
+describe("scanArrows with enabledTypes filter", () => {
+  it("only matches enabled types", () => {
+    const d = doc(["a -> b => c <- d"]);
+    const matches = scanArrows(d, ["->"]);
+    expect(matches).toHaveLength(1);
+    expect(matches[0].char).toBe("→");
+  });
+
+  it("returns empty when no types enabled", () => {
+    const d = doc(["a -> b => c"]);
+    expect(scanArrows(d, [])).toHaveLength(0);
+  });
+
+  it("respects bidirectional priority with filter", () => {
+    const d = doc(["a <-> b"]);
+    const matches = scanArrows(d, ["<->", "->", "<-"]);
+    expect(matches).toHaveLength(1);
+    expect(matches[0].char).toBe("↔");
+  });
+});
+
 describe("buildArrowDecorations", () => {
   it("skips decoration on cursor line", () => {
     const d = doc(["a -> b", "c -> d", "e -> f"]);

@@ -1789,7 +1789,7 @@ body {
   font-size: 0.95em;
 }
 .editor-body .cm-editor .cm-arrow-widget {
-  color: var(--accent);
+  color: var(--arrow-color, var(--accent));
 }
 .editor-body .cm-editor .cm-checkbox-widget {
   accent-color: var(--accent);

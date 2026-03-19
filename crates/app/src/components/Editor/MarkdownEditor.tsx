@@ -119,6 +119,8 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
   const spellCheck = useUIStore((s) => s.spellCheck);
   const editorIndentSize = useUIStore((s) => s.editorIndentSize);
   const bulletStyle = useUIStore((s) => s.bulletStyle);
+  const arrowLigatures = useUIStore((s) => s.arrowLigatures);
+  const arrowEnabledTypes = useUIStore((s) => s.arrowEnabledTypes);
   const wsRoot = useWorkspaceStore((s) => s.info?.root);
 
   // Keep refs up-to-date
@@ -168,7 +170,9 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
         checkboxDecorations(),
         bulletDecorations(bulletStyle),
         orderedListDecorations(),
-        arrowDecorations(),
+        ...(arrowLigatures && arrowEnabledTypes.length > 0
+          ? [arrowDecorations(arrowEnabledTypes)]
+          : []),
         headingFoldService(),
         mermaidDecorations(isDark),
       );
@@ -244,7 +248,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
       viewRef.current = null;
       onViewReady?.(null);
     };
-  }, [notePath, effectiveTheme, uiZoom, editorFontFamily, editorFontSize, readOnly, raw, wsRoot, showLineNumbers, lineWrapping, spellCheck, editorIndentSize, bulletStyle]);
+  }, [notePath, effectiveTheme, uiZoom, editorFontFamily, editorFontSize, readOnly, raw, wsRoot, showLineNumbers, lineWrapping, spellCheck, editorIndentSize, bulletStyle, arrowLigatures, arrowEnabledTypes]);
 
   // Sync external content changes (e.g., after save or conflict resolution)
   // without recreating the editor

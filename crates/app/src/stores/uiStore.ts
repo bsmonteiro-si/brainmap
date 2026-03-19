@@ -53,6 +53,23 @@ export const BULLET_PRESETS: Record<BulletStyle, [string, string, string]> = {
   minimal: ["•", "•", "•"],
 };
 
+export type ArrowColorStyle = "accent" | "muted" | "inherit";
+export const ARROW_COLOR_OPTIONS: { value: ArrowColorStyle; label: string }[] = [
+  { value: "accent",  label: "Accent" },
+  { value: "muted",   label: "Muted" },
+  { value: "inherit",  label: "Inherit (body text)" },
+];
+
+export type ArrowType = "->" | "<-" | "<->" | "=>" | "<=>";
+export const ARROW_TYPE_LABELS: Record<ArrowType, string> = {
+  "->":  "→  (right arrow)",
+  "<-":  "←  (left arrow)",
+  "<->": "↔  (bidirectional)",
+  "=>":  "⇒  (double right)",
+  "<=>": "⇔  (double bidirectional)",
+};
+export const ALL_ARROW_TYPES: ArrowType[] = ["->", "<-", "<->", "=>", "<=>"];
+
 export const BOLD_WEIGHT_OPTIONS: { value: number; label: string }[] = [
   { value: 500, label: "Medium (500)" },
   { value: 600, label: "Semibold (600)" },
@@ -200,6 +217,9 @@ interface PersistedPrefs {
   boldWeight?: number;
   boldTint?: number;
   italicTint?: number;
+  arrowLigatures?: boolean;
+  arrowEnabledTypes?: ArrowType[];
+  arrowColor?: ArrowColorStyle;
 }
 
 type CreateNoteMode = "default" | "create-and-link";
@@ -285,6 +305,9 @@ interface UIState {
   boldWeight: number;
   boldTint: number;
   italicTint: number;
+  arrowLigatures: boolean;
+  arrowEnabledTypes: ArrowType[];
+  arrowColor: ArrowColorStyle;
   emptyFolders: Set<string>;
   homeNotePath: string | null;
   customFileOrder: Record<string, string[]>;
@@ -361,6 +384,9 @@ interface UIState {
   setBoldWeight: (v: number) => void;
   setBoldTint: (v: number) => void;
   setItalicTint: (v: number) => void;
+  setArrowLigatures: (v: boolean) => void;
+  toggleArrowType: (t: ArrowType) => void;
+  setArrowColor: (v: ArrowColorStyle) => void;
   setDefaultTabSize: (tab: LeftTab, content: number) => void;
   resetLayoutPrefs: () => void;
   resetWorkspaceState: () => void;
@@ -525,6 +551,9 @@ export const useUIStore = create<UIState>((set, get) => ({
   boldWeight: storedPrefs.boldWeight ?? 700,
   boldTint: storedPrefs.boldTint ?? 35,
   italicTint: storedPrefs.italicTint ?? 35,
+  arrowLigatures: storedPrefs.arrowLigatures ?? true,
+  arrowEnabledTypes: storedPrefs.arrowEnabledTypes ?? [...ALL_ARROW_TYPES],
+  arrowColor: storedPrefs.arrowColor ?? "accent",
   tooltipFontSize: storedPrefs.tooltipFontSize ?? DEFAULT_TOOLTIP_SIZE,
   tooltipPillSize: storedPrefs.tooltipPillSize ?? DEFAULT_TOOLTIP_PILL_SIZE,
   tooltipConnectionsSize: storedPrefs.tooltipConnectionsSize ?? DEFAULT_TOOLTIP_CONNECTIONS_SIZE,
@@ -794,6 +823,25 @@ export const useUIStore = create<UIState>((set, get) => ({
   setItalicTint: (v: number) => {
     set({ italicTint: v });
     savePrefs({ italicTint: v });
+  },
+
+  setArrowLigatures: (v: boolean) => {
+    set({ arrowLigatures: v });
+    savePrefs({ arrowLigatures: v });
+  },
+
+  toggleArrowType: (t: ArrowType) => {
+    const current = get().arrowEnabledTypes;
+    const next = current.includes(t)
+      ? current.filter((x) => x !== t)
+      : [...current, t];
+    set({ arrowEnabledTypes: next });
+    savePrefs({ arrowEnabledTypes: next });
+  },
+
+  setArrowColor: (v: ArrowColorStyle) => {
+    set({ arrowColor: v });
+    savePrefs({ arrowColor: v });
   },
 
   setTooltipFontSize: (v: number) => {

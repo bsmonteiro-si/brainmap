@@ -1,5 +1,5 @@
-import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES, THEME_OPTIONS, SOURCE_STYLE_OPTIONS, EXAMPLE_STYLE_OPTIONS, MATH_STYLE_OPTIONS, ATTENTION_STYLE_OPTIONS, BULLET_STYLE_OPTIONS, BOLD_WEIGHT_OPTIONS } from "../../stores/uiStore";
-import type { LeftTab, ComponentTheme, ThemeName, SourceStyle, ExampleStyle, MathStyle, AttentionStyle, BulletStyle } from "../../stores/uiStore";
+import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES, THEME_OPTIONS, SOURCE_STYLE_OPTIONS, EXAMPLE_STYLE_OPTIONS, MATH_STYLE_OPTIONS, ATTENTION_STYLE_OPTIONS, BULLET_STYLE_OPTIONS, BOLD_WEIGHT_OPTIONS, ARROW_COLOR_OPTIONS, ARROW_TYPE_LABELS, ALL_ARROW_TYPES } from "../../stores/uiStore";
+import type { LeftTab, ComponentTheme, ThemeName, SourceStyle, ExampleStyle, MathStyle, AttentionStyle, BulletStyle, ArrowColorStyle, ArrowType } from "../../stores/uiStore";
 
 function FontFamilySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const presetValue =
@@ -77,6 +77,12 @@ export function SettingsModal() {
   const setBoldTint = useUIStore((s) => s.setBoldTint);
   const italicTint = useUIStore((s) => s.italicTint);
   const setItalicTint = useUIStore((s) => s.setItalicTint);
+  const arrowLigatures = useUIStore((s) => s.arrowLigatures);
+  const setArrowLigatures = useUIStore((s) => s.setArrowLigatures);
+  const arrowEnabledTypes = useUIStore((s) => s.arrowEnabledTypes);
+  const toggleArrowType = useUIStore((s) => s.toggleArrowType);
+  const arrowColor = useUIStore((s) => s.arrowColor);
+  const setArrowColor = useUIStore((s) => s.setArrowColor);
   const lineWrapping = useUIStore((s) => s.lineWrapping);
   const setLineWrapping = useUIStore((s) => s.setLineWrapping);
   const spellCheck = useUIStore((s) => s.spellCheck);
@@ -357,6 +363,49 @@ export function SettingsModal() {
                 </div>
               </div>
             </div>
+            <div className="settings-row" style={{ alignItems: "center" }}>
+              <span className="settings-label">Arrow ligatures</span>
+              <label className="settings-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={arrowLigatures}
+                  onChange={(e) => setArrowLigatures(e.target.checked)}
+                />
+                Replace ASCII arrows with Unicode
+              </label>
+            </div>
+            {arrowLigatures && (
+              <>
+                <div className="settings-row">
+                  <span className="settings-label">Arrow types</span>
+                  <div className="settings-control" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {ALL_ARROW_TYPES.map((t) => (
+                      <label key={t} className="settings-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={arrowEnabledTypes.includes(t)}
+                          onChange={() => toggleArrowType(t)}
+                        />
+                        {ARROW_TYPE_LABELS[t]}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="settings-row">
+                  <span className="settings-label">Arrow color</span>
+                  <div className="settings-control">
+                    <select
+                      value={arrowColor}
+                      onChange={(e) => setArrowColor(e.target.value as ArrowColorStyle)}
+                    >
+                      {ARROW_COLOR_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </>
+            )}
             <div className="settings-row" style={{ alignItems: "center" }}>
               <span className="settings-label">Line wrapping</span>
               <label className="settings-checkbox-label">

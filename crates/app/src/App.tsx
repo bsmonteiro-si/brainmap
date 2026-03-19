@@ -55,6 +55,7 @@ function App() {
   const boldWeight = useUIStore((s) => s.boldWeight);
   const boldTint = useUIStore((s) => s.boldTint);
   const italicTint = useUIStore((s) => s.italicTint);
+  const arrowColor = useUIStore((s) => s.arrowColor);
 
   // Subscribe to workspace events for live updates
   useEffect(() => {
@@ -356,7 +357,12 @@ function App() {
         ? `color-mix(in srgb, var(--text-primary) ${100 - italicTint}%, var(--accent))`
         : "inherit"
     );
-  }, [boldWeight, boldTint, italicTint]);
+    const arrowColorValue =
+      arrowColor === "accent" ? "var(--accent)"
+      : arrowColor === "muted" ? "var(--text-muted)"
+      : "inherit";
+    root.style.setProperty("--arrow-color", arrowColorValue);
+  }, [boldWeight, boldTint, italicTint, arrowColor]);
 
   // Apply zoom at document level so mouse event coordinates remain consistent
   // (applying zoom to a sub-element breaks Cytoscape hit-testing).
