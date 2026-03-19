@@ -1,7 +1,6 @@
 /**
  * CodeMirror 6 extension that replaces unordered list markers (`-`, `*`, `+`)
- * with depth-aware bullet characters. Cursor-aware: shows raw marker when the
- * cursor is on the same line. Bullet shape is configurable via BulletStyle.
+ * with depth-aware bullet characters. Bullet shape is configurable via BulletStyle.
  */
 import {
   EditorView,

@@ -1,7 +1,6 @@
 /**
  * CodeMirror 6 extension that styles ordered list markers (`1.`, `a.`, `iii.`)
- * with accent coloring. Cursor-aware: shows raw marker when the cursor is on
- * the same line.
+ * with accent coloring.
  *
  * Regex restricts alpha to single chars and roman to max 4 chars to avoid
  * false positives on prose (e.g. `e.g.`, `etc.`).
