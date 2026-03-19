@@ -50,6 +50,8 @@ function App() {
   const uiZoom = useUIStore((s) => s.uiZoom); // drives zoom useEffect below
   const sourceStyle = useUIStore((s) => s.sourceStyle);
   const exampleStyle = useUIStore((s) => s.exampleStyle);
+  const mathStyle = useUIStore((s) => s.mathStyle);
+  const attentionStyle = useUIStore((s) => s.attentionStyle);
 
   // Subscribe to workspace events for live updates
   useEffect(() => {
@@ -316,6 +318,12 @@ function App() {
   useEffect(() => {
     document.documentElement.setAttribute("data-example-style", exampleStyle);
   }, [exampleStyle]);
+  useEffect(() => {
+    document.documentElement.setAttribute("data-math-style", mathStyle);
+  }, [mathStyle]);
+  useEffect(() => {
+    document.documentElement.setAttribute("data-attention-style", attentionStyle);
+  }, [attentionStyle]);
 
   // Apply font CSS variables
   useEffect(() => {

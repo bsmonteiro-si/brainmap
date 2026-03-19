@@ -83,6 +83,12 @@ const CALLOUT_ICON_PATHS: Record<string, SvgElement[]> = {
     // Sigma
     ["path", { d: "M18 7V5a1 1 0 0 0-1-1H6.5a.5.5 0 0 0-.4.8l4.5 6a2 2 0 0 1 0 2.4l-4.5 6a.5.5 0 0 0 .4.8H17a1 1 0 0 0 1-1v-2" }],
   ],
+  attention: [
+    // TriangleAlert
+    ["path", { d: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" }],
+    ["path", { d: "M12 9v4" }],
+    ["path", { d: "M12 17h.01" }],
+  ],
 };
 
 // Fallback: Info circle

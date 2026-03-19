@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { SLASH_COMMANDS, filterSlashCommands } from "./cmSlashCommands";
 import { CALLOUT_TYPE_ENTRIES } from "./calloutTypes";
 
-const STATIC_COMMAND_COUNT = 15; // headings(3) + lists(3) + blocks(6) + inline source(1) + inline example(1) + math(1)
+const STATIC_COMMAND_COUNT = 16; // headings(3) + lists(3) + blocks(6) + inline source(1) + inline example(1) + inline math(1) + math block(1)
 const SKIP_AUTO_GEN_COUNT = 1; // math (has custom command, excluded from auto-gen)
 
 describe("SLASH_COMMANDS registry", () => {
@@ -61,6 +61,12 @@ describe("SLASH_COMMANDS registry", () => {
   it("includes inline example command", () => {
     const keywords = SLASH_COMMANDS.map((c) => c.keyword);
     expect(keywords).toContain("example");
+  });
+
+  it("includes inline math and math block commands", () => {
+    const keywords = SLASH_COMMANDS.map((c) => c.keyword);
+    expect(keywords).toContain("imath");
+    expect(keywords).toContain("math");
   });
 
   it("has valid sections", () => {

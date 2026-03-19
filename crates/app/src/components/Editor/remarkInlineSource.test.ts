@@ -32,6 +32,16 @@ function hasInlineExample(tree: Root): boolean {
   return htmlNodes(tree).some((v) => v.includes("inline-example"));
 }
 
+/** Check if any HTML node contains inline-math markup. */
+function hasInlineMath(tree: Root): boolean {
+  return htmlNodes(tree).some((v) => v.includes("inline-math"));
+}
+
+/** Check if any HTML node contains inline-attention markup. */
+function hasInlineAttention(tree: Root): boolean {
+  return htmlNodes(tree).some((v) => v.includes("inline-attention"));
+}
+
 describe("remarkInlineSource", () => {
   it("transforms a basic inline source citation", () => {
     const tree = process("Some text [!source Book of Why, Ch.1] more text.");
@@ -158,5 +168,94 @@ describe("remarkInlineSource – inline example", () => {
     expect(hasInlineExample(tree)).toBe(true);
     const html = htmlNodes(tree);
     expect(html[0]).toContain("quicksort");
+  });
+});
+
+describe("remarkInlineSource – inline math", () => {
+  it("transforms a basic inline math expression", () => {
+    const tree = process("Text [!math E=mc^2] more.");
+    expect(hasInlineMath(tree)).toBe(true);
+    const html = htmlNodes(tree);
+    expect(html[0]).toContain("inline-math-tag");
+    // KaTeX renders to .katex class
+    expect(html[0]).toContain("katex");
+  });
+
+  it("does NOT match empty content [!math ]", () => {
+    const tree = process("Text [!math ] end.");
+    expect(hasInlineMath(tree)).toBe(false);
+  });
+
+  it("does NOT match without space after !math", () => {
+    const tree = process("Text [!mathtext] end.");
+    expect(hasInlineMath(tree)).toBe(false);
+  });
+
+  it("does NOT transform inside fenced code blocks", () => {
+    const tree = process("```\n[!math x^2]\n```");
+    expect(hasInlineMath(tree)).toBe(false);
+  });
+
+  it("works inside headings", () => {
+    const tree = process("## Title [!math \\alpha]");
+    expect(hasInlineMath(tree)).toBe(true);
+  });
+
+  it("works alongside source and example", () => {
+    const tree = process("Text [!source A] and [!math x] and [!example B].");
+    const html = htmlNodes(tree);
+    expect(html.some((v) => v.includes("inline-source"))).toBe(true);
+    expect(html.some((v) => v.includes("inline-math"))).toBe(true);
+    expect(html.some((v) => v.includes("inline-example"))).toBe(true);
+  });
+});
+
+describe("remarkInlineSource – inline attention", () => {
+  it("transforms a basic inline attention citation", () => {
+    const tree = process("Text [!attention check this] more.");
+    expect(hasInlineAttention(tree)).toBe(true);
+    const html = htmlNodes(tree);
+    expect(html[0]).toContain("inline-attention-tag");
+    expect(html[0]).toContain("check this");
+  });
+
+  it("transforms mixed attention with source and example", () => {
+    const tree = process("Text [!source A] and [!attention B] and [!example C].");
+    const html = htmlNodes(tree);
+    expect(html.some((v) => v.includes("inline-source"))).toBe(true);
+    expect(html.some((v) => v.includes("inline-attention"))).toBe(true);
+    expect(html.some((v) => v.includes("inline-example"))).toBe(true);
+  });
+
+  it("does NOT match empty content [!attention ]", () => {
+    const tree = process("Text [!attention ] end.");
+    expect(hasInlineAttention(tree)).toBe(false);
+  });
+
+  it("does NOT match without space after !attention", () => {
+    const tree = process("Text [!attentiontext] end.");
+    expect(hasInlineAttention(tree)).toBe(false);
+  });
+
+  it("does NOT transform inside fenced code blocks", () => {
+    const tree = process("```\n[!attention not a cite]\n```");
+    expect(hasInlineAttention(tree)).toBe(false);
+  });
+
+  it("does NOT transform inside inline code", () => {
+    const tree = process("Text `[!attention not a cite]` more.");
+    expect(hasInlineAttention(tree)).toBe(false);
+  });
+
+  it("works inside headings", () => {
+    const tree = process("## Title [!attention important note]");
+    expect(hasInlineAttention(tree)).toBe(true);
+  });
+
+  it("works inside list items", () => {
+    const tree = process("- Item [!attention watch out]");
+    expect(hasInlineAttention(tree)).toBe(true);
+    const html = htmlNodes(tree);
+    expect(html[0]).toContain("watch out");
   });
 });

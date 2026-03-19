@@ -23,6 +23,22 @@ export const EXAMPLE_STYLE_OPTIONS: { value: ExampleStyle; label: string }[] = [
   { value: "quotes", label: "Quotation marks" },
 ];
 
+export type MathStyle = "underline" | "pill" | "icon" | "quotes";
+export const MATH_STYLE_OPTIONS: { value: MathStyle; label: string }[] = [
+  { value: "underline", label: "Underline + label" },
+  { value: "pill", label: "Pill badge" },
+  { value: "icon", label: "Sigma icon" },
+  { value: "quotes", label: "Quotation marks" },
+];
+
+export type AttentionStyle = "underline" | "pill" | "icon" | "quotes";
+export const ATTENTION_STYLE_OPTIONS: { value: AttentionStyle; label: string }[] = [
+  { value: "underline", label: "Underline + label" },
+  { value: "pill", label: "Pill badge" },
+  { value: "icon", label: "Alert icon" },
+  { value: "quotes", label: "Quotation marks" },
+];
+
 export const THEME_BASE: Record<ThemeName, "light" | "dark"> = {
   light: "light",
   dark: "dark",
@@ -150,6 +166,8 @@ interface PersistedPrefs {
   relatedNotesExpanded?: boolean;
   sourceStyle?: SourceStyle;
   exampleStyle?: ExampleStyle;
+  mathStyle?: MathStyle;
+  attentionStyle?: AttentionStyle;
   fileSortOrder?: FileSortOrder;
   autoRevealFile?: boolean;
   lineWrapping?: boolean;
@@ -235,6 +253,8 @@ interface UIState {
   relatedNotesExpanded: boolean;
   sourceStyle: SourceStyle;
   exampleStyle: ExampleStyle;
+  mathStyle: MathStyle;
+  attentionStyle: AttentionStyle;
   emptyFolders: Set<string>;
   homeNotePath: string | null;
   customFileOrder: Record<string, string[]>;
@@ -305,6 +325,8 @@ interface UIState {
   resetFontPrefs: () => void;
   setSourceStyle: (v: SourceStyle) => void;
   setExampleStyle: (v: ExampleStyle) => void;
+  setMathStyle: (v: MathStyle) => void;
+  setAttentionStyle: (v: AttentionStyle) => void;
   setDefaultTabSize: (tab: LeftTab, content: number) => void;
   resetLayoutPrefs: () => void;
   resetWorkspaceState: () => void;
@@ -463,6 +485,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   showLineNumbers: storedPrefs.editorLineNumbers ?? false,
   sourceStyle: storedPrefs.sourceStyle ?? "pill",
   exampleStyle: storedPrefs.exampleStyle ?? "pill",
+  mathStyle: storedPrefs.mathStyle ?? "pill",
+  attentionStyle: storedPrefs.attentionStyle ?? "pill",
   tooltipFontSize: storedPrefs.tooltipFontSize ?? DEFAULT_TOOLTIP_SIZE,
   tooltipPillSize: storedPrefs.tooltipPillSize ?? DEFAULT_TOOLTIP_PILL_SIZE,
   tooltipConnectionsSize: storedPrefs.tooltipConnectionsSize ?? DEFAULT_TOOLTIP_CONNECTIONS_SIZE,
@@ -702,6 +726,16 @@ export const useUIStore = create<UIState>((set, get) => ({
   setExampleStyle: (v: ExampleStyle) => {
     set({ exampleStyle: v });
     savePrefs({ exampleStyle: v });
+  },
+
+  setMathStyle: (v: MathStyle) => {
+    set({ mathStyle: v });
+    savePrefs({ mathStyle: v });
+  },
+
+  setAttentionStyle: (v: AttentionStyle) => {
+    set({ attentionStyle: v });
+    savePrefs({ attentionStyle: v });
   },
 
   setTooltipFontSize: (v: number) => {

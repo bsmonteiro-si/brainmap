@@ -2,6 +2,13 @@
 
 Feature history moved from CLAUDE.md. Organized by phase and feature area.
 
+## Editor — Attention Callout
+
+- **Block callout**: `[!attention] Title { ... }` renders with amber-orange (#ff6b35) border, TriangleAlert icon, cursor-aware header widget, and fold support.
+- **Inline citation**: `[!attention some text]` with 4 toggleable display styles (underline, pill, icon, quotes) — same as source/example/math.
+- **Settings**: "Attention citations" style selector in Settings modal.
+- **Preview**: Styled inline rendering in MarkdownPreview via remarkInlineSource plugin.
+
 ## Final Polish — Settings & File Management
 
 Five remaining features:

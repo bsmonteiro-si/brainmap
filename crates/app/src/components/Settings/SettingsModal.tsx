@@ -1,5 +1,5 @@
-import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES, THEME_OPTIONS, SOURCE_STYLE_OPTIONS, EXAMPLE_STYLE_OPTIONS } from "../../stores/uiStore";
-import type { LeftTab, ComponentTheme, ThemeName, SourceStyle, ExampleStyle } from "../../stores/uiStore";
+import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES, THEME_OPTIONS, SOURCE_STYLE_OPTIONS, EXAMPLE_STYLE_OPTIONS, MATH_STYLE_OPTIONS, ATTENTION_STYLE_OPTIONS } from "../../stores/uiStore";
+import type { LeftTab, ComponentTheme, ThemeName, SourceStyle, ExampleStyle, MathStyle, AttentionStyle } from "../../stores/uiStore";
 
 function FontFamilySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const presetValue =
@@ -65,6 +65,10 @@ export function SettingsModal() {
   const setSourceStyle = useUIStore((s) => s.setSourceStyle);
   const exampleStyle = useUIStore((s) => s.exampleStyle);
   const setExampleStyle = useUIStore((s) => s.setExampleStyle);
+  const attentionStyle = useUIStore((s) => s.attentionStyle);
+  const setAttentionStyle = useUIStore((s) => s.setAttentionStyle);
+  const mathStyle = useUIStore((s) => s.mathStyle);
+  const setMathStyle = useUIStore((s) => s.setMathStyle);
   const lineWrapping = useUIStore((s) => s.lineWrapping);
   const setLineWrapping = useUIStore((s) => s.setLineWrapping);
   const spellCheck = useUIStore((s) => s.spellCheck);
@@ -256,6 +260,32 @@ export function SettingsModal() {
                   onChange={(e) => setExampleStyle(e.target.value as ExampleStyle)}
                 >
                   {EXAMPLE_STYLE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Math citations</span>
+              <div className="settings-control">
+                <select
+                  value={mathStyle}
+                  onChange={(e) => setMathStyle(e.target.value as MathStyle)}
+                >
+                  {MATH_STYLE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Attention citations</span>
+              <div className="settings-control">
+                <select
+                  value={attentionStyle}
+                  onChange={(e) => setAttentionStyle(e.target.value as AttentionStyle)}
+                >
+                  {ATTENTION_STYLE_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>

@@ -9,9 +9,10 @@
  */
 
 import type { Root, PhrasingContent, Parent } from "mdast";
+import katex from "katex";
 
 /** Inline callout types supported by this plugin. */
-const INLINE_TYPES = ["source", "example"];
+const INLINE_TYPES = ["source", "example", "math", "attention"];
 
 const INLINE_RE = new RegExp(
   `\\[!(${INLINE_TYPES.join("|")})\\s+([^\\]]+)\\]`,
@@ -84,9 +85,19 @@ function transformPhrasing(parent: Parent & { children: PhrasingContent[] }) {
       if (m.index > lastIndex) {
         newChildren.push({ type: "text", value: value.slice(lastIndex, m.index) });
       }
+      let renderedContent: string;
+      if (type === "math") {
+        try {
+          renderedContent = katex.renderToString(content, { throwOnError: false });
+        } catch {
+          renderedContent = escapeHtml(content);
+        }
+      } else {
+        renderedContent = escapeHtml(content);
+      }
       newChildren.push({
         type: "html",
-        value: `<span class="inline-${type}"><span class="inline-${type}-tag">${type}</span>${escapeHtml(content)}</span>`,
+        value: `<span class="inline-${type}"><span class="inline-${type}-tag">${type}</span>${renderedContent}</span>`,
       });
       lastIndex = m.index + m[0].length;
     }

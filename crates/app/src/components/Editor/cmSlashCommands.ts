@@ -323,6 +323,15 @@ export const SLASH_COMMANDS: SlashCommandDef[] = [
       replaceWith(v, from, to, '[!example ""]', '[!example "'.length),
   },
   {
+    keyword: "imath",
+    label: "Inline Math",
+    detail: "Inline LaTeX expression",
+    section: "BrainMap",
+    icon: "sigma",
+    apply: (v, from, to) =>
+      replaceWith(v, from, to, '[!math ]', '[!math '.length),
+  },
+  {
     keyword: "math",
     label: "Math Block",
     detail: "LaTeX equation (KaTeX)",

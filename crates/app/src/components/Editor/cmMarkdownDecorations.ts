@@ -17,6 +17,7 @@ import { RangeSetBuilder, StateField, type Text, type Extension } from "@codemir
 import { syntaxTree } from "@codemirror/language";
 import type { EditorState } from "@codemirror/state";
 import { formatTable, isTableFormatted, parseCells, parseAlignment, DELIM_CELL_RE, type Alignment } from "./tableFormatter";
+import katex from "katex";
 
 // ---------------------------------------------------------------------------
 // Shared utility: scan fenced code blocks
@@ -251,7 +252,7 @@ class TableWidget extends WidgetType {
 // ---------------------------------------------------------------------------
 // Inline citation marks (no replace widgets — preserves CM hit-testing)
 // ---------------------------------------------------------------------------
-const INLINE_CITATION_RE = /\[!(source|example)\s+([^\]]+)\]/g;
+const INLINE_CITATION_RE = /\[!(source|example|math|attention)\s+([^\]]+)\]/g;
 
 const sourceTagMark = Decoration.mark({ class: "cm-source-tag" });
 const sourceContentMark = Decoration.mark({ class: "cm-source-content" });
@@ -260,6 +261,59 @@ const sourceBracketMark = Decoration.mark({ class: "cm-source-bracket" });
 const exampleTagMark = Decoration.mark({ class: "cm-example-tag" });
 const exampleContentMark = Decoration.mark({ class: "cm-example-content" });
 const exampleBracketMark = Decoration.mark({ class: "cm-example-bracket" });
+
+const mathTagMark = Decoration.mark({ class: "cm-math-tag" });
+const mathContentMark = Decoration.mark({ class: "cm-math-content" });
+const mathBracketMark = Decoration.mark({ class: "cm-math-bracket" });
+
+const attentionTagMark = Decoration.mark({ class: "cm-attention-tag" });
+const attentionContentMark = Decoration.mark({ class: "cm-attention-content" });
+const attentionBracketMark = Decoration.mark({ class: "cm-attention-bracket" });
+
+const CITATION_MARKS: Record<string, { tag: Decoration; content: Decoration; bracket: Decoration }> = {
+  source: { tag: sourceTagMark, content: sourceContentMark, bracket: sourceBracketMark },
+  example: { tag: exampleTagMark, content: exampleContentMark, bracket: exampleBracketMark },
+  math: { tag: mathTagMark, content: mathContentMark, bracket: mathBracketMark },
+  attention: { tag: attentionTagMark, content: attentionContentMark, bracket: attentionBracketMark },
+};
+
+// ---------------------------------------------------------------------------
+// Inline math widget (renders KaTeX inline, replacing raw LaTeX text)
+// ---------------------------------------------------------------------------
+class InlineMathWidget extends WidgetType {
+  constructor(readonly latex: string) {
+    super();
+  }
+
+  eq(other: InlineMathWidget): boolean {
+    return this.latex === other.latex;
+  }
+
+  toDOM(): HTMLElement {
+    const wrapper = document.createElement("span");
+    wrapper.className = "cm-inline-math-widget";
+
+    const badge = document.createElement("span");
+    badge.className = "cm-inline-math-badge";
+    badge.textContent = "math";
+    wrapper.appendChild(badge);
+
+    const mathSpan = document.createElement("span");
+    mathSpan.className = "cm-inline-math-rendered";
+    try {
+      katex.render(this.latex, mathSpan, { throwOnError: false });
+    } catch {
+      mathSpan.textContent = this.latex;
+    }
+    wrapper.appendChild(mathSpan);
+
+    return wrapper;
+  }
+
+  ignoreEvent(): boolean {
+    return false;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Decoration builders
@@ -385,7 +439,7 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
       if (node.name === "Link") {
         // Track as skip range for inline source scanning (unless it IS an inline source)
         const linkText = state.sliceDoc(node.from, node.to);
-        if (!linkText.startsWith("[!source") && !linkText.startsWith("[!example")) {
+        if (!linkText.startsWith("[!source") && !linkText.startsWith("[!example") && !linkText.startsWith("[!math") && !linkText.startsWith("[!attention")) {
           sourceSkipRanges.push([node.from, node.to]);
         }
         const linkLine = doc.lineAt(node.from).number;
@@ -428,10 +482,20 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
         ([sf, st]) => matchFrom < st && matchTo > sf,
       );
       if (overlaps) continue;
-      // Select mark set based on citation type
-      const tagMark = type === "example" ? exampleTagMark : sourceTagMark;
-      const contentMark = type === "example" ? exampleContentMark : sourceContentMark;
-      const bracketMark = type === "example" ? exampleBracketMark : sourceBracketMark;
+      // Math: replace entire citation with inline KaTeX widget
+      if (type === "math") {
+        decos.push({
+          from: matchFrom,
+          to: matchTo,
+          deco: Decoration.replace({ widget: new InlineMathWidget(content) }),
+        });
+        continue;
+      }
+      // Other types: mark-based decoration (tag + content + bracket)
+      const marks = CITATION_MARKS[type] ?? CITATION_MARKS.source;
+      const tagMark = marks.tag;
+      const contentMark = marks.content;
+      const bracketMark = marks.bracket;
       // [!type  → content start
       const tagEnd = matchFrom + m[0].indexOf(content);
       // Mark [!type  as tag (CSS hides text + shows label via ::after)
@@ -443,8 +507,10 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
     }
   }
 
-  // Sort by from position, then by to (line decos first since to === from)
-  decos.sort((a, b) => a.from - b.from || a.to - b.to);
+  // RangeSetBuilder requires sorted by (from, startSide). Sort accordingly.
+  decos.sort((a, b) =>
+    a.from - b.from || a.deco.startSide - b.deco.startSide || a.to - b.to
+  );
 
   for (const d of decos) {
     builder.add(d.from, d.to, d.deco);

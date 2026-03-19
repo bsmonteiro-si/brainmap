@@ -18,6 +18,8 @@ import {
 } from "@codemirror/state";
 import type { EditorState } from "@codemirror/state";
 import { scanFencedBlocks } from "./cmMarkdownDecorations";
+import { scanCallouts } from "./cmCalloutDecorations";
+import { CALLOUT_TYPES, CALLOUT_FALLBACK } from "./calloutTypes";
 import { useUIStore } from "../../stores/uiStore";
 
 // ---------------------------------------------------------------------------
@@ -98,12 +100,14 @@ class MermaidWidget extends WidgetType {
   constructor(
     readonly source: string,
     readonly cached: CacheEntry | undefined,
+    readonly calloutColor: string | null,
   ) {
     super();
   }
 
   eq(other: MermaidWidget): boolean {
     if (this.source !== other.source) return false;
+    if (this.calloutColor !== other.calloutColor) return false;
     // Must also compare cache state so CM re-renders DOM when async render completes
     if (this.cached === other.cached) return true;
     if (!this.cached || !other.cached) return false;
@@ -115,6 +119,14 @@ class MermaidWidget extends WidgetType {
   toDOM(): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = "cm-mermaid-widget";
+
+    // Apply callout border/background when inside a callout
+    if (this.calloutColor) {
+      wrapper.style.borderLeft = `3px solid ${this.calloutColor}`;
+      wrapper.style.borderRight = `1px solid color-mix(in srgb, ${this.calloutColor} 15%, transparent)`;
+      wrapper.style.background = `color-mix(in srgb, ${this.calloutColor} 5%, transparent)`;
+      wrapper.style.paddingLeft = "14px";
+    }
 
     if (!this.cached) {
       wrapper.innerHTML = '<div class="cm-mermaid-loading">Rendering diagram\u2026</div>';
@@ -166,6 +178,9 @@ function buildMermaidDecos(state: EditorState, cursorLine: number): DecorationSe
 
   if (mermaidBlocks.length === 0) return Decoration.none;
 
+  // Scan callouts to detect if mermaid blocks are inside one
+  const callouts = scanCallouts(doc);
+
   const builder = new RangeSetBuilder<Decoration>();
 
   for (const block of mermaidBlocks) {
@@ -190,13 +205,21 @@ function buildMermaidDecos(state: EditorState, cursorLine: number): DecorationSe
       pendingSources.push(source);
     }
 
-    const from = doc.line(block.startLine).from;
-    const to = doc.line(block.endLine).to;
+    // Detect enclosing callout for border continuity
+    const blockFrom = doc.line(block.startLine).from;
+    const blockTo = doc.line(block.endLine).to;
+    const enclosing = callouts.find(
+      (c) => blockFrom >= c.headerTo && blockTo <= c.closingLineFrom,
+    );
+    const calloutColor = enclosing
+      ? (CALLOUT_TYPES[enclosing.type]?.color ?? CALLOUT_FALLBACK.color)
+      : null;
+
     builder.add(
-      from,
-      to,
+      blockFrom,
+      blockTo,
       Decoration.replace({
-        widget: new MermaidWidget(source, cached),
+        widget: new MermaidWidget(source, cached, calloutColor),
         block: true,
       }),
     );
