@@ -316,9 +316,27 @@ class InlineMathWidget extends WidgetType {
 }
 
 // ---------------------------------------------------------------------------
+// HR widget (replaces raw --- with a visual <hr>; cursor-aware)
+// ---------------------------------------------------------------------------
+class HrWidget extends WidgetType {
+  eq(): boolean {
+    return true;
+  }
+
+  toDOM(): HTMLElement {
+    const hr = document.createElement("hr");
+    hr.className = "cm-hr-widget";
+    return hr;
+  }
+
+  ignoreEvent(): boolean {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Decoration builders
 // ---------------------------------------------------------------------------
-const hrLineDeco = Decoration.line({ class: "cm-hr-line" });
 const bqLineDeco = Decoration.line({ class: "cm-blockquote-line" });
 const fencedStartDeco = Decoration.line({ class: "cm-fenced-code cm-fenced-code-start" });
 const fencedEndDeco = Decoration.line({ class: "cm-fenced-code cm-fenced-code-end" });
@@ -343,7 +361,7 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
   for (const ln of cls.hr) {
     if (ln === cursorLine) continue;
     const line = doc.line(ln);
-    decos.push({ from: line.from, to: line.from, deco: hrLineDeco });
+    decos.push({ from: line.from, to: line.to, deco: Decoration.replace({ widget: new HrWidget() }) });
   }
 
   // Blockquotes (not cursor-aware)
