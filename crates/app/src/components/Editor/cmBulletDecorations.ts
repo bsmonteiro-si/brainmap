@@ -72,10 +72,9 @@ export function scanBullets(doc: Text): BulletMatch[] {
   return results;
 }
 
-export function buildBulletDecorations(doc: Text, cursorLine: number, preset: [string, string, string]): DecorationSet {
+export function buildBulletDecorations(doc: Text, preset: [string, string, string]): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
   for (const m of scanBullets(doc)) {
-    if (m.lineNumber === cursorLine) continue;
     const char = preset[m.depth % 3];
     builder.add(
       m.markerFrom,
@@ -89,16 +88,14 @@ export function buildBulletDecorations(doc: Text, cursorLine: number, preset: [s
 export function bulletDecorations(style: BulletStyle): Extension {
   const preset = BULLET_PRESETS[style];
 
-  return StateField.define<{ cursorLine: number; decos: DecorationSet }>({
+  return StateField.define<DecorationSet>({
     create(state) {
-      const cursorLine = state.doc.lineAt(state.selection.main.head).number;
-      return { cursorLine, decos: buildBulletDecorations(state.doc, cursorLine, preset) };
+      return buildBulletDecorations(state.doc, preset);
     },
     update(value, tr) {
-      const cursorLine = tr.state.doc.lineAt(tr.state.selection.main.head).number;
-      if (!tr.docChanged && cursorLine === value.cursorLine) return value;
-      return { cursorLine, decos: buildBulletDecorations(tr.state.doc, cursorLine, preset) };
+      if (!tr.docChanged) return value;
+      return buildBulletDecorations(tr.state.doc, preset);
     },
-    provide: (f) => EditorView.decorations.from(f, (v) => v.decos),
+    provide: (f) => EditorView.decorations.from(f),
   });
 }

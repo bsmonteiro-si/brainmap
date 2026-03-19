@@ -1,5 +1,4 @@
 import { useRef, useEffect } from "react";
-import { listen } from "@tauri-apps/api/event";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { markdown } from "@codemirror/lang-markdown";
@@ -108,7 +107,6 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
   const contentRef = useRef(content);
-  const readOnlyRef = useRef(readOnly);
   const uiZoomRef = useRef(1);
   const effectiveTheme = useUIStore((s) => s.effectiveEditorTheme);
   const editorFontFamily = useUIStore((s) => s.editorFontFamily);
@@ -126,7 +124,6 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
   // Keep refs up-to-date
   onChangeRef.current = onChange;
   contentRef.current = content;
-  readOnlyRef.current = readOnly;
   uiZoomRef.current = uiZoom;
 
   // Create/recreate editor when note changes, theme changes, or zoom changes
@@ -135,23 +132,6 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
 
     const isDark = THEME_BASE[effectiveTheme] === "dark";
     const extensions = [
-      // Prevent browser default file-drop navigation (safety net for OS file drops)
-      EditorView.domEventHandlers({
-        dragover(event) {
-          if (event.dataTransfer?.types.includes("Files")) {
-            event.preventDefault();
-            return true;
-          }
-          return false;
-        },
-        drop(event) {
-          if (event.dataTransfer?.files.length) {
-            event.preventDefault();
-            return true;
-          }
-          return false;
-        },
-      }),
       ...(lineWrapping ? [EditorView.lineWrapping] : []),
       ...(showLineNumbers ? [lineNumbers()] : []),
       ...(spellCheck ? [EditorView.contentAttributes.of({ spellcheck: "true" })] : []),
@@ -263,50 +243,6 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
       });
     }
   }, [content]);
-
-  // Insert absolute file paths when files are dragged from Finder/OS into the editor
-  useEffect(() => {
-    let cancelled = false;
-    let unlisten: (() => void) | null = null;
-
-    listen<{ paths: string[]; position: { x: number; y: number } }>(
-      "tauri://drag-drop",
-      (event) => {
-        const view = viewRef.current;
-        if (!view || readOnlyRef.current) return;
-
-        const { paths, position } = event.payload;
-        if (!paths.length) return;
-
-        // Tauri gives physical/window coordinates; convert to CSS space for zoom
-        const zoom = uiZoomRef.current || 1;
-        const x = position.x / zoom;
-        const y = position.y / zoom;
-
-        // Bounds check: ensure drop is over this editor instance
-        const rect = view.dom.getBoundingClientRect();
-        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return;
-
-        const pos = view.posAtCoords({ x, y });
-        if (pos === null) return;
-
-        const text = paths.join("\n");
-        view.dispatch({
-          changes: { from: pos, insert: text },
-          selection: { anchor: pos + text.length },
-        });
-        view.focus();
-      }
-    ).then((fn) => {
-      if (cancelled) fn();
-      else unlisten = fn;
-    });
-
-    return () => {
-      cancelled = true;
-      unlisten?.();
-    };
-  }, []);
 
   return <div ref={containerRef} style={{ height: "100%" }} />;
 }

@@ -80,10 +80,9 @@ export function scanOrderedMarkers(doc: Text): OrderedMatch[] {
   return results;
 }
 
-export function buildOrderedDecorations(doc: Text, cursorLine: number): DecorationSet {
+export function buildOrderedDecorations(doc: Text): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
   for (const m of scanOrderedMarkers(doc)) {
-    if (m.lineNumber === cursorLine) continue;
     builder.add(
       m.markerFrom,
       m.markerTo,
@@ -94,16 +93,14 @@ export function buildOrderedDecorations(doc: Text, cursorLine: number): Decorati
 }
 
 export function orderedListDecorations(): Extension {
-  return StateField.define<{ cursorLine: number; decos: DecorationSet }>({
+  return StateField.define<DecorationSet>({
     create(state) {
-      const cursorLine = state.doc.lineAt(state.selection.main.head).number;
-      return { cursorLine, decos: buildOrderedDecorations(state.doc, cursorLine) };
+      return buildOrderedDecorations(state.doc);
     },
     update(value, tr) {
-      const cursorLine = tr.state.doc.lineAt(tr.state.selection.main.head).number;
-      if (!tr.docChanged && cursorLine === value.cursorLine) return value;
-      return { cursorLine, decos: buildOrderedDecorations(tr.state.doc, cursorLine) };
+      if (!tr.docChanged) return value;
+      return buildOrderedDecorations(tr.state.doc);
     },
-    provide: (f) => EditorView.decorations.from(f, (v) => v.decos),
+    provide: (f) => EditorView.decorations.from(f),
   });
 }

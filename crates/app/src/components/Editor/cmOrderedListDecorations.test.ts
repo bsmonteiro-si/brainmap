@@ -87,31 +87,17 @@ describe("scanOrderedMarkers", () => {
 });
 
 describe("buildOrderedDecorations", () => {
-  it("skips decoration on the cursor line", () => {
+  it("produces decorations for all ordered list lines", () => {
     const d = doc(["1. line one", "2. line two", "3. line three"]);
-    // Cursor on line 2
-    const decoSet = buildOrderedDecorations(d, 2);
+    const decoSet = buildOrderedDecorations(d);
     const decos: { from: number; to: number }[] = [];
     const iter = decoSet.iter();
     while (iter.value) {
       decos.push({ from: iter.from, to: iter.to });
       iter.next();
     }
-    expect(decos).toHaveLength(2);
-    // line 1 marker "1." at offset 0-2, line 3 marker "3." at offset 24-26
+    expect(decos).toHaveLength(3);
     expect(decos[0].from).toBe(0);
     expect(decos[0].to).toBe(2);
-  });
-
-  it("produces decorations for all non-cursor lines", () => {
-    const d = doc(["1. a", "2. b", "3. c"]);
-    const decoSet = buildOrderedDecorations(d, 999);
-    const decos: number[] = [];
-    const iter = decoSet.iter();
-    while (iter.value) {
-      decos.push(iter.from);
-      iter.next();
-    }
-    expect(decos).toHaveLength(3);
   });
 });

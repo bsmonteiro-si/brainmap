@@ -68,20 +68,16 @@ describe("scanBullets", () => {
 });
 
 describe("buildBulletDecorations", () => {
-  it("skips decoration on the cursor line", () => {
+  it("produces decorations for all list lines", () => {
     const d = doc(["- line 1", "- line 2", "- line 3"]);
-    // Cursor on line 2 — should produce decorations for lines 1 and 3 only
-    const decoSet = buildBulletDecorations(d, 2, BULLET_PRESETS.classic);
+    const decoSet = buildBulletDecorations(d, BULLET_PRESETS.classic);
     const decos: { from: number; to: number }[] = [];
     const iter = decoSet.iter();
     while (iter.value) {
       decos.push({ from: iter.from, to: iter.to });
       iter.next();
     }
-    expect(decos).toHaveLength(2);
-    // line 1 marker at offset 0, line 3 marker at offset 18
-    expect(decos[0].from).toBe(0);
-    expect(decos[1].from).toBe(18);
+    expect(decos).toHaveLength(3);
   });
 
   it("uses correct preset characters per depth", () => {
@@ -89,12 +85,10 @@ describe("buildBulletDecorations", () => {
     for (const style of presets) {
       const preset = BULLET_PRESETS[style];
       const d = doc(["- d0", "    - d1", "        - d2"]);
-      // Cursor on non-existent line to get all decorations
-      const decoSet = buildBulletDecorations(d, 999, preset);
+      const decoSet = buildBulletDecorations(d, preset);
       const widgets: string[] = [];
       const iter = decoSet.iter();
       while (iter.value) {
-        // The widget is a replace decoration — extract the widget's char
         const widget = (iter.value.spec as { widget?: { char: string } }).widget;
         if (widget) widgets.push(widget.char);
         iter.next();
@@ -111,7 +105,7 @@ describe("buildBulletDecorations", () => {
       "            - d3 (cycles to d0 char)",
     ]);
     const preset = BULLET_PRESETS.classic;
-    const decoSet = buildBulletDecorations(d, 999, preset);
+    const decoSet = buildBulletDecorations(d, preset);
     const widgets: string[] = [];
     const iter = decoSet.iter();
     while (iter.value) {
