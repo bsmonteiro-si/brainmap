@@ -21,6 +21,7 @@ import { markdownDecorations } from "./cmMarkdownDecorations";
 import { checkboxDecorations } from "./cmCheckboxDecorations";
 import { bulletDecorations } from "./cmBulletDecorations";
 import { orderedListDecorations } from "./cmOrderedListDecorations";
+import { arrowDecorations } from "./cmArrowDecorations";
 import { listNestingKeymap } from "./cmListNesting";
 import { smartPaste } from "./cmSmartPaste";
 import { createSlashAutocompletion } from "./cmSlashCommands";
@@ -167,6 +168,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
         checkboxDecorations(),
         bulletDecorations(bulletStyle),
         orderedListDecorations(),
+        arrowDecorations(),
         headingFoldService(),
         mermaidDecorations(isDark),
       );
