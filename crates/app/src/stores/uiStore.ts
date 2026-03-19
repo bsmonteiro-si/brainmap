@@ -53,6 +53,14 @@ export const BULLET_PRESETS: Record<BulletStyle, [string, string, string]> = {
   minimal: ["•", "•", "•"],
 };
 
+export const BOLD_WEIGHT_OPTIONS: { value: number; label: string }[] = [
+  { value: 500, label: "Medium (500)" },
+  { value: 600, label: "Semibold (600)" },
+  { value: 700, label: "Bold (700)" },
+  { value: 800, label: "Extra-bold (800)" },
+  { value: 900, label: "Black (900)" },
+];
+
 export const THEME_BASE: Record<ThemeName, "light" | "dark"> = {
   light: "light",
   dark: "dark",
@@ -189,6 +197,9 @@ interface PersistedPrefs {
   editorIndentSize?: number;
   mermaidMaxHeight?: number;
   bulletStyle?: BulletStyle;
+  boldWeight?: number;
+  boldTint?: number;
+  italicTint?: number;
 }
 
 type CreateNoteMode = "default" | "create-and-link";
@@ -271,6 +282,9 @@ interface UIState {
   mathStyle: MathStyle;
   attentionStyle: AttentionStyle;
   bulletStyle: BulletStyle;
+  boldWeight: number;
+  boldTint: number;
+  italicTint: number;
   emptyFolders: Set<string>;
   homeNotePath: string | null;
   customFileOrder: Record<string, string[]>;
@@ -344,6 +358,9 @@ interface UIState {
   setMathStyle: (v: MathStyle) => void;
   setAttentionStyle: (v: AttentionStyle) => void;
   setBulletStyle: (v: BulletStyle) => void;
+  setBoldWeight: (v: number) => void;
+  setBoldTint: (v: number) => void;
+  setItalicTint: (v: number) => void;
   setDefaultTabSize: (tab: LeftTab, content: number) => void;
   resetLayoutPrefs: () => void;
   resetWorkspaceState: () => void;
@@ -505,6 +522,9 @@ export const useUIStore = create<UIState>((set, get) => ({
   mathStyle: storedPrefs.mathStyle ?? "pill",
   attentionStyle: storedPrefs.attentionStyle ?? "pill",
   bulletStyle: storedPrefs.bulletStyle ?? "classic",
+  boldWeight: storedPrefs.boldWeight ?? 700,
+  boldTint: storedPrefs.boldTint ?? 15,
+  italicTint: storedPrefs.italicTint ?? 20,
   tooltipFontSize: storedPrefs.tooltipFontSize ?? DEFAULT_TOOLTIP_SIZE,
   tooltipPillSize: storedPrefs.tooltipPillSize ?? DEFAULT_TOOLTIP_PILL_SIZE,
   tooltipConnectionsSize: storedPrefs.tooltipConnectionsSize ?? DEFAULT_TOOLTIP_CONNECTIONS_SIZE,
@@ -759,6 +779,21 @@ export const useUIStore = create<UIState>((set, get) => ({
   setBulletStyle: (v: BulletStyle) => {
     set({ bulletStyle: v });
     savePrefs({ bulletStyle: v });
+  },
+
+  setBoldWeight: (v: number) => {
+    set({ boldWeight: v });
+    savePrefs({ boldWeight: v });
+  },
+
+  setBoldTint: (v: number) => {
+    set({ boldTint: v });
+    savePrefs({ boldTint: v });
+  },
+
+  setItalicTint: (v: number) => {
+    set({ italicTint: v });
+    savePrefs({ italicTint: v });
   },
 
   setTooltipFontSize: (v: number) => {

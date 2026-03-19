@@ -52,6 +52,9 @@ function App() {
   const exampleStyle = useUIStore((s) => s.exampleStyle);
   const mathStyle = useUIStore((s) => s.mathStyle);
   const attentionStyle = useUIStore((s) => s.attentionStyle);
+  const boldWeight = useUIStore((s) => s.boldWeight);
+  const boldTint = useUIStore((s) => s.boldTint);
+  const italicTint = useUIStore((s) => s.italicTint);
 
   // Subscribe to workspace events for live updates
   useEffect(() => {
@@ -338,6 +341,22 @@ function App() {
     root.style.setProperty("--tooltip-summary-size", `${tooltipSummarySize}px`);
     root.style.setProperty("--tooltip-tag-size", `${tooltipTagSize}px`);
   }, [uiFontFamily, uiFontSize, editorFontFamily, editorFontSize, tooltipFontSize, tooltipPillSize, tooltipConnectionsSize, tooltipSummarySize, tooltipTagSize]);
+
+  // Apply bold/italic CSS variables
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--bold-weight", String(boldWeight));
+    root.style.setProperty("--bold-color",
+      boldTint > 0
+        ? `color-mix(in srgb, var(--text-primary) ${100 - boldTint}%, var(--accent))`
+        : "inherit"
+    );
+    root.style.setProperty("--italic-color",
+      italicTint > 0
+        ? `color-mix(in srgb, var(--text-primary) ${100 - italicTint}%, var(--accent))`
+        : "inherit"
+    );
+  }, [boldWeight, boldTint, italicTint]);
 
   // Apply zoom at document level so mouse event coordinates remain consistent
   // (applying zoom to a sub-element breaks Cytoscape hit-testing).

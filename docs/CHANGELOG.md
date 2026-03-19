@@ -8,6 +8,7 @@ Feature history moved from CLAUDE.md. Organized by phase and feature area.
 - **Depth-aware bullet shapes**: Unordered list bullets change shape by nesting depth (cycles every 3 levels). Configurable via "List bullet style" in Settings with 4 presets: Classic (● ○ ▪), Dash (— – ·), Arrow (▸ ▹ ▪), Minimal (• • •).
 - **Styled ordered markers**: Ordered list numbers/letters/roman numerals are replaced with accent-colored widgets in Edit mode (cursor-aware — raw marker shown on active line).
 - **Preview nested list borders**: Nested lists in Preview mode get a subtle left border (`color-mix(accent, 25%)`) for visual hierarchy.
+- **Customizable bold/italic**: Bold weight configurable (500–900) via Settings. Both bold and italic text can be accent-tinted (0–40% blend with accent color) for better visual distinction. Applied in both Edit and Preview modes via live CSS variables (no editor recreation needed).
 
 ## Editor — Attention Callout
 

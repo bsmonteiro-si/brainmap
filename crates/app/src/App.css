@@ -2673,8 +2673,8 @@ body {
   text-decoration: underline;
 }
 
-.md-preview strong { font-weight: 700; }
-.md-preview em { font-style: italic; }
+.md-preview strong { font-weight: var(--bold-weight, 700); color: var(--bold-color, inherit); }
+.md-preview em { font-style: italic; color: var(--italic-color, inherit); }
 .md-preview del { text-decoration: line-through; color: var(--text-muted); }
 
 .md-preview code {

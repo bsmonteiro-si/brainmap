@@ -1,4 +1,4 @@
-import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES, THEME_OPTIONS, SOURCE_STYLE_OPTIONS, EXAMPLE_STYLE_OPTIONS, MATH_STYLE_OPTIONS, ATTENTION_STYLE_OPTIONS, BULLET_STYLE_OPTIONS } from "../../stores/uiStore";
+import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES, THEME_OPTIONS, SOURCE_STYLE_OPTIONS, EXAMPLE_STYLE_OPTIONS, MATH_STYLE_OPTIONS, ATTENTION_STYLE_OPTIONS, BULLET_STYLE_OPTIONS, BOLD_WEIGHT_OPTIONS } from "../../stores/uiStore";
 import type { LeftTab, ComponentTheme, ThemeName, SourceStyle, ExampleStyle, MathStyle, AttentionStyle, BulletStyle } from "../../stores/uiStore";
 
 function FontFamilySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -71,6 +71,12 @@ export function SettingsModal() {
   const setMathStyle = useUIStore((s) => s.setMathStyle);
   const bulletStyle = useUIStore((s) => s.bulletStyle);
   const setBulletStyle = useUIStore((s) => s.setBulletStyle);
+  const boldWeight = useUIStore((s) => s.boldWeight);
+  const setBoldWeight = useUIStore((s) => s.setBoldWeight);
+  const boldTint = useUIStore((s) => s.boldTint);
+  const setBoldTint = useUIStore((s) => s.setBoldTint);
+  const italicTint = useUIStore((s) => s.italicTint);
+  const setItalicTint = useUIStore((s) => s.setItalicTint);
   const lineWrapping = useUIStore((s) => s.lineWrapping);
   const setLineWrapping = useUIStore((s) => s.setLineWrapping);
   const spellCheck = useUIStore((s) => s.spellCheck);
@@ -304,6 +310,51 @@ export function SettingsModal() {
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Bold weight</span>
+              <div className="settings-control">
+                <select
+                  value={boldWeight}
+                  onChange={(e) => setBoldWeight(Number(e.target.value))}
+                >
+                  {BOLD_WEIGHT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Bold accent tint</span>
+              <div className="settings-control">
+                <div className="settings-size-row">
+                  <input
+                    type="range"
+                    min={0}
+                    max={40}
+                    step={5}
+                    value={boldTint}
+                    onChange={(e) => setBoldTint(Number(e.target.value))}
+                  />
+                  <span className="settings-size-value">{boldTint}%</span>
+                </div>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Italic accent tint</span>
+              <div className="settings-control">
+                <div className="settings-size-row">
+                  <input
+                    type="range"
+                    min={0}
+                    max={40}
+                    step={5}
+                    value={italicTint}
+                    onChange={(e) => setItalicTint(Number(e.target.value))}
+                  />
+                  <span className="settings-size-value">{italicTint}%</span>
+                </div>
               </div>
             </div>
             <div className="settings-row" style={{ alignItems: "center" }}>
