@@ -39,6 +39,20 @@ export const ATTENTION_STYLE_OPTIONS: { value: AttentionStyle; label: string }[]
   { value: "quotes", label: "Quotation marks" },
 ];
 
+export type BulletStyle = "classic" | "dash" | "arrow" | "minimal";
+export const BULLET_STYLE_OPTIONS: { value: BulletStyle; label: string }[] = [
+  { value: "classic", label: "Classic (● ○ ▪)" },
+  { value: "dash",    label: "Dash (— – ·)" },
+  { value: "arrow",   label: "Arrow (▸ ▹ ▪)" },
+  { value: "minimal", label: "Minimal (• • •)" },
+];
+export const BULLET_PRESETS: Record<BulletStyle, [string, string, string]> = {
+  classic: ["●", "○", "▪"],
+  dash:    ["—", "–", "·"],
+  arrow:   ["▸", "▹", "▪"],
+  minimal: ["•", "•", "•"],
+};
+
 export const THEME_BASE: Record<ThemeName, "light" | "dark"> = {
   light: "light",
   dark: "dark",
@@ -174,6 +188,7 @@ interface PersistedPrefs {
   spellCheck?: boolean;
   editorIndentSize?: number;
   mermaidMaxHeight?: number;
+  bulletStyle?: BulletStyle;
 }
 
 type CreateNoteMode = "default" | "create-and-link";
@@ -255,6 +270,7 @@ interface UIState {
   exampleStyle: ExampleStyle;
   mathStyle: MathStyle;
   attentionStyle: AttentionStyle;
+  bulletStyle: BulletStyle;
   emptyFolders: Set<string>;
   homeNotePath: string | null;
   customFileOrder: Record<string, string[]>;
@@ -327,6 +343,7 @@ interface UIState {
   setExampleStyle: (v: ExampleStyle) => void;
   setMathStyle: (v: MathStyle) => void;
   setAttentionStyle: (v: AttentionStyle) => void;
+  setBulletStyle: (v: BulletStyle) => void;
   setDefaultTabSize: (tab: LeftTab, content: number) => void;
   resetLayoutPrefs: () => void;
   resetWorkspaceState: () => void;
@@ -487,6 +504,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   exampleStyle: storedPrefs.exampleStyle ?? "pill",
   mathStyle: storedPrefs.mathStyle ?? "pill",
   attentionStyle: storedPrefs.attentionStyle ?? "pill",
+  bulletStyle: storedPrefs.bulletStyle ?? "classic",
   tooltipFontSize: storedPrefs.tooltipFontSize ?? DEFAULT_TOOLTIP_SIZE,
   tooltipPillSize: storedPrefs.tooltipPillSize ?? DEFAULT_TOOLTIP_PILL_SIZE,
   tooltipConnectionsSize: storedPrefs.tooltipConnectionsSize ?? DEFAULT_TOOLTIP_CONNECTIONS_SIZE,
@@ -736,6 +754,11 @@ export const useUIStore = create<UIState>((set, get) => ({
   setAttentionStyle: (v: AttentionStyle) => {
     set({ attentionStyle: v });
     savePrefs({ attentionStyle: v });
+  },
+
+  setBulletStyle: (v: BulletStyle) => {
+    set({ bulletStyle: v });
+    savePrefs({ bulletStyle: v });
   },
 
   setTooltipFontSize: (v: number) => {

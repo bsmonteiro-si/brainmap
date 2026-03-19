@@ -1,5 +1,5 @@
-import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES, THEME_OPTIONS, SOURCE_STYLE_OPTIONS, EXAMPLE_STYLE_OPTIONS, MATH_STYLE_OPTIONS, ATTENTION_STYLE_OPTIONS } from "../../stores/uiStore";
-import type { LeftTab, ComponentTheme, ThemeName, SourceStyle, ExampleStyle, MathStyle, AttentionStyle } from "../../stores/uiStore";
+import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES, THEME_OPTIONS, SOURCE_STYLE_OPTIONS, EXAMPLE_STYLE_OPTIONS, MATH_STYLE_OPTIONS, ATTENTION_STYLE_OPTIONS, BULLET_STYLE_OPTIONS } from "../../stores/uiStore";
+import type { LeftTab, ComponentTheme, ThemeName, SourceStyle, ExampleStyle, MathStyle, AttentionStyle, BulletStyle } from "../../stores/uiStore";
 
 function FontFamilySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const presetValue =
@@ -69,6 +69,8 @@ export function SettingsModal() {
   const setAttentionStyle = useUIStore((s) => s.setAttentionStyle);
   const mathStyle = useUIStore((s) => s.mathStyle);
   const setMathStyle = useUIStore((s) => s.setMathStyle);
+  const bulletStyle = useUIStore((s) => s.bulletStyle);
+  const setBulletStyle = useUIStore((s) => s.setBulletStyle);
   const lineWrapping = useUIStore((s) => s.lineWrapping);
   const setLineWrapping = useUIStore((s) => s.setLineWrapping);
   const spellCheck = useUIStore((s) => s.spellCheck);
@@ -286,6 +288,19 @@ export function SettingsModal() {
                   onChange={(e) => setAttentionStyle(e.target.value as AttentionStyle)}
                 >
                   {ATTENTION_STYLE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">List bullet style</span>
+              <div className="settings-control">
+                <select
+                  value={bulletStyle}
+                  onChange={(e) => setBulletStyle(e.target.value as BulletStyle)}
+                >
+                  {BULLET_STYLE_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>

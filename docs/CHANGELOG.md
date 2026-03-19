@@ -2,6 +2,13 @@
 
 Feature history moved from CLAUDE.md. Organized by phase and feature area.
 
+## Editor — Enhanced List Styling
+
+- **Accent-colored markers**: Unordered bullets and ordered numbers now render in `var(--accent)` with `font-weight: 600` in both Edit and Preview modes, improving contrast across all themes.
+- **Depth-aware bullet shapes**: Unordered list bullets change shape by nesting depth (cycles every 3 levels). Configurable via "List bullet style" in Settings with 4 presets: Classic (● ○ ▪), Dash (— – ·), Arrow (▸ ▹ ▪), Minimal (• • •).
+- **Styled ordered markers**: Ordered list numbers/letters/roman numerals are replaced with accent-colored widgets in Edit mode (cursor-aware — raw marker shown on active line).
+- **Preview nested list borders**: Nested lists in Preview mode get a subtle left border (`color-mix(accent, 25%)`) for visual hierarchy.
+
 ## Editor — Attention Callout
 
 - **Block callout**: `[!attention] Title { ... }` renders with amber-orange (#ff6b35) border, TriangleAlert icon, cursor-aware header widget, and fold support.

@@ -19,6 +19,7 @@ import { listSpacing } from "./cmListSpacing";
 import { markdownDecorations } from "./cmMarkdownDecorations";
 import { checkboxDecorations } from "./cmCheckboxDecorations";
 import { bulletDecorations } from "./cmBulletDecorations";
+import { orderedListDecorations } from "./cmOrderedListDecorations";
 import { listNestingKeymap } from "./cmListNesting";
 import { smartPaste } from "./cmSmartPaste";
 import { createSlashAutocompletion } from "./cmSlashCommands";
@@ -114,6 +115,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
   const lineWrapping = useUIStore((s) => s.lineWrapping);
   const spellCheck = useUIStore((s) => s.spellCheck);
   const editorIndentSize = useUIStore((s) => s.editorIndentSize);
+  const bulletStyle = useUIStore((s) => s.bulletStyle);
   const wsRoot = useWorkspaceStore((s) => s.info?.root);
 
   // Keep refs up-to-date
@@ -143,7 +145,8 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
         listSpacing(),
         markdownDecorations(),
         checkboxDecorations(),
-        bulletDecorations(),
+        bulletDecorations(bulletStyle),
+        orderedListDecorations(),
         headingFoldService(),
         mermaidDecorations(isDark),
       );
@@ -219,7 +222,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
       viewRef.current = null;
       onViewReady?.(null);
     };
-  }, [notePath, effectiveTheme, uiZoom, editorFontFamily, editorFontSize, readOnly, raw, wsRoot, showLineNumbers, lineWrapping, spellCheck, editorIndentSize]);
+  }, [notePath, effectiveTheme, uiZoom, editorFontFamily, editorFontSize, readOnly, raw, wsRoot, showLineNumbers, lineWrapping, spellCheck, editorIndentSize, bulletStyle]);
 
   // Sync external content changes (e.g., after save or conflict resolution)
   // without recreating the editor
