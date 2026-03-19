@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { SLASH_COMMANDS, filterSlashCommands } from "./cmSlashCommands";
 import { CALLOUT_TYPE_ENTRIES } from "./calloutTypes";
 
-const STATIC_COMMAND_COUNT = 16; // headings(3) + lists(3) + blocks(6) + inline source(1) + inline example(1) + inline math(1) + math block(1)
+const STATIC_COMMAND_COUNT = 17; // headings(3) + lists(3) + blocks(6) + inline source(1) + inline example(1) + inline attention(1) + inline math(1) + math block(1)
 const SKIP_AUTO_GEN_COUNT = 1; // math (has custom command, excluded from auto-gen)
 
 describe("SLASH_COMMANDS registry", () => {

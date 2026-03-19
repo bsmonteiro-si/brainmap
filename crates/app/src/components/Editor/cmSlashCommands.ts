@@ -111,6 +111,11 @@ const ICON_PATHS: Record<string, SvgElement[]> = {
   sigma: [
     ["path", { d: "M18 7V5a1 1 0 0 0-1-1H6.5a.5.5 0 0 0-.4.8l4.5 6a2 2 0 0 1 0 2.4l-4.5 6a.5.5 0 0 0 .4.8H17a1 1 0 0 0 1-1v-2" }],
   ],
+  "triangle-alert": [
+    ["path", { d: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" }],
+    ["path", { d: "M12 9v4" }],
+    ["path", { d: "M12 17h.01" }],
+  ],
 };
 
 function renderSvgElement(el: SvgElement): string {
@@ -148,10 +153,11 @@ const CALLOUT_ICON_MAP: Record<string, string> = {
   example: "flask-conical",
   definition: "book-a",
   math: "sigma",
+  attention: "triangle-alert",
 };
 
 /** Callout types that have an inline `/keyword` command (gets a `-callout` suffix in auto-gen). */
-const INLINE_COMMAND_TYPES = new Set(["source", "example"]);
+const INLINE_COMMAND_TYPES = new Set(["source", "example", "attention"]);
 /** Callout types with a fully custom command (excluded from auto-generation). */
 const SKIP_AUTO_GEN_TYPES = new Set(["math"]);
 
@@ -321,6 +327,15 @@ export const SLASH_COMMANDS: SlashCommandDef[] = [
     icon: "flask-conical",
     apply: (v, from, to) =>
       replaceWith(v, from, to, '[!example ""]', '[!example "'.length),
+  },
+  {
+    keyword: "attention",
+    label: "Inline Attention",
+    detail: "Attention note",
+    section: "BrainMap",
+    icon: "triangle-alert",
+    apply: (v, from, to) =>
+      replaceWith(v, from, to, '[!attention ]', '[!attention '.length),
   },
   {
     keyword: "imath",
