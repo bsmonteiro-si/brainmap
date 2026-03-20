@@ -144,8 +144,13 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
       clearMermaidCache();
       extensions.push(
         markdown({ extensions: GFM, codeLanguages: languages }),
+        // Markdown-specific styles (headings, emphasis, strong, strikethrough, monospace) — must come
+        // first so they take precedence for overlapping tags. The code theme below provides colors for
+        // all code tokens (keyword, string, comment, etc.). Both must be non-fallback so CM6's
+        // getHighlighters() returns both; using { fallback: true } on either causes it to be ignored
+        // when the other is present.
         syntaxHighlighting(buildMarkdownHighlight(isDark)),
-        syntaxHighlighting(isDark ? oneDarkHighlightStyle : defaultHighlightStyle, { fallback: true }),
+        syntaxHighlighting(isDark ? oneDarkHighlightStyle : defaultHighlightStyle),
         linkNavigation(notePath),
         calloutDecorations(),
         listSpacing(),

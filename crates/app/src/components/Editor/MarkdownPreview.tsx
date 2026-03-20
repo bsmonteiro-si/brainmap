@@ -35,6 +35,45 @@ function extractTextContent(nodes: React.ReactNode[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// Code block wrapper (line numbers + copy button)
+// ---------------------------------------------------------------------------
+
+function CodeBlock({ lang, children, ...preProps }: { lang?: string; children?: React.ReactNode } & React.HTMLAttributes<HTMLPreElement>) {
+  const [copied, setCopied] = useState(false);
+
+  // Extract text for line count and clipboard
+  const codeChild = React.Children.toArray(children).find(
+    (c) => React.isValidElement(c) && c.type === "code",
+  ) as React.ReactElement<{ children?: React.ReactNode }> | undefined;
+  const text = codeChild ? extractTextContent(React.Children.toArray(codeChild.props.children)).replace(/\n$/, "") : "";
+  const lineCount = text.split("\n").length;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }).catch(() => { /* clipboard unavailable */ });
+  };
+
+  return (
+    <div className="code-block-wrapper">
+      {lang && <span className="code-lang-badge">{lang}</span>}
+      <button className="code-copy-btn" onClick={handleCopy} title="Copy code">
+        {copied ? "Copied!" : "Copy"}
+      </button>
+      <div className="code-block-inner">
+        <div className="code-line-numbers" aria-hidden="true">
+          {Array.from({ length: lineCount }, (_, i) => (
+            <span key={i}>{i + 1}</span>
+          ))}
+        </div>
+        <pre {...preProps}>{children}</pre>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Mermaid preview block (lazy-loaded)
 // ---------------------------------------------------------------------------
 
@@ -279,15 +318,10 @@ export function MarkdownPreview({ content, notePath }: Props) {
         ) as React.ReactElement<{ className?: string }> | undefined;
         const langMatch = codeChild?.props?.className?.match(/language-([\w.+#-]+)/);
         const lang = langMatch?.[1];
-        if (lang && lang !== "mermaid") {
-          return (
-            <div className="code-block-wrapper">
-              <span className="code-lang-badge">{lang}</span>
-              <pre {...props}>{children}</pre>
-            </div>
-          );
+        if (lang === "mermaid") {
+          return <pre {...props}>{children}</pre>;
         }
-        return <pre {...props}>{children}</pre>;
+        return <CodeBlock lang={lang} {...props}>{children}</CodeBlock>;
       },
       code: ({
         className,
