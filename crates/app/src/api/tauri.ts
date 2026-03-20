@@ -158,6 +158,10 @@ export class TauriBridge implements BrainMapAPI {
     return invoke("move_note", { oldPath, newPath });
   }
 
+  async movePlainFile(oldPath: string, newPath: string): Promise<string> {
+    return invoke("move_plain_file", { oldPath, newPath });
+  }
+
   async moveFolder(oldFolder: string, newFolder: string): Promise<{ new_folder: string; moved_notes: [string, string][]; rewritten_paths: string[] }> {
     return invoke("move_folder", { oldFolder, newFolder });
   }

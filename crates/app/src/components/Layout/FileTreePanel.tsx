@@ -1068,21 +1068,37 @@ export function FileTreePanel() {
 
         useUndoStore.getState().pushAction({ kind: "move-folder", oldFolder: oldPath, newFolder: newPath });
       } else {
-        // Save dirty note before moving
-        if (editorState.activeNote?.path === oldPath && editorState.isDirty) {
-          await editorState.saveNote();
+        const isNote = useGraphStore.getState().nodes.has(oldPath);
+
+        // Save dirty file before moving
+        if (isNote) {
+          if (editorState.activeNote?.path === oldPath && editorState.isDirty) {
+            await editorState.saveNote();
+          }
+        } else {
+          if (editorState.activePlainFile?.path === oldPath && editorState.isDirty) {
+            await editorState.saveNote();
+          }
         }
 
-        await api.moveNote(oldPath, newPath);
+        if (isNote) {
+          await api.moveNote(oldPath, newPath);
+        } else {
+          await api.movePlainFile(oldPath, newPath);
+        }
         await useGraphStore.getState().loadTopology();
 
         // Update tab
         useTabStore.getState().renamePath(oldPath, newPath);
 
-        // Update editor if active note was moved
-        if (useEditorStore.getState().activeNote?.path === oldPath) {
-          useEditorStore.getState().openNote(newPath);
-          useGraphStore.getState().selectNode(newPath);
+        // Update editor if active file was moved
+        if (isNote) {
+          if (useEditorStore.getState().activeNote?.path === oldPath) {
+            useEditorStore.getState().openNote(newPath);
+            useGraphStore.getState().selectNode(newPath);
+          }
+        } else if (useEditorStore.getState().activePlainFile?.path === oldPath) {
+          useEditorStore.getState().openPlainFile(newPath);
         }
 
         // Update UI state
@@ -1094,7 +1110,7 @@ export function FileTreePanel() {
           ui.setHomeNote(newPath);
         }
 
-        useUndoStore.getState().pushAction({ kind: "move-note", oldPath, newPath });
+        useUndoStore.getState().pushAction({ kind: "move-note", oldPath, newPath, isPlainFile: !isNote });
       }
       return true;
     } catch (e) {

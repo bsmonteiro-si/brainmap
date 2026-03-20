@@ -13,7 +13,7 @@ export type UndoableAction =
   | { kind: "create-folder"; folderPath: string }
   | { kind: "delete-note"; path: string; snapshot: NoteDetail }
   | { kind: "delete-folder"; folderPath: string; snapshots: NoteDetail[] }
-  | { kind: "move-note"; oldPath: string; newPath: string }
+  | { kind: "move-note"; oldPath: string; newPath: string; isPlainFile?: boolean }
   | { kind: "move-folder"; oldFolder: string; newFolder: string };
 
 interface UndoState {
@@ -90,6 +90,8 @@ function postMoveCleanup(oldPath: string, newPath: string, isFolder: boolean) {
     if (editor.activeNote?.path === oldPath) {
       editor.openNote(newPath);
       useGraphStore.getState().selectNode(newPath);
+    } else if (editor.activePlainFile?.path === oldPath) {
+      editor.openPlainFile(newPath);
     }
     if (ui.graphFocusPath === oldPath) {
       ui.setGraphFocus(newPath, "note");
@@ -265,7 +267,11 @@ export const useUndoStore = create<UndoState>((set, get) => ({
 
         case "move-note": {
           try {
-            await api.moveNote(action.newPath, action.oldPath);
+            if (action.isPlainFile) {
+              await api.movePlainFile(action.newPath, action.oldPath);
+            } else {
+              await api.moveNote(action.newPath, action.oldPath);
+            }
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             if (msg.includes("DuplicatePath") || msg.includes("already exists")) {
@@ -419,7 +425,11 @@ export const useUndoStore = create<UndoState>((set, get) => ({
 
         case "move-note": {
           try {
-            await api.moveNote(action.oldPath, action.newPath);
+            if (action.isPlainFile) {
+              await api.movePlainFile(action.oldPath, action.newPath);
+            } else {
+              await api.moveNote(action.oldPath, action.newPath);
+            }
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             showToast(set, `Redo failed: ${msg}`);

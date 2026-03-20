@@ -640,6 +640,31 @@ pub fn delete_plain_file(
 }
 
 #[tauri::command]
+pub fn move_plain_file(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    old_path: String,
+    new_path: String,
+) -> Result<String, String> {
+    let root = state.resolve_root(None)?;
+    let old_abs = state.with_slot(&root, |slot| {
+        handlers::validate_relative_path(&slot.workspace.root, &old_path)
+    })?;
+    let new_abs = state.with_slot(&root, |slot| {
+        handlers::validate_relative_path(&slot.workspace.root, &new_path)
+    })?;
+    state.register_expected_write(&root, old_abs);
+    state.register_expected_write(&root, new_abs);
+    state.with_slot(&root, |slot| {
+        handlers::handle_move_plain_file(&slot.workspace, &old_path, &new_path)
+    })?;
+
+    emit_files_changed_event(&app, &root, vec![new_path.clone()], vec![old_path.clone()]);
+
+    Ok(new_path)
+}
+
+#[tauri::command]
 pub fn resolve_pdf_path(state: State<'_, AppState>, path: String) -> Result<PdfMetaDto, String> {
     state.with_active(|ws| handlers::handle_resolve_pdf_path(ws, &path))
 }

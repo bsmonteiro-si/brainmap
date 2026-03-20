@@ -489,6 +489,34 @@ pub fn handle_delete_plain_file(ws: &Workspace, path: &str) -> Result<(), String
     Ok(())
 }
 
+/// Move a plain (non-BrainMap) file on disk.
+/// Rejects moves of files tracked in the BrainMap graph (use `move_note` instead).
+pub fn handle_move_plain_file(ws: &Workspace, old_path: &str, new_path: &str) -> Result<String, String> {
+    let rp = brainmap_core::model::RelativePath::new(old_path);
+    if ws.notes.contains_key(&rp) {
+        return Err("Cannot move a BrainMap-managed note via plain file API".to_string());
+    }
+    let new_rp = brainmap_core::model::RelativePath::new(new_path);
+    if ws.notes.contains_key(&new_rp) {
+        return Err(format!("Target path conflicts with a managed note: {}", new_path));
+    }
+    let old_abs = validate_relative_path(&ws.root, old_path)?;
+    let new_abs = validate_relative_path(&ws.root, new_path)?;
+    if !old_abs.exists() {
+        return Err(format!("File not found: {}", old_path));
+    }
+    if new_abs.exists() {
+        return Err(format!("Target already exists: {}", new_path));
+    }
+    if let Some(parent) = new_abs.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create directories: {}", e))?;
+    }
+    std::fs::rename(&old_abs, &new_abs)
+        .map_err(|e| format!("Failed to move file: {}", e))?;
+    Ok(new_path.to_string())
+}
+
 /// Write raw content (frontmatter + body) for a BrainMap-managed note.
 /// Writes to disk then re-parses via `reload_file` to update graph/index.
 /// Returns the `GraphDiff` from reload_file for event emission.

@@ -362,6 +362,11 @@ export class MockBridge implements BrainMapAPI {
     return { new_path: newPath, rewritten_paths: [] };
   }
 
+  async movePlainFile(_oldPath: string, newPath: string): Promise<string> {
+    await mockDelay("default");
+    return newPath;
+  }
+
   async moveFolder(oldFolder: string, newFolder: string): Promise<{ new_folder: string; moved_notes: [string, string][]; rewritten_paths: string[] }> {
     await mockDelay("default");
     return { new_folder: newFolder, moved_notes: [], rewritten_paths: [] };

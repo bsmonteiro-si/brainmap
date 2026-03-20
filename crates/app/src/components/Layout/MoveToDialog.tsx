@@ -3,6 +3,7 @@ import { useUIStore } from "../../stores/uiStore";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { useTabStore } from "../../stores/tabStore";
+import { useUndoStore } from "../../stores/undoStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { getAPI } from "../../api/bridge";
 import { pickFolder } from "../../api/pickFolder";
@@ -134,11 +135,25 @@ export function MoveToDialog() {
       if (target.isFolder) {
         await api.moveFolder(target.path, newPath);
       } else {
-        const result = await api.moveNote(target.path, newPath);
-        useTabStore.getState().renamePath(target.path, result.new_path);
-        const activeNote = useEditorStore.getState().activeNote;
-        if (activeNote?.path === target.path) {
-          useEditorStore.getState().openNote(result.new_path);
+        const isNote = useGraphStore.getState().nodes.has(target.path);
+        if (isNote) {
+          const result = await api.moveNote(target.path, newPath);
+          useTabStore.getState().renamePath(target.path, result.new_path);
+          const activeNote = useEditorStore.getState().activeNote;
+          if (activeNote?.path === target.path) {
+            useEditorStore.getState().openNote(result.new_path);
+          }
+        } else {
+          const editorState = useEditorStore.getState();
+          if (editorState.activePlainFile?.path === target.path && editorState.isDirty) {
+            await editorState.saveNote();
+          }
+          await api.movePlainFile(target.path, newPath);
+          useTabStore.getState().renamePath(target.path, newPath);
+          if (useEditorStore.getState().activePlainFile?.path === target.path) {
+            useEditorStore.getState().openPlainFile(newPath);
+          }
+          useUndoStore.getState().pushAction({ kind: "move-note", oldPath: target.path, newPath, isPlainFile: true });
         }
       }
       close();

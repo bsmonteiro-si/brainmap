@@ -55,6 +55,7 @@ pub fn run() {
             commands::create_plain_file,
             commands::read_plain_file,
             commands::delete_plain_file,
+            commands::move_plain_file,
             commands::resolve_pdf_path,
             commands::load_pdf_highlights,
             commands::save_pdf_highlights,
