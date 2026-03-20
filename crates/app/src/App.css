@@ -4618,6 +4618,54 @@ body {
   justify-content: center;
 }
 
+/* ── Edge toolbar + label ── */
+.canvas-edge-toolbar {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  position: absolute;
+  pointer-events: all;
+}
+
+.canvas-edge-label {
+  position: absolute;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  pointer-events: all;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.canvas-edge-label:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.canvas-edge-label-input-wrapper {
+  position: absolute;
+  pointer-events: all;
+}
+
+.canvas-edge-label-input {
+  width: 160px;
+  padding: 4px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
 .canvas-file-node {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);

@@ -23,7 +23,7 @@ import { canvasToFlow, flowToCanvas } from "./canvasTranslation";
 import type { JsonCanvas } from "./canvasTranslation";
 import { StickyNote, FileText, Layers } from "lucide-react";
 import { useGraphStore } from "../../stores/graphStore";
-import { CanvasFileNode, CanvasTextNode, CanvasLinkNode, CanvasGroupNode } from "./canvasNodes";
+import { CanvasFileNode, CanvasTextNode, CanvasLinkNode, CanvasGroupNode, CanvasEdge } from "./canvasNodes";
 
 // ── Error boundary ────────────────────────────────────────────────────────────
 
@@ -78,6 +78,10 @@ const NODE_TYPES = {
   canvasText: CanvasTextNode,
   canvasLink: CanvasLinkNode,
   canvasGroup: CanvasGroupNode,
+};
+
+const EDGE_TYPES = {
+  default: CanvasEdge,
 };
 
 // Module-level pending saves (same pattern as Excalidraw)
@@ -249,7 +253,7 @@ function CanvasEditorInner({ path }: { path: string }) {
     (connection) => {
       setEdges((eds) =>
         addEdge(
-          { ...connection, markerEnd: { type: MarkerType.ArrowClosed } },
+          { ...connection, markerEnd: { type: MarkerType.ArrowClosed }, data: { isNew: true } },
           eds,
         ),
       );
@@ -264,11 +268,73 @@ function CanvasEditorInner({ path }: { path: string }) {
   const [showNoteSelect, setShowNoteSelect] = useState(false);
   const [noteFilter, setNoteFilter] = useState("");
 
+  // Element context menu (right-click on a node or edge)
+  const [elemCtxMenu, setElemCtxMenu] = useState<{ x: number; y: number; nodeId?: string; edgeId?: string } | null>(null);
+
+  const handleNodeContextMenu = useCallback(
+    (event: ReactMouseEvent, node: { id: string }) => {
+      event.preventDefault();
+      setElemCtxMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
+      setCtxMenu(null);
+    },
+    [],
+  );
+
+  const handleEdgeContextMenu = useCallback(
+    (event: ReactMouseEvent, edge: { id: string }) => {
+      event.preventDefault();
+      setElemCtxMenu({ x: event.clientX, y: event.clientY, edgeId: edge.id });
+      setCtxMenu(null);
+    },
+    [],
+  );
+
+  const closeElemCtxMenu = useCallback(() => setElemCtxMenu(null), []);
+
+  const deleteSelected = useCallback(() => {
+    const selectedNodeIds = new Set(
+      nodesRef.current.filter((n) => n.selected).map((n) => n.id),
+    );
+    const selectedEdgeIds = new Set(
+      edgesRef.current.filter((e) => e.selected).map((e) => e.id),
+    );
+    // Include the right-clicked element
+    if (elemCtxMenu?.nodeId) selectedNodeIds.add(elemCtxMenu.nodeId);
+    if (elemCtxMenu?.edgeId) selectedEdgeIds.add(elemCtxMenu.edgeId);
+
+    if (selectedNodeIds.size > 0) {
+      setNodes((nds) => nds.filter((n) => !selectedNodeIds.has(n.id)));
+    }
+    // Delete selected edges + edges connected to deleted nodes
+    if (selectedNodeIds.size > 0 || selectedEdgeIds.size > 0) {
+      setEdges((eds) =>
+        eds.filter(
+          (e) =>
+            !selectedEdgeIds.has(e.id) &&
+            !selectedNodeIds.has(e.source) &&
+            !selectedNodeIds.has(e.target),
+        ),
+      );
+    }
+    closeElemCtxMenu();
+    requestAnimationFrame(() => scheduleSave());
+  }, [setNodes, setEdges, elemCtxMenu, closeElemCtxMenu, scheduleSave]);
+
+  // Close element context menu on click elsewhere
+  useEffect(() => {
+    if (!elemCtxMenu) return;
+    const handler = () => closeElemCtxMenu();
+    window.addEventListener("click", handler);
+    return () => window.removeEventListener("click", handler);
+  }, [elemCtxMenu, closeElemCtxMenu]);
+
+  // Pane context menu (right-click on empty canvas)
   const handlePaneContextMenu = useCallback(
     (event: ReactMouseEvent) => {
       event.preventDefault();
       const flowPos = reactFlowInstance.screenToFlowPosition({ x: event.clientX, y: event.clientY });
       setCtxMenu({ x: event.clientX, y: event.clientY, flowX: flowPos.x, flowY: flowPos.y });
+      setElemCtxMenu(null);
       setShowNoteSelect(false);
       setNoteFilter("");
     },
@@ -358,6 +424,7 @@ function CanvasEditorInner({ path }: { path: string }) {
 
   // Stable nodeTypes reference (must not change between renders)
   const nodeTypes = useMemo(() => NODE_TYPES, []);
+  const edgeTypes = useMemo(() => EDGE_TYPES, []);
 
   // Context menu note picker
   const filteredNotes = useMemo(() => {
@@ -410,8 +477,12 @@ function CanvasEditorInner({ path }: { path: string }) {
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
         onPaneContextMenu={handlePaneContextMenu}
+        onNodeContextMenu={handleNodeContextMenu}
+        onEdgeContextMenu={handleEdgeContextMenu}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         colorMode={colorMode}
+        deleteKeyCode={["Backspace", "Delete"]}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         defaultEdgeOptions={{ markerEnd: { type: MarkerType.ArrowClosed } }}
@@ -524,6 +595,17 @@ function CanvasEditorInner({ path }: { path: string }) {
               </div>
             </div>
           )}
+        </div>
+      )}
+      {elemCtxMenu && (
+        <div
+          className="context-menu"
+          style={{ left: elemCtxMenu.x, top: elemCtxMenu.y, minWidth: 140 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="context-menu-item context-menu-item--danger" onClick={deleteSelected}>
+            Delete
+          </div>
         </div>
       )}
     </div>

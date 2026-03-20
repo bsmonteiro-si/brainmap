@@ -1,10 +1,12 @@
-import { memo, useState } from "react";
-import { Handle, Position, NodeResizer, NodeToolbar } from "@xyflow/react";
-import type { NodeProps } from "@xyflow/react";
-import { Trash2, Palette } from "lucide-react";
+import { memo, useState, useRef, useEffect } from "react";
+import {
+  Handle, Position, NodeResizer, NodeToolbar,
+  BaseEdge, EdgeLabelRenderer, getBezierPath, useReactFlow,
+} from "@xyflow/react";
+import type { NodeProps, EdgeProps } from "@xyflow/react";
+import { Trash2, Palette, PenLine } from "lucide-react";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
-import { useReactFlow } from "@xyflow/react";
 import { getNodeColor } from "../GraphView/graphStyles";
 
 // JSON Canvas preset colors
@@ -237,3 +239,191 @@ function CanvasGroupNodeInner({ id, data, selected }: NodeProps) {
 }
 
 export const CanvasGroupNode = memo(CanvasGroupNodeInner);
+
+// ── Custom Edge with toolbar ──────────────────────────────────────────────────
+
+function CanvasEdgeInner({
+  id,
+  sourceX, sourceY, targetX, targetY,
+  sourcePosition, targetPosition,
+  selected,
+  label,
+  markerEnd,
+  markerStart,
+  style,
+  data,
+}: EdgeProps) {
+  const { setEdges } = useReactFlow();
+  const [showColors, setShowColors] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState(String(label ?? ""));
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Also check if this is a newly created edge that should prompt for label
+  const isNew = (data as Record<string, unknown> | undefined)?.isNew === true;
+  const [promptLabel, setPromptLabel] = useState(isNew);
+
+  useEffect(() => {
+    if ((editing || promptLabel) && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing, promptLabel]);
+
+  const [edgePath, labelX, labelY] = getBezierPath({
+    sourceX, sourceY, targetX, targetY,
+    sourcePosition, targetPosition,
+  });
+
+  const commitLabel = (value: string) => {
+    const trimmed = value.trim();
+    setEdges((eds) =>
+      eds.map((ed) => {
+        if (ed.id !== id) return ed;
+        const { isNew: _, ...restData } = (ed.data ?? {}) as Record<string, unknown>;
+        return {
+          ...ed,
+          label: trimmed || undefined,
+          data: Object.keys(restData).length > 0 ? restData : undefined,
+        };
+      }),
+    );
+    setEditing(false);
+    setPromptLabel(false);
+  };
+
+  const handleLabelKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitLabel(editValue);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setEditing(false);
+      setPromptLabel(false);
+      // For new edges, just clear the isNew flag
+      if (isNew) {
+        setEdges((eds) =>
+          eds.map((ed) => {
+            if (ed.id !== id) return ed;
+            const { isNew: _, ...restData } = (ed.data ?? {}) as Record<string, unknown>;
+            return { ...ed, data: Object.keys(restData).length > 0 ? restData : undefined };
+          }),
+        );
+      }
+    }
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEdges((eds) => eds.filter((e) => e.id !== id));
+  };
+
+  const handleColor = (e: React.MouseEvent, color: string) => {
+    e.stopPropagation();
+    setEdges((eds) =>
+      eds.map((ed) => ed.id === id ? { ...ed, style: { ...ed.style, stroke: color } } : ed),
+    );
+    setShowColors(false);
+  };
+
+  const handleClearColor = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEdges((eds) =>
+      eds.map((ed) => {
+        if (ed.id !== id) return ed;
+        const { stroke: _, ...rest } = (ed.style ?? {}) as Record<string, unknown>;
+        return { ...ed, style: Object.keys(rest).length > 0 ? rest : undefined };
+      }),
+    );
+    setShowColors(false);
+  };
+
+  const startEditing = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditValue(String(label ?? ""));
+    setEditing(true);
+  };
+
+  const showInput = editing || promptLabel;
+
+  return (
+    <>
+      <BaseEdge path={edgePath} markerEnd={markerEnd} markerStart={markerStart} style={style} />
+      <EdgeLabelRenderer>
+        {/* Label display or input */}
+        {showInput ? (
+          <div
+            className="canvas-edge-label-input-wrapper"
+            style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              ref={inputRef}
+              className="canvas-edge-label-input"
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={handleLabelKeyDown}
+              onBlur={() => commitLabel(editValue)}
+              placeholder="Label (Enter to set, Esc to skip)"
+            />
+          </div>
+        ) : label ? (
+          <div
+            className="canvas-edge-label"
+            style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)` }}
+            onDoubleClick={startEditing}
+          >
+            {label}
+          </div>
+        ) : null}
+        {/* Toolbar */}
+        {selected && !showInput && (
+          <div
+            className="canvas-edge-toolbar"
+            style={{ transform: `translate(-50%, -100%) translate(${labelX}px,${labelY - 16}px)` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button className="canvas-node-toolbar-btn" title="Edit label" onClick={startEditing}>
+              <PenLine size={16} />
+            </button>
+            <button className="canvas-node-toolbar-btn" title="Delete" onClick={handleDelete}>
+              <Trash2 size={16} />
+            </button>
+            <div className="canvas-node-toolbar-color-wrapper">
+              <button
+                className="canvas-node-toolbar-btn"
+                title="Color"
+                onClick={(e) => { e.stopPropagation(); setShowColors(!showColors); }}
+              >
+                <Palette size={16} />
+              </button>
+              {showColors && (
+                <div className="canvas-color-picker">
+                  {CANVAS_COLORS.map((c) => (
+                    <button
+                      key={c.id}
+                      className="canvas-color-swatch"
+                      style={{ backgroundColor: c.color }}
+                      title={c.label}
+                      onClick={(e) => handleColor(e, c.color)}
+                    />
+                  ))}
+                  <button
+                    className="canvas-color-swatch canvas-color-swatch--clear"
+                    title="Clear color"
+                    onClick={handleClearColor}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </EdgeLabelRenderer>
+    </>
+  );
+}
+
+export const CanvasEdge = memo(CanvasEdgeInner);
