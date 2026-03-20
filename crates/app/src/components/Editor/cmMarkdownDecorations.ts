@@ -341,6 +341,18 @@ const bqLineDeco = Decoration.line({ class: "cm-blockquote-line" });
 const fencedStartDeco = Decoration.line({ class: "cm-fenced-code cm-fenced-code-start" });
 const fencedEndDeco = Decoration.line({ class: "cm-fenced-code cm-fenced-code-end" });
 const fencedBodyDeco = Decoration.line({ class: "cm-fenced-code" });
+/** Widget that shows a language badge (e.g. "RUST") floated to the right of the fence-start line. */
+class CodeLangBadgeWidget extends WidgetType {
+  constructor(readonly lang: string) { super(); }
+  toDOM() {
+    const span = document.createElement("span");
+    span.className = "cm-code-lang-badge";
+    span.textContent = this.lang.split(/\s/)[0];
+    return span;
+  }
+  eq(other: CodeLangBadgeWidget) { return this.lang === other.lang; }
+}
+
 const inlineCodeMark = Decoration.mark({ class: "cm-inline-code" });
 const imageUrlMark = Decoration.mark({ class: "cm-image-url" });
 const linkDimMark = Decoration.mark({ class: "cm-link-dim" });
@@ -376,6 +388,14 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
       const line = doc.line(ln);
       if (ln === block.startLine) {
         decos.push({ from: line.from, to: line.from, deco: fencedStartDeco });
+        // Language badge widget at end of fence-start line
+        if (block.lang) {
+          decos.push({
+            from: line.to,
+            to: line.to,
+            deco: Decoration.widget({ widget: new CodeLangBadgeWidget(block.lang), side: 1 }),
+          });
+        }
       } else if (ln === block.endLine) {
         decos.push({ from: line.from, to: line.from, deco: fencedEndDeco });
       } else {

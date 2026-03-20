@@ -4,7 +4,9 @@ import { EditorState } from "@codemirror/state";
 import { markdown } from "@codemirror/lang-markdown";
 import { GFM } from "@lezer/markdown";
 import { defaultKeymap, history, historyKeymap, redo, indentWithTab } from "@codemirror/commands";
-import { syntaxHighlighting, HighlightStyle, indentUnit } from "@codemirror/language";
+import { syntaxHighlighting, HighlightStyle, defaultHighlightStyle, indentUnit } from "@codemirror/language";
+import { oneDarkHighlightStyle } from "@codemirror/theme-one-dark";
+import { languages } from "@codemirror/language-data";
 import { search, searchKeymap } from "@codemirror/search";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { tags } from "@lezer/highlight";
@@ -141,8 +143,9 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
     if (!raw) {
       clearMermaidCache();
       extensions.push(
-        markdown({ extensions: GFM }),
+        markdown({ extensions: GFM, codeLanguages: languages }),
         syntaxHighlighting(buildMarkdownHighlight(isDark)),
+        syntaxHighlighting(isDark ? oneDarkHighlightStyle : defaultHighlightStyle, { fallback: true }),
         linkNavigation(notePath),
         calloutDecorations(),
         listSpacing(),

@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+import rehypeHighlight from "rehype-highlight";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import { resolveNotePath, isLocalNoteLink, ensureMdExtension } from "../../utils/resolveNotePath";
@@ -271,6 +272,23 @@ export function MarkdownPreview({ content, notePath }: Props) {
           </div>
         );
       },
+      pre: ({ children, ...props }: React.HTMLAttributes<HTMLPreElement> & { children?: React.ReactNode }) => {
+        // Extract language from the nested <code> element
+        const codeChild = React.Children.toArray(children).find(
+          (c) => React.isValidElement(c) && c.type === "code",
+        ) as React.ReactElement<{ className?: string }> | undefined;
+        const langMatch = codeChild?.props?.className?.match(/language-([\w.+#-]+)/);
+        const lang = langMatch?.[1];
+        if (lang && lang !== "mermaid") {
+          return (
+            <div className="code-block-wrapper">
+              <span className="code-lang-badge">{lang}</span>
+              <pre {...props}>{children}</pre>
+            </div>
+          );
+        }
+        return <pre {...props}>{children}</pre>;
+      },
       code: ({
         className,
         children,
@@ -295,7 +313,7 @@ export function MarkdownPreview({ content, notePath }: Props) {
 
   return (
     <div className="md-preview" ref={containerRef}>
-      <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={[rehypeRaw]} components={components}>
+      <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={[rehypeRaw, [rehypeHighlight, { ignoreMissing: true }]]} components={components}>
         {encodeLinkSpaces(preprocessCallouts(normalizeCheckboxes(content)))}
       </ReactMarkdown>
     </div>

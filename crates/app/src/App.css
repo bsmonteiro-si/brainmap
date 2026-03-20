@@ -1177,11 +1177,11 @@ body {
   border-radius: 4px;
 }
 .editor-body .cm-editor .cm-inline-code {
-  background: color-mix(in srgb, var(--accent) 12%, var(--bg-tertiary));
-  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border-color));
-  border-radius: 4px;
-  padding: 1px 5px;
-  color: color-mix(in srgb, var(--accent) 40%, var(--text-primary));
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  color: var(--accent);
 }
 /* Language badge floated right on fence-start line */
 .editor-body .cm-editor .cm-code-lang-badge {
@@ -1240,11 +1240,10 @@ body {
 .editor-body .cm-editor .cm-table-widget code {
   font-family: ui-monospace, 'Menlo', 'Monaco', 'Consolas', monospace;
   font-size: 0.88em;
-  background: color-mix(in srgb, var(--accent) 12%, var(--bg-tertiary));
-  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border-color));
-  border-radius: 4px;
-  padding: 1px 5px;
-  color: color-mix(in srgb, var(--accent) 40%, var(--text-primary));
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
 }
 .editor-body .cm-editor .cm-table-widget-wrapper {
   position: relative;
@@ -2725,11 +2724,10 @@ body {
 .md-preview code {
   font-family: ui-monospace, 'Menlo', 'Monaco', 'Consolas', monospace;
   font-size: 0.88em;
-  background: color-mix(in srgb, var(--accent) 12%, var(--bg-tertiary));
-  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border-color));
-  border-radius: 4px;
-  padding: 0.1em 0.4em;
-  color: color-mix(in srgb, var(--accent) 40%, var(--text-primary));
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
 }
 
 .md-preview pre {
@@ -2873,6 +2871,9 @@ body {
 .md-preview .callout-body {
   padding: 8px 12px 10px 16px;
   color: var(--text-secondary);
+}
+.md-preview .callout-body pre code {
+  color: var(--text-primary);
 }
 .md-preview .callout-body p { margin: 0; }
 .md-preview .callout-body p + p { margin-top: 0.5em; }

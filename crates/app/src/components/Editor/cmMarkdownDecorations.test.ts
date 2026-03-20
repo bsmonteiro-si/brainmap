@@ -331,3 +331,27 @@ describe("renderInlineMarkdown", () => {
     expect(renderInlineMarkdown("hello world")).toBe("hello world");
   });
 });
+
+describe("scanFencedBlocks lang extraction for badge", () => {
+  it("extracts multi-word info string (first word as lang)", () => {
+    const d = doc("```javascript title=example\nconsole.log();\n```");
+    const blocks = scanFencedBlocks(d);
+    // Full info string is preserved; badge widget will display it
+    expect(blocks[0].lang).toBe("javascript title=example");
+  });
+
+  it("returns undefined lang for bare fence", () => {
+    const d = doc("```\nplain code\n```");
+    expect(scanFencedBlocks(d)[0].lang).toBeUndefined();
+  });
+
+  it("extracts lang from tilde fence", () => {
+    const d = doc("~~~python\nprint('hi')\n~~~");
+    expect(scanFencedBlocks(d)[0].lang).toBe("python");
+  });
+
+  it("trims whitespace from lang", () => {
+    const d = doc("```  rust  \nfn main() {}\n```");
+    expect(scanFencedBlocks(d)[0].lang).toBe("rust");
+  });
+});
