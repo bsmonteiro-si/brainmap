@@ -193,6 +193,7 @@ interface PersistedPrefs {
   filesTheme?: ComponentTheme;
   editorTheme?: ComponentTheme;
   excalidrawTheme?: "light" | "dark";
+  canvasTheme?: "light" | "dark";
   homeNotes?: Record<string, string>; // workspaceRoot → notePath
   tooltipFontSize?: number;
   tooltipPillSize?: number;
@@ -221,6 +222,7 @@ interface PersistedPrefs {
   arrowLigatures?: boolean;
   arrowEnabledTypes?: ArrowType[];
   arrowColor?: ArrowColorStyle;
+  settingsSize?: { width: number; height: number };
 }
 
 type CreateNoteMode = "default" | "create-and-link";
@@ -261,6 +263,7 @@ interface UIState {
   createFolderDialogOpen: boolean;
   createFolderInitialPath: string | null;
   settingsOpen: boolean;
+  settingsSize: { width: number; height: number };
   showEdgeLabels: boolean;
   showLegend: boolean;
   graphLayout: GraphLayout;
@@ -311,6 +314,7 @@ interface UIState {
   arrowColor: ArrowColorStyle;
   emptyFolders: Set<string>;
   excalidrawTheme: "light" | "dark";
+  canvasTheme: "light" | "dark";
   homeNotePath: string | null;
   customFileOrder: Record<string, string[]>;
 
@@ -326,6 +330,7 @@ interface UIState {
   setFilesTheme: (theme: ComponentTheme) => void;
   setEditorTheme: (theme: ComponentTheme) => void;
   setExcalidrawTheme: (theme: "light" | "dark") => void;
+  setCanvasTheme: (theme: "light" | "dark") => void;
   toggleGraphMode: () => void;
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
@@ -337,6 +342,7 @@ interface UIState {
   closeCreateFolderDialog: () => void;
   openSettings: () => void;
   closeSettings: () => void;
+  setSettingsSize: (size: { width: number; height: number }) => void;
   toggleEdgeLabels: () => void;
   toggleLegend: () => void;
   setGraphLayout: (layout: GraphLayout) => void;
@@ -505,6 +511,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   effectiveFilesTheme: resolveComponentTheme(storedPrefs.filesTheme ?? "inherit", resolveTheme(storedPrefs.theme ?? "system")),
   effectiveEditorTheme: resolveComponentTheme(storedPrefs.editorTheme ?? "inherit", resolveTheme(storedPrefs.theme ?? "system")),
   excalidrawTheme: storedPrefs.excalidrawTheme ?? "dark",
+  canvasTheme: storedPrefs.canvasTheme ?? "dark",
   graphMode: "navigate",
   commandPaletteOpen: false,
   createNoteDialogOpen: false,
@@ -520,6 +527,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   createFolderDialogOpen: false,
   createFolderInitialPath: null,
   settingsOpen: false,
+  settingsSize: storedPrefs.settingsSize ?? { width: 640, height: Math.round(window.innerHeight * 0.5) },
   showEdgeLabels: false,
   showLegend: false,
   graphLayout: "force",
@@ -648,6 +656,10 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ excalidrawTheme });
     savePrefs({ excalidrawTheme });
   },
+  setCanvasTheme: (canvasTheme: "light" | "dark") => {
+    set({ canvasTheme });
+    savePrefs({ canvasTheme });
+  },
 
   toggleGraphMode: () => {
     set((state) => ({
@@ -680,6 +692,10 @@ export const useUIStore = create<UIState>((set, get) => ({
   closeCreateFolderDialog: () => set({ createFolderDialogOpen: false, createFolderInitialPath: null }),
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false }),
+  setSettingsSize: (size) => {
+    set({ settingsSize: size });
+    savePrefs({ settingsSize: size });
+  },
 
   toggleEdgeLabels: () => set((s) => ({ showEdgeLabels: !s.showEdgeLabels })),
   toggleLegend: () => set((s) => ({ showLegend: !s.showLegend })),
