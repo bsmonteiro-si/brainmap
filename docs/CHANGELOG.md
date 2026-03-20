@@ -2,6 +2,18 @@
 
 Feature history moved from CLAUDE.md. Organized by phase and feature area.
 
+## Canvas Support (JSON Canvas)
+
+- **Standalone `.canvas` files**: Create, open, and edit spatial canvas views using the open JSON Canvas specification (jsoncanvas.org).
+- **4 node types**: File references (note cards with title/type/tags), text cards, link nodes, and group containers.
+- **Edge connections**: Draw edges between nodes by dragging from handle to handle. Edges support labels and directional arrows.
+- **Note-aware**: File nodes reference real `.md` files — show live title, type badge, and tags from the graph. Double-click opens the note.
+- **React Flow**: Powered by @xyflow/react with zoom, pan, fit-to-view controls, and grid background.
+- **Auto-save**: Debounced save (1.5s) on every position change, edge addition, or node modification.
+- **Canvas theme**: Independent light/dark setting in Settings modal.
+- **Sample canvas**: `seed/The Smoking Controversy.canvas` demonstrates the format with 5 file nodes, 2 text annotations, and labeled edges.
+- **Error boundary**: Prevents app crash; "Open as Text" and "Retry" fallback buttons.
+
 ## Excalidraw Drawing Support
 
 - **Standalone `.excalidraw` files**: Create, open, and edit Excalidraw drawings directly in BrainMap with the full Excalidraw editor.

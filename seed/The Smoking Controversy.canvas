@@ -1,0 +1,103 @@
+{
+  "nodes": [
+    {
+      "id": "evidence",
+      "type": "file",
+      "file": "Evidence/smoking-lung-cancer.md",
+      "x": 280,
+      "y": 0,
+      "width": 280,
+      "height": 80
+    },
+    {
+      "id": "argument",
+      "type": "file",
+      "file": "Arguments/causal-reasoning-formalizable.md",
+      "x": 280,
+      "y": 180,
+      "width": 280,
+      "height": 80
+    },
+    {
+      "id": "fisher",
+      "type": "file",
+      "file": "People/ronald-fisher.md",
+      "x": 60,
+      "y": 380,
+      "width": 250,
+      "height": 80
+    },
+    {
+      "id": "pearson",
+      "type": "file",
+      "file": "People/karl-pearson.md",
+      "x": 520,
+      "y": 380,
+      "width": 250,
+      "height": 80
+    },
+    {
+      "id": "confounding",
+      "type": "file",
+      "file": "Concepts/confounding.md",
+      "x": 60,
+      "y": 180,
+      "width": 180,
+      "height": 80
+    },
+    {
+      "id": "annotation",
+      "type": "text",
+      "text": "Fisher invented RCTs but denied smoking caused cancer — the irony at the heart of the causal revolution.",
+      "x": 60,
+      "y": 530,
+      "width": 340,
+      "height": 70
+    },
+    {
+      "id": "timeline",
+      "type": "text",
+      "text": "1950s: Doll & Hill publish evidence.\n1960s: Fisher publishes objections.\n1964: US Surgeon General rules causation.\n2000s: Pearl formalizes what was missing.",
+      "x": 460,
+      "y": 530,
+      "width": 340,
+      "height": 90
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "fromNode": "evidence",
+      "toNode": "argument",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "supports"
+    },
+    {
+      "id": "e2",
+      "fromNode": "fisher",
+      "toNode": "argument",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "contradicts",
+      "color": "#e74c3c"
+    },
+    {
+      "id": "e3",
+      "fromNode": "pearson",
+      "toNode": "argument",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "contradicts",
+      "color": "#e74c3c"
+    },
+    {
+      "id": "e4",
+      "fromNode": "fisher",
+      "toNode": "confounding",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "label": "invoked"
+    }
+  ]
+}

@@ -158,9 +158,9 @@ function App() {
           return;
         }
 
-        // Excalidraw tab — unmount cleanup handles saving; just close
+        // Custom editor tabs — unmount cleanup handles saving; just close
         const closingTab = useTabStore.getState().getTab(closingId);
-        if (closingTab?.kind === "excalidraw") {
+        if (closingTab?.kind === "excalidraw" || closingTab?.kind === "canvas") {
           closeTabAndNavigateNext(closingId);
           return;
         }
@@ -196,6 +196,8 @@ function App() {
           const tab = tabId ? useTabStore.getState().getTab(tabId) : null;
           if (tab?.kind === "excalidraw") {
             window.dispatchEvent(new CustomEvent("excalidraw:save", { detail: tab.path }));
+          } else if (tab?.kind === "canvas") {
+            window.dispatchEvent(new CustomEvent("canvas:save", { detail: tab.path }));
           } else {
             useEditorStore.getState().saveNote();
           }

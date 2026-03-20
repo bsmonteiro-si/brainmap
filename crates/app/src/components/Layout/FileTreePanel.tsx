@@ -326,6 +326,29 @@ function ContextMenu({
     }
   };
 
+  const handleNewCanvasHere = async () => {
+    onClose();
+    const prefix = state.node ? folderPrefixFor(state.node) : "";
+    const workspaceFiles = useGraphStore.getState().workspaceFiles;
+    let name = "Untitled.canvas";
+    let counter = 2;
+    while (workspaceFiles.includes(prefix + name)) {
+      name = `Untitled-${counter}.canvas`;
+      counter++;
+    }
+    const fullPath = prefix + name;
+    const emptyCanvas = JSON.stringify({ nodes: [], edges: [] });
+    try {
+      const api = await getAPI();
+      await api.writePlainFile(fullPath, emptyCanvas);
+      await useEditorStore.getState().clearForCustomTab();
+      const fileName = fullPath.split("/").pop() ?? fullPath;
+      useTabStore.getState().openTab(fullPath, "canvas", fileName, null);
+    } catch (e) {
+      log.error("files", "failed to create canvas", { error: String(e) });
+    }
+  };
+
   const handleDelete = () => {
     if (!state.node) return;
     onClose();
@@ -415,6 +438,9 @@ function ContextMenu({
           <div className="context-menu-item" onClick={handleNewDrawingHere}>
             New Drawing at Root
           </div>
+          <div className="context-menu-item" onClick={handleNewCanvasHere}>
+            New Canvas at Root
+          </div>
           <div className="context-menu-item" onClick={handleNewFolderHere}>
             New Folder at Root
           </div>
@@ -426,6 +452,9 @@ function ContextMenu({
           </div>
           <div className="context-menu-item" onClick={handleNewDrawingHere}>
             New Drawing Here
+          </div>
+          <div className="context-menu-item" onClick={handleNewCanvasHere}>
+            New Canvas Here
           </div>
           <div className="context-menu-item" onClick={handleNewFolderHere}>
             New Subfolder Here
@@ -770,6 +799,12 @@ function FileTreeNode({
     if (node.fullPath.toLowerCase().endsWith(".excalidraw")) {
       const fileName = node.fullPath.split("/").pop() ?? node.fullPath;
       useTabStore.getState().openTab(node.fullPath, "excalidraw", fileName, null);
+      useEditorStore.getState().clearForCustomTab();
+      return;
+    }
+    if (node.fullPath.toLowerCase().endsWith(".canvas")) {
+      const fileName = node.fullPath.split("/").pop() ?? node.fullPath;
+      useTabStore.getState().openTab(node.fullPath, "canvas", fileName, null);
       useEditorStore.getState().clearForCustomTab();
       return;
     }

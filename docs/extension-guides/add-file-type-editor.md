@@ -261,6 +261,7 @@ If the library supports theming independently from the app:
 | `.md` (no YAML) | `"plain-file"` | MarkdownEditor | Yes | Phase 1 |
 | `.pdf` | `"pdf"` | PdfViewer | No (highlights only) | Phase 1c |
 | `.excalidraw` | `"excalidraw"` | ExcalidrawEditor | Yes | Phase 1c |
+| `.canvas` | `"canvas"` | CanvasEditor | Yes | Phase 1c |
 
 ## Common pitfalls
 
