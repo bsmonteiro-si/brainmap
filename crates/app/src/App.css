@@ -1177,10 +1177,26 @@ body {
   border-radius: 4px;
 }
 .editor-body .cm-editor .cm-inline-code {
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-tertiary));
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border-color));
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: color-mix(in srgb, var(--accent) 40%, var(--text-primary));
+}
+/* Language badge floated right on fence-start line */
+.editor-body .cm-editor .cm-code-lang-badge {
+  float: right;
+  font-size: 0.72em;
+  color: var(--text-muted);
   background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
+  padding: 1px 6px;
   border-radius: 3px;
-  padding: 1px 4px;
+  font-family: var(--ui-font-family);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  user-select: none;
+  pointer-events: none;
+  opacity: 0.7;
 }
 .editor-body .cm-editor .cm-line.cm-table-line {
   font-family: ui-monospace, 'Menlo', 'Monaco', 'Consolas', monospace !important;
@@ -1224,10 +1240,11 @@ body {
 .editor-body .cm-editor .cm-table-widget code {
   font-family: ui-monospace, 'Menlo', 'Monaco', 'Consolas', monospace;
   font-size: 0.88em;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: 3px;
-  padding: 1px 4px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-tertiary));
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border-color));
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: color-mix(in srgb, var(--accent) 40%, var(--text-primary));
 }
 .editor-body .cm-editor .cm-table-widget-wrapper {
   position: relative;
@@ -2708,10 +2725,11 @@ body {
 .md-preview code {
   font-family: ui-monospace, 'Menlo', 'Monaco', 'Consolas', monospace;
   font-size: 0.88em;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: 3px;
-  padding: 0.1em 0.35em;
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-tertiary));
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border-color));
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+  color: color-mix(in srgb, var(--accent) 40%, var(--text-primary));
 }
 
 .md-preview pre {
@@ -2729,6 +2747,60 @@ body {
   font-size: 0.87em;
   color: var(--text-primary);
 }
+/* Language badge in preview code blocks */
+.md-preview .code-block-wrapper {
+  position: relative;
+  margin: 0 0 1em;
+}
+.md-preview .code-block-wrapper pre {
+  margin: 0;
+}
+.md-preview .code-lang-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 2px 8px;
+  font-size: 0.72em;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  border-radius: 0 6px 0 6px;
+  border-bottom: 1px solid var(--border-color);
+  border-left: 1px solid var(--border-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: var(--ui-font-family);
+  user-select: none;
+  opacity: 0.7;
+}
+
+/* ── highlight.js syntax theme (adapts to CSS variables) ── */
+.md-preview .hljs { background: transparent; }
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in { color: color-mix(in srgb, var(--accent) 90%, var(--text-primary)); }
+.hljs-string,
+.hljs-attr,
+.hljs-addition { color: color-mix(in srgb, #98c379 85%, var(--text-primary)); }
+.hljs-comment,
+.hljs-quote { color: var(--text-muted); font-style: italic; }
+.hljs-number,
+.hljs-literal,
+.hljs-regexp { color: color-mix(in srgb, #d19a66 85%, var(--text-primary)); }
+.hljs-title,
+.hljs-title\.class_,
+.hljs-title\.function_ { color: color-mix(in srgb, #61afef 85%, var(--text-primary)); }
+.hljs-type,
+.hljs-template-tag { color: color-mix(in srgb, #e5c07b 85%, var(--text-primary)); }
+.hljs-variable,
+.hljs-params { color: color-mix(in srgb, #e06c75 85%, var(--text-primary)); }
+.hljs-meta,
+.hljs-meta .hljs-keyword { color: color-mix(in srgb, #c678dd 85%, var(--text-primary)); }
+.hljs-symbol,
+.hljs-bullet { color: color-mix(in srgb, #56b6c2 85%, var(--text-primary)); }
+.hljs-deletion { color: #e06c75; }
+.hljs-section { color: var(--accent); font-weight: 600; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }
 
 /* ── Mermaid in MarkdownPreview ── */
 .md-preview .mermaid-preview {
@@ -4272,4 +4344,19 @@ body {
 
 .pdf-color-swatch--active {
   border-color: var(--text-primary);
+}
+
+/* ── Excalidraw ───────────────────────────────────────────── */
+.excalidraw-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Prevent BrainMap global font overrides from leaking into Excalidraw */
+.excalidraw-container .excalidraw {
+  font-family: unset;
+  font-size: unset;
 }

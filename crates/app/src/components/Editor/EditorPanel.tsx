@@ -8,6 +8,7 @@ import { FrontmatterForm } from "./FrontmatterForm";
 import { RelatedNotesFooter } from "./RelatedNotesFooter";
 import { EditorToolbar } from "./EditorToolbar";
 import { PdfViewer } from "./PdfViewer";
+import { ExcalidrawEditor } from "./ExcalidrawEditor";
 import { DocumentOutline } from "./DocumentOutline";
 import { getNodeColor } from "../GraphView/graphStyles";
 import type { EditorView } from "@codemirror/view";
@@ -71,6 +72,14 @@ export function EditorPanel() {
     return (
       <div className="editor-panel-container">
         <PdfViewer path={activeTab.path} />
+      </div>
+    );
+  }
+
+  if (activeTab?.kind === "excalidraw") {
+    return (
+      <div className="editor-panel-container">
+        <ExcalidrawEditor path={activeTab.path} />
       </div>
     );
   }

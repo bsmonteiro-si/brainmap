@@ -13,6 +13,9 @@ function navigateToActiveTab() {
       if (nextTab.kind === "untitled") {
         useGraphStore.getState().selectNode(null);
         useEditorStore.getState().activateUntitledTab(activeTabId);
+      } else if (nextTab.kind === "pdf" || nextTab.kind === "excalidraw") {
+        useGraphStore.getState().selectNode(null);
+        useEditorStore.getState().clearForCustomTab();
       } else if (nextTab.kind === "note") {
         useGraphStore.getState().selectNode(activeTabId);
         useEditorStore.getState().openNote(activeTabId);

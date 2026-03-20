@@ -28,6 +28,7 @@ import {
   Lock,
   GitBranch,
   ScrollText,
+  Pencil,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { getNodeColor } from "../GraphView/graphStyles";
@@ -60,6 +61,7 @@ const FILE_EXT_ICONS: Record<string, ExtIcon> = {
   txt: { icon: FileText, color: "#95a5a6" },
   // Documents
   pdf: { icon: FileText, color: "#e74c3c" },
+  excalidraw: { icon: Pencil, color: "#6965db" },
   // Web
   html: { icon: Globe, color: "#e44d26" },
   htm: { icon: Globe, color: "#e44d26" },

@@ -49,8 +49,10 @@ export function SettingsModal() {
   const closeSettings = useUIStore((s) => s.closeSettings);
   const filesTheme = useUIStore((s) => s.filesTheme);
   const editorTheme = useUIStore((s) => s.editorTheme);
+  const excalidrawTheme = useUIStore((s) => s.excalidrawTheme);
   const setFilesTheme = useUIStore((s) => s.setFilesTheme);
   const setEditorTheme = useUIStore((s) => s.setEditorTheme);
+  const setExcalidrawTheme = useUIStore((s) => s.setExcalidrawTheme);
   const uiFontFamily = useUIStore((s) => s.uiFontFamily);
   const uiFontSize = useUIStore((s) => s.uiFontSize);
   const editorFontFamily = useUIStore((s) => s.editorFontFamily);
@@ -172,6 +174,18 @@ export function SettingsModal() {
                   {THEME_OPTIONS.map((t) => (
                     <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
+                </select>
+              </div>
+            </div>
+            <div className="settings-row">
+              <span className="settings-label">Excalidraw</span>
+              <div className="settings-control">
+                <select
+                  value={excalidrawTheme}
+                  onChange={(e) => setExcalidrawTheme(e.target.value as "light" | "dark")}
+                >
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
                 </select>
               </div>
             </div>

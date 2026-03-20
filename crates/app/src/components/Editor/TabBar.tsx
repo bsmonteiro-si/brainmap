@@ -120,10 +120,10 @@ export function TabBar() {
     if (tab.kind === "untitled") {
       useGraphStore.getState().selectNode(null);
       useEditorStore.getState().activateUntitledTab(path);
-    } else if (tab.kind === "pdf") {
+    } else if (tab.kind === "pdf" || tab.kind === "excalidraw") {
       useGraphStore.getState().selectNode(null);
       useTabStore.getState().activateTab(path);
-      useEditorStore.getState().clearForPdfTab();
+      useEditorStore.getState().clearForCustomTab();
     } else if (tab.kind === "note") {
       useGraphStore.getState().selectNode(path);
       useEditorStore.getState().openNote(path);
@@ -163,7 +163,8 @@ export function TabBar() {
     }
 
     // PDF tabs are never dirty — just close
-    if (tab && tab.kind === "pdf") {
+    // Excalidraw tabs save via unmount cleanup in ExcalidrawEditor
+    if (tab && (tab.kind === "pdf" || tab.kind === "excalidraw")) {
       closeTabAndNavigateNext(id);
       return;
     }
@@ -245,7 +246,7 @@ export function TabBar() {
         >
           <NoteTypeIcon noteType={tab.kind === "untitled" ? undefined : (tab.noteType ?? undefined)} fileName={tab.kind === "untitled" ? undefined : tab.path?.split("/").pop()} size={14} />
           <span className="tab-title">{tab.title}</span>
-          {(tab.id === activeTabId ? editorIsDirty : tab.isDirty) && <span className="tab-dirty-dot" />}
+          {(tab.id === activeTabId && tab.kind !== "excalidraw" && tab.kind !== "pdf" ? editorIsDirty : tab.isDirty) && <span className="tab-dirty-dot" />}
           <button
             className="tab-close"
             onClick={(e) => handleClose(e, tab.id)}

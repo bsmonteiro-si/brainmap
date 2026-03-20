@@ -2,6 +2,17 @@
 
 Feature history moved from CLAUDE.md. Organized by phase and feature area.
 
+## Excalidraw Drawing Support
+
+- **Standalone `.excalidraw` files**: Create, open, and edit Excalidraw drawings directly in BrainMap with the full Excalidraw editor.
+- **Lazy-loaded**: `@excalidraw/excalidraw` package is dynamically imported only when opening a drawing, keeping the main bundle small.
+- **Auto-save**: Debounced auto-save (1.5s) with content-aware dirty tracking — selection-only changes don't trigger writes.
+- **Dark mode**: Follows the app's editor theme setting.
+- **File tree integration**: `.excalidraw` files appear with a pencil icon. Right-click context menu includes "New Drawing Here" / "New Drawing at Root".
+- **Tab system**: Full tab support — multiple drawings can be open simultaneously, dirty dot indicator, Cmd+S manual save, save-on-close.
+- **Error recovery**: Malformed JSON shows an error with "Open as Text" fallback.
+- **No backend changes**: Phase 1 is frontend-only; drawings are plain JSON files managed via existing `readPlainFile`/`writePlainFile` API.
+
 ## Editor — Enhanced List Styling
 
 - **Accent-colored markers**: Unordered bullets and ordered numbers now render in `var(--accent)` with `font-weight: 600` in both Edit and Preview modes, improving contrast across all themes.

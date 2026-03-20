@@ -295,6 +295,37 @@ function ContextMenu({
     useUIStore.getState().openCreateFolderDialog(prefix);
   };
 
+  const handleNewDrawingHere = async () => {
+    onClose();
+    const prefix = state.node ? folderPrefixFor(state.node) : "";
+    const workspaceFiles = useGraphStore.getState().workspaceFiles;
+    // Auto-generate unique filename
+    let name = "Untitled.excalidraw";
+    let counter = 2;
+    while (workspaceFiles.includes(prefix + name)) {
+      name = `Untitled-${counter}.excalidraw`;
+      counter++;
+    }
+    const fullPath = prefix + name;
+    const emptyDrawing = JSON.stringify({
+      type: "excalidraw",
+      version: 2,
+      source: "brainmap",
+      elements: [],
+      appState: {},
+      files: {},
+    });
+    try {
+      const api = await getAPI();
+      await api.writePlainFile(fullPath, emptyDrawing);
+      await useEditorStore.getState().clearForCustomTab();
+      const fileName = fullPath.split("/").pop() ?? fullPath;
+      useTabStore.getState().openTab(fullPath, "excalidraw", fileName, null);
+    } catch (e) {
+      log.error("files", "failed to create drawing", { error: String(e) });
+    }
+  };
+
   const handleDelete = () => {
     if (!state.node) return;
     onClose();
@@ -381,6 +412,9 @@ function ContextMenu({
           <div className="context-menu-item" onClick={handleNewNoteHere}>
             New Note at Root
           </div>
+          <div className="context-menu-item" onClick={handleNewDrawingHere}>
+            New Drawing at Root
+          </div>
           <div className="context-menu-item" onClick={handleNewFolderHere}>
             New Folder at Root
           </div>
@@ -389,6 +423,9 @@ function ContextMenu({
         <>
           <div className="context-menu-item" onClick={handleNewNoteHere}>
             New Note Here
+          </div>
+          <div className="context-menu-item" onClick={handleNewDrawingHere}>
+            New Drawing Here
           </div>
           <div className="context-menu-item" onClick={handleNewFolderHere}>
             New Subfolder Here
@@ -727,7 +764,13 @@ function FileTreeNode({
     if (node.fullPath.toLowerCase().endsWith(".pdf")) {
       const fileName = node.fullPath.split("/").pop() ?? node.fullPath;
       useTabStore.getState().openTab(node.fullPath, "pdf", fileName, null);
-      useEditorStore.getState().clearForPdfTab();
+      useEditorStore.getState().clearForCustomTab();
+      return;
+    }
+    if (node.fullPath.toLowerCase().endsWith(".excalidraw")) {
+      const fileName = node.fullPath.split("/").pop() ?? node.fullPath;
+      useTabStore.getState().openTab(node.fullPath, "excalidraw", fileName, null);
+      useEditorStore.getState().clearForCustomTab();
       return;
     }
     if (isBrainMapNote) {

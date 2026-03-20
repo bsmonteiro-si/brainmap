@@ -192,6 +192,7 @@ interface PersistedPrefs {
   defaultTabSizes?: Partial<Record<LeftTab, TabPanelSizes>>;
   filesTheme?: ComponentTheme;
   editorTheme?: ComponentTheme;
+  excalidrawTheme?: "light" | "dark";
   homeNotes?: Record<string, string>; // workspaceRoot → notePath
   tooltipFontSize?: number;
   tooltipPillSize?: number;
@@ -309,6 +310,7 @@ interface UIState {
   arrowEnabledTypes: ArrowType[];
   arrowColor: ArrowColorStyle;
   emptyFolders: Set<string>;
+  excalidrawTheme: "light" | "dark";
   homeNotePath: string | null;
   customFileOrder: Record<string, string[]>;
 
@@ -323,6 +325,7 @@ interface UIState {
   setTheme: (theme: Theme) => void;
   setFilesTheme: (theme: ComponentTheme) => void;
   setEditorTheme: (theme: ComponentTheme) => void;
+  setExcalidrawTheme: (theme: "light" | "dark") => void;
   toggleGraphMode: () => void;
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
@@ -501,6 +504,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   editorTheme: storedPrefs.editorTheme ?? "inherit",
   effectiveFilesTheme: resolveComponentTheme(storedPrefs.filesTheme ?? "inherit", resolveTheme(storedPrefs.theme ?? "system")),
   effectiveEditorTheme: resolveComponentTheme(storedPrefs.editorTheme ?? "inherit", resolveTheme(storedPrefs.theme ?? "system")),
+  excalidrawTheme: storedPrefs.excalidrawTheme ?? "dark",
   graphMode: "navigate",
   commandPaletteOpen: false,
   createNoteDialogOpen: false,
@@ -639,6 +643,10 @@ export const useUIStore = create<UIState>((set, get) => ({
     const s = get();
     set({ editorTheme, effectiveEditorTheme: resolveComponentTheme(editorTheme, s.effectiveTheme) });
     savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, uiZoom: s.uiZoom, editorTheme });
+  },
+  setExcalidrawTheme: (excalidrawTheme: "light" | "dark") => {
+    set({ excalidrawTheme });
+    savePrefs({ excalidrawTheme });
   },
 
   toggleGraphMode: () => {

@@ -158,6 +158,13 @@ function App() {
           return;
         }
 
+        // Excalidraw tab — unmount cleanup handles saving; just close
+        const closingTab = useTabStore.getState().getTab(closingId);
+        if (closingTab?.kind === "excalidraw") {
+          closeTabAndNavigateNext(closingId);
+          return;
+        }
+
         // Regular tab
         const editor = useEditorStore.getState();
         if (editor.isDirty) {
@@ -186,7 +193,12 @@ function App() {
             saveAsTabId: tabId,
           });
         } else {
-          useEditorStore.getState().saveNote();
+          const tab = tabId ? useTabStore.getState().getTab(tabId) : null;
+          if (tab?.kind === "excalidraw") {
+            window.dispatchEvent(new CustomEvent("excalidraw:save", { detail: tab.path }));
+          } else {
+            useEditorStore.getState().saveNote();
+          }
         }
       }
       if (isMod && e.key === "b") {
