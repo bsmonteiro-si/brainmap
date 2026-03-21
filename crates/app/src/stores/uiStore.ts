@@ -194,6 +194,8 @@ interface PersistedPrefs {
   editorTheme?: ComponentTheme;
   excalidrawTheme?: "light" | "dark";
   canvasTheme?: "light" | "dark";
+  canvasShowDots?: boolean;
+  canvasDotOpacity?: number;
   homeNotes?: Record<string, string>; // workspaceRoot → notePath
   tooltipFontSize?: number;
   tooltipPillSize?: number;
@@ -315,6 +317,8 @@ interface UIState {
   emptyFolders: Set<string>;
   excalidrawTheme: "light" | "dark";
   canvasTheme: "light" | "dark";
+  canvasShowDots: boolean;
+  canvasDotOpacity: number;
   homeNotePath: string | null;
   customFileOrder: Record<string, string[]>;
 
@@ -331,6 +335,8 @@ interface UIState {
   setEditorTheme: (theme: ComponentTheme) => void;
   setExcalidrawTheme: (theme: "light" | "dark") => void;
   setCanvasTheme: (theme: "light" | "dark") => void;
+  setCanvasShowDots: (show: boolean) => void;
+  setCanvasDotOpacity: (opacity: number) => void;
   toggleGraphMode: () => void;
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
@@ -512,6 +518,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   effectiveEditorTheme: resolveComponentTheme(storedPrefs.editorTheme ?? "inherit", resolveTheme(storedPrefs.theme ?? "system")),
   excalidrawTheme: storedPrefs.excalidrawTheme ?? "dark",
   canvasTheme: storedPrefs.canvasTheme ?? "dark",
+  canvasShowDots: storedPrefs.canvasShowDots ?? true,
+  canvasDotOpacity: storedPrefs.canvasDotOpacity ?? 50,
   graphMode: "navigate",
   commandPaletteOpen: false,
   createNoteDialogOpen: false,
@@ -659,6 +667,14 @@ export const useUIStore = create<UIState>((set, get) => ({
   setCanvasTheme: (canvasTheme: "light" | "dark") => {
     set({ canvasTheme });
     savePrefs({ canvasTheme });
+  },
+  setCanvasShowDots: (canvasShowDots: boolean) => {
+    set({ canvasShowDots });
+    savePrefs({ canvasShowDots });
+  },
+  setCanvasDotOpacity: (canvasDotOpacity: number) => {
+    set({ canvasDotOpacity });
+    savePrefs({ canvasDotOpacity });
   },
 
   toggleGraphMode: () => {

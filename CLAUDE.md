@@ -12,11 +12,11 @@ Run `./scripts/check.sh` before committing. Activate hook: `git config core.hook
 
 ## Project Structure
 
-`crates/core` (parser, graph, FTS5, workspace), `crates/cli` (clap, 21 cmds), `crates/mcp` (rmcp, 24 tools + 3 resources), `crates/app/src-tauri` (Tauri v2 + React, excluded from workspace). `docs/` specs, `seed/` test dataset.
+`crates/core` (parser, graph, FTS5, workspace), `crates/cli` (clap, 21 cmds), `crates/mcp` (rmcp, 24 tools + 3 resources), `crates/app/src-tauri` (Tauri v2 + React, excluded from workspace). `docs/` specs, `seed/` test dataset (`.md` notes + `.canvas` sample).
 
 ## Architecture
 
-`.md` with YAML frontmatter = source of truth -> in-memory graph + SQLite FTS5. Consumers: CLI, Tauri app, MCP server. All writes through `workspace.rs`. Per-slot locking for multi-segment; Zustand snapshot/restore for segment switching. Folders are virtual graph nodes from directory structure.
+`.md` with YAML frontmatter = source of truth -> in-memory graph + SQLite FTS5. Consumers: CLI, Tauri app, MCP server. All writes through `workspace.rs`. Per-slot locking for multi-segment; Zustand snapshot/restore for segment switching. Folders are virtual graph nodes from directory structure. Non-markdown file types (`.excalidraw`, `.canvas`, `.pdf`) use dedicated editor components via the custom tab kind pattern (see `docs/extension-guides/add-file-type-editor.md`).
 
 ## Data Model
 

@@ -96,7 +96,10 @@ function CanvasEditorInner({ path }: { path: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const canvasTheme = useUIStore((s) => s.canvasTheme);
+  const canvasShowDots = useUIStore((s) => s.canvasShowDots);
+  const canvasDotOpacity = useUIStore((s) => s.canvasDotOpacity);
   const colorMode: ColorMode = canvasTheme;
+  const containerClass = `canvas-container${canvasTheme === "light" ? " canvas-light" : ""}`;
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedRef = useRef<string>("");
@@ -441,7 +444,7 @@ function CanvasEditorInner({ path }: { path: string }) {
 
   if (loading) {
     return (
-      <div className="canvas-container">
+      <div className={containerClass}>
         <div className="editor-placeholder">Loading canvas...</div>
       </div>
     );
@@ -449,7 +452,7 @@ function CanvasEditorInner({ path }: { path: string }) {
 
   if (error) {
     return (
-      <div className="canvas-container">
+      <div className={containerClass}>
         <div className="editor-placeholder" style={{ flexDirection: "column", gap: 8 }}>
           <div>{error}</div>
           <button
@@ -469,7 +472,7 @@ function CanvasEditorInner({ path }: { path: string }) {
   }
 
   return (
-    <div className="canvas-container">
+    <div className={containerClass}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -488,7 +491,17 @@ function CanvasEditorInner({ path }: { path: string }) {
         defaultEdgeOptions={{ markerEnd: { type: MarkerType.ArrowClosed } }}
       >
         <Controls />
-        <Background />
+        {canvasShowDots && (
+          <Background
+            variant={"dots" as const}
+            gap={20}
+            size={1.5}
+            color={canvasTheme === "light"
+              ? `rgba(0, 0, 0, ${canvasDotOpacity / 100})`
+              : `rgba(255, 255, 255, ${canvasDotOpacity / 100})`
+            }
+          />
+        )}
         <Panel position="bottom-center" className="canvas-toolbar">
           <button
             className="canvas-toolbar-btn"

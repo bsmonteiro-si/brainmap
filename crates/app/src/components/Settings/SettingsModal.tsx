@@ -66,10 +66,14 @@ export function SettingsModal() {
   const editorTheme = useUIStore((s) => s.editorTheme);
   const excalidrawTheme = useUIStore((s) => s.excalidrawTheme);
   const canvasTheme = useUIStore((s) => s.canvasTheme);
+  const canvasShowDots = useUIStore((s) => s.canvasShowDots);
+  const canvasDotOpacity = useUIStore((s) => s.canvasDotOpacity);
   const setFilesTheme = useUIStore((s) => s.setFilesTheme);
   const setEditorTheme = useUIStore((s) => s.setEditorTheme);
   const setExcalidrawTheme = useUIStore((s) => s.setExcalidrawTheme);
   const setCanvasTheme = useUIStore((s) => s.setCanvasTheme);
+  const setCanvasShowDots = useUIStore((s) => s.setCanvasShowDots);
+  const setCanvasDotOpacity = useUIStore((s) => s.setCanvasDotOpacity);
   const uiFontFamily = useUIStore((s) => s.uiFontFamily);
   const uiFontSize = useUIStore((s) => s.uiFontSize);
   const editorFontFamily = useUIStore((s) => s.editorFontFamily);
@@ -245,6 +249,35 @@ export function SettingsModal() {
             </select>
           </div>
         </div>
+        <div className="settings-row" style={{ alignItems: "center" }}>
+          <span className="settings-label">Canvas dots</span>
+          <label className="settings-checkbox-label">
+            <input
+              type="checkbox"
+              checked={canvasShowDots}
+              onChange={(e) => setCanvasShowDots(e.target.checked)}
+            />
+            Show grid dots
+          </label>
+        </div>
+        {canvasShowDots && (
+          <div className="settings-row">
+            <span className="settings-label">Dot intensity</span>
+            <div className="settings-control">
+              <div className="settings-size-row">
+                <input
+                  type="range"
+                  min={10}
+                  max={100}
+                  step={10}
+                  value={canvasDotOpacity}
+                  onChange={(e) => setCanvasDotOpacity(Number(e.target.value))}
+                />
+                <span className="settings-size-value">{canvasDotOpacity}%</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Interface Font ── */}
