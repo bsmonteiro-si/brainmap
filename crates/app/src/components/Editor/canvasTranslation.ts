@@ -186,7 +186,7 @@ export function flowToCanvas(nodes: Node[], edges: Edge[]): JsonCanvas {
         if (data.shape && data.shape !== "rectangle") node.shape = String(data.shape);
         if (data.fontSize && data.fontSize !== 13) node.fontSize = Number(data.fontSize);
         if (data.fontFamily) node.fontFamily = String(data.fontFamily);
-        if (data.textAlign && data.textAlign !== "left") node.textAlign = String(data.textAlign);
+        if (data.textAlign && data.textAlign !== "center") node.textAlign = String(data.textAlign);
         return node;
       }
       case "file": {

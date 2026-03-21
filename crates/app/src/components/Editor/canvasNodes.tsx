@@ -30,6 +30,7 @@ const FONT_FAMILIES = [
   { id: "sans-serif", label: "Sans" },
   { id: "serif", label: "Serif" },
   { id: "monospace", label: "Mono" },
+  { id: "'Chalkboard SE', cursive", label: "Sketch" },
 ];
 const TEXT_ALIGNMENTS = [
   { id: "left", icon: AlignLeft, label: "Left" },

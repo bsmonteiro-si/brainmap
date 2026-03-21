@@ -209,6 +209,19 @@ export function CreateNoteDialog() {
         await useEditorStore.getState().openPlainFile(createdPath);
       }
 
+      // Notify canvas (or other caller) that a file was created
+      const onCreated = useUIStore.getState().createNoteOnCreatedCallback;
+      if (onCreated) {
+        const createdFilePath = isNoteMode
+          ? (path.endsWith(".md") ? path : path + ".md")
+          : isCanvasMode
+            ? (path.endsWith(".canvas") ? path : path + ".canvas")
+            : isExcalidrawMode
+              ? (path.endsWith(".excalidraw") ? path : path + ".excalidraw")
+              : path;
+        onCreated(createdFilePath);
+      }
+
       close();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

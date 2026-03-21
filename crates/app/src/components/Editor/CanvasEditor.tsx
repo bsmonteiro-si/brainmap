@@ -20,7 +20,7 @@ import { useUIStore } from "../../stores/uiStore";
 import { log } from "../../utils/logger";
 import { canvasToFlow, flowToCanvas } from "./canvasTranslation";
 import type { JsonCanvas } from "./canvasTranslation";
-import { StickyNote, FileText, Layers, ChevronDown } from "lucide-react";
+import { StickyNote, FileText, FilePlus, Layers, ChevronDown } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES } from "./canvasShapes";
 import { useGraphStore } from "../../stores/graphStore";
@@ -108,6 +108,10 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const canvasArrowSize = useUIStore((s) => s.canvasArrowSize);
   const canvasCalloutTailSize = useUIStore((s) => s.canvasCalloutTailSize);
   const canvasStickyRotation = useUIStore((s) => s.canvasStickyRotation);
+  const canvasStickyColor = useUIStore((s) => s.canvasStickyColor);
+  const canvasStickyShadow = useUIStore((s) => s.canvasStickyShadow);
+  const canvasStickyFoldSize = useUIStore((s) => s.canvasStickyFoldSize);
+  const canvasStickyPin = useUIStore((s) => s.canvasStickyPin);
   const canvasRoundedRadius = useUIStore((s) => s.canvasRoundedRadius);
   const colorMode: ColorMode = canvasTheme;
   const containerClass = `canvas-container${canvasTheme === "light" ? " canvas-light" : ""}`;
@@ -115,6 +119,10 @@ export function CanvasEditorInner({ path }: { path: string }) {
     "--callout-tail": `${canvasCalloutTailSize}px`,
     "--callout-tail-inner": `${canvasCalloutTailSize - 1}px`,
     "--sticky-rotation": `${canvasStickyRotation}deg`,
+    "--sticky-color": canvasStickyColor,
+    "--sticky-shadow": `${canvasStickyShadow}px`,
+    "--sticky-fold": `${canvasStickyFoldSize}px`,
+    "--sticky-pin": canvasStickyPin ? "block" : "none",
     "--rounded-radius": `${canvasRoundedRadius}px`,
   } as React.CSSProperties;
 
@@ -472,6 +480,31 @@ export function CanvasEditorInner({ path }: { path: string }) {
     [reactFlowInstance, setNodes, scheduleSave],
   );
 
+  // Create a new note via dialog and add it as a file node
+  const createNoteForCanvas = useCallback(
+    (flowX?: number, flowY?: number) => {
+      // Set the callback so when the dialog creates the note, we add a node
+      useUIStore.setState({
+        createNoteOnCreatedCallback: (createdPath: string) => {
+          const viewport = reactFlowInstance.getViewport();
+          const container = document.querySelector(".canvas-container");
+          const cw = container?.clientWidth ?? 800;
+          const ch = container?.clientHeight ?? 600;
+          const x = flowX ?? ((-viewport.x + cw / 2) / viewport.zoom - 125);
+          const y = flowY ?? ((-viewport.y + ch / 2) / viewport.zoom - 50);
+          const id = `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+          setNodes((nds) => [
+            ...nds,
+            { id, type: "canvasFile", position: { x, y }, data: { file: createdPath }, style: { width: 250, height: 100 } },
+          ]);
+          requestAnimationFrame(() => scheduleSave());
+        },
+      });
+      useUIStore.getState().openCreateNoteDialog();
+    },
+    [reactFlowInstance, setNodes, scheduleSave],
+  );
+
   const toolbarNotes = useMemo(() => {
     if (!toolbarPicker) return [];
     const lf = toolbarFilter.toLowerCase();
@@ -612,6 +645,14 @@ export function CanvasEditorInner({ path }: { path: string }) {
           >
             <Layers size={22} />
           </button>
+          <div className="canvas-toolbar-separator" />
+          <button
+            className="canvas-toolbar-btn"
+            title="Create new note"
+            onClick={() => createNoteForCanvas()}
+          >
+            <FilePlus size={22} />
+          </button>
         </Panel>
       </ReactFlow>
       {toolbarShapePicker && (
@@ -694,6 +735,18 @@ export function CanvasEditorInner({ path }: { path: string }) {
                 onClick={() => addNodeAtMenu("canvasGroup", { label: "Group" }, 400, 300)}
               >
                 Add Group
+              </div>
+              <div className="context-menu-separator" />
+              <div
+                className="context-menu-item"
+                onClick={() => {
+                  const flowX = ctxMenu?.flowX;
+                  const flowY = ctxMenu?.flowY;
+                  closeCtxMenu();
+                  createNoteForCanvas(flowX, flowY);
+                }}
+              >
+                Create New Note
               </div>
             </>
           ) : showCtxShapes ? (

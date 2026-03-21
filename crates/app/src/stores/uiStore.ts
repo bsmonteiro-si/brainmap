@@ -203,6 +203,10 @@ interface PersistedPrefs {
   canvasCardBgOpacity?: number;
   canvasCalloutTailSize?: number;
   canvasStickyRotation?: number;
+  canvasStickyColor?: string;
+  canvasStickyShadow?: number;
+  canvasStickyFoldSize?: number;
+  canvasStickyPin?: boolean;
   canvasRoundedRadius?: number;
   canvasPanelFontFamily?: string;
   canvasPanelFontSize?: number;
@@ -264,6 +268,7 @@ interface UIState {
   graphMode: GraphMode;
   commandPaletteOpen: boolean;
   createNoteDialogOpen: boolean;
+  createNoteOnCreatedCallback: ((path: string) => void) | null;
   createNoteInitialPath: string | null;
   createNoteInitialTitle: string | null;
   createNoteMode: CreateNoteMode;
@@ -335,6 +340,10 @@ interface UIState {
   canvasCardBgOpacity: number;
   canvasCalloutTailSize: number;
   canvasStickyRotation: number;
+  canvasStickyColor: string;
+  canvasStickyShadow: number;
+  canvasStickyFoldSize: number;
+  canvasStickyPin: boolean;
   canvasRoundedRadius: number;
   canvasPanelFontFamily: string;
   canvasPanelFontSize: number;
@@ -361,6 +370,10 @@ interface UIState {
   setCanvasCardBgOpacity: (opacity: number) => void;
   setCanvasCalloutTailSize: (v: number) => void;
   setCanvasStickyRotation: (v: number) => void;
+  setCanvasStickyColor: (v: string) => void;
+  setCanvasStickyShadow: (v: number) => void;
+  setCanvasStickyFoldSize: (v: number) => void;
+  setCanvasStickyPin: (v: boolean) => void;
   setCanvasRoundedRadius: (v: number) => void;
   setCanvasPanelFontFamily: (v: string) => void;
   setCanvasPanelFontSize: (v: number) => void;
@@ -553,6 +566,10 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasCardBgOpacity: storedPrefs.canvasCardBgOpacity ?? 15,
   canvasCalloutTailSize: storedPrefs.canvasCalloutTailSize ?? 18,
   canvasStickyRotation: storedPrefs.canvasStickyRotation ?? 1.5,
+  canvasStickyColor: storedPrefs.canvasStickyColor ?? "#fef3c7",
+  canvasStickyShadow: storedPrefs.canvasStickyShadow ?? 6,
+  canvasStickyFoldSize: storedPrefs.canvasStickyFoldSize ?? 20,
+  canvasStickyPin: storedPrefs.canvasStickyPin ?? false,
   canvasRoundedRadius: storedPrefs.canvasRoundedRadius ?? 24,
   canvasPanelFontFamily: storedPrefs.canvasPanelFontFamily ?? DEFAULT_UI_FONT,
   canvasPanelFontSize: storedPrefs.canvasPanelFontSize ?? 12,
@@ -560,6 +577,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   graphMode: "navigate",
   commandPaletteOpen: false,
   createNoteDialogOpen: false,
+  createNoteOnCreatedCallback: null,
   createNoteInitialPath: null,
   createNoteInitialTitle: null,
   createNoteMode: "default",
@@ -734,6 +752,22 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ canvasStickyRotation });
     savePrefs({ canvasStickyRotation });
   },
+  setCanvasStickyColor: (canvasStickyColor: string) => {
+    set({ canvasStickyColor });
+    savePrefs({ canvasStickyColor });
+  },
+  setCanvasStickyShadow: (canvasStickyShadow: number) => {
+    set({ canvasStickyShadow });
+    savePrefs({ canvasStickyShadow });
+  },
+  setCanvasStickyFoldSize: (canvasStickyFoldSize: number) => {
+    set({ canvasStickyFoldSize });
+    savePrefs({ canvasStickyFoldSize });
+  },
+  setCanvasStickyPin: (canvasStickyPin: boolean) => {
+    set({ canvasStickyPin });
+    savePrefs({ canvasStickyPin });
+  },
   setCanvasRoundedRadius: (canvasRoundedRadius: number) => {
     set({ canvasRoundedRadius });
     savePrefs({ canvasRoundedRadius });
@@ -757,7 +791,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   closeCommandPalette: () => set({ commandPaletteOpen: false }),
   openCreateNoteDialog: (pathOrOpts?: string | CreateNoteDialogOpts) => {
     if (typeof pathOrOpts === "string" || pathOrOpts === undefined) {
-      set({ createNoteDialogOpen: true, createNoteInitialPath: pathOrOpts ?? null, createNoteInitialTitle: null, createNoteMode: "default", createFileKind: "note", createAndLinkSource: null, createNoteSaveAsBody: null, createNoteSaveAsTabId: null });
+      set({ createNoteDialogOpen: true, createNoteOnCreatedCallback: null, createNoteInitialPath: pathOrOpts ?? null, createNoteInitialTitle: null, createNoteMode: "default", createFileKind: "note", createAndLinkSource: null, createNoteSaveAsBody: null, createNoteSaveAsTabId: null });
     } else {
       set({
         createNoteDialogOpen: true,
@@ -771,7 +805,7 @@ export const useUIStore = create<UIState>((set, get) => ({
       });
     }
   },
-  closeCreateNoteDialog: () => set({ createNoteDialogOpen: false, createNoteInitialPath: null, createNoteInitialTitle: null, createNoteMode: "default", createFileKind: "note", createAndLinkSource: null, createNoteSaveAsBody: null, createNoteSaveAsTabId: null }),
+  closeCreateNoteDialog: () => set({ createNoteDialogOpen: false, createNoteOnCreatedCallback: null, createNoteInitialPath: null, createNoteInitialTitle: null, createNoteMode: "default", createFileKind: "note", createAndLinkSource: null, createNoteSaveAsBody: null, createNoteSaveAsTabId: null }),
   openUnsavedChangesDialog: (tabId: string) => set({ unsavedChangesDialogOpen: true, unsavedChangesTabId: tabId }),
   closeUnsavedChangesDialog: () => set({ unsavedChangesDialogOpen: false, unsavedChangesTabId: null }),
   openCreateFolderDialog: (initialPath?: string) => set({ createFolderDialogOpen: true, createFolderInitialPath: initialPath ?? null }),
