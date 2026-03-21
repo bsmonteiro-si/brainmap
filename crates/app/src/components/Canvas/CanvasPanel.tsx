@@ -35,8 +35,8 @@ export function CanvasPanel() {
   const currentName = activeCanvasPath?.split("/").pop()?.replace(/\.canvas$/i, "") ?? null;
 
   return (
-    <div className="canvas-panel" style={{ fontFamily: canvasPanelFontFamily, fontSize: canvasPanelFontSize }}>
-      <div className="canvas-panel-header">
+    <div className="canvas-panel">
+      <div className="canvas-panel-header" style={{ fontFamily: canvasPanelFontFamily, fontSize: canvasPanelFontSize }}>
         <div className="canvas-panel-icon">
           <LayoutDashboard size={14} />
         </div>
@@ -60,7 +60,7 @@ export function CanvasPanel() {
         </button>
       </div>
       {showPicker && (
-        <div className="canvas-panel-picker">
+        <div className="canvas-panel-picker" style={{ fontFamily: canvasPanelFontFamily, fontSize: canvasPanelFontSize }}>
           {canvasFiles.length === 0 ? (
             <div className="canvas-panel-picker-empty">No canvas files found</div>
           ) : (
