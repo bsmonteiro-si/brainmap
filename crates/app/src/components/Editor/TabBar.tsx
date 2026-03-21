@@ -232,7 +232,7 @@ export function TabBar() {
           key={tab.id}
           role="tab"
           aria-selected={tab.id === activeTabId}
-          className={`tab-item${tab.id === activeTabId ? " tab-item--active" : ""}${dragTabId === tab.id ? " tab-item--dragging" : ""}${dropTargetId === tab.id ? " tab-item--drop-target" : ""}`}
+          className={`tab-item${tab.id === activeTabId ? " tab-item--active" : ""}${dragTabId === tab.id ? " tab-item--dragging" : ""}${dropTargetId === tab.id ? " tab-item--drop-target" : ""}${tab.kind === "canvas" || tab.kind === "excalidraw" || tab.kind === "pdf" ? ` tab-item--${tab.kind}` : ""}`}
           draggable
           onClick={() => handleActivate(tab.id)}
           onAuxClick={(e) => handleAuxClick(e, tab.id)}
@@ -245,7 +245,10 @@ export function TabBar() {
           title={tab.kind === "untitled" ? tab.title : tab.path}
         >
           <NoteTypeIcon noteType={tab.kind === "untitled" ? undefined : (tab.noteType ?? undefined)} fileName={tab.kind === "untitled" ? undefined : tab.path?.split("/").pop()} size={14} />
-          <span className="tab-title">{tab.title}</span>
+          <span className="tab-title">{(tab.kind === "canvas" || tab.kind === "excalidraw" || tab.kind === "pdf") ? tab.title.replace(/\.[^.]+$/, "") : tab.title}</span>
+          {tab.kind === "canvas" && <span className="tab-ext-badge tab-ext-badge--canvas">.canvas</span>}
+          {tab.kind === "excalidraw" && <span className="tab-ext-badge tab-ext-badge--excalidraw">.excalidraw</span>}
+          {tab.kind === "pdf" && <span className="tab-ext-badge tab-ext-badge--pdf">.pdf</span>}
           {(tab.id === activeTabId && tab.kind !== "excalidraw" && tab.kind !== "pdf" && tab.kind !== "canvas" ? editorIsDirty : tab.isDirty) && <span className="tab-dirty-dot" />}
           <button
             className="tab-close"

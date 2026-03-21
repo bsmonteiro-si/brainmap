@@ -17,6 +17,7 @@ interface JsonCanvasNodeBase {
 interface JsonCanvasTextNode extends JsonCanvasNodeBase {
   type: "text";
   text: string;
+  shape?: string;
 }
 
 interface JsonCanvasFileNode extends JsonCanvasNodeBase {
@@ -89,6 +90,7 @@ export function canvasToFlow(canvas: JsonCanvas): { nodes: Node[]; edges: Edge[]
     switch (cn.type) {
       case "text":
         data.text = cn.text;
+        if (cn.shape) data.shape = cn.shape;
         break;
       case "file":
         data.file = cn.file;
@@ -173,8 +175,11 @@ export function flowToCanvas(nodes: Node[], edges: Edge[]): JsonCanvas {
     if (data.bgColor) base.bgColor = String(data.bgColor);
 
     switch (canvasType) {
-      case "text":
-        return { ...base, type: "text" as const, text: String(data.text ?? "") };
+      case "text": {
+        const node: JsonCanvasTextNode = { ...base, type: "text" as const, text: String(data.text ?? "") };
+        if (data.shape && data.shape !== "rectangle") node.shape = String(data.shape);
+        return node;
+      }
       case "file": {
         const node: JsonCanvasFileNode = { ...base, type: "file" as const, file: String(data.file ?? "") };
         if (data.subpath) node.subpath = String(data.subpath);

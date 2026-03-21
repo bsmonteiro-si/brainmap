@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
-import { LayoutDashboard, FolderOpen, Plus } from "lucide-react";
+import { LayoutDashboard, Plus, ChevronDown } from "lucide-react";
 import { useUIStore } from "../../stores/uiStore";
 import { useGraphStore } from "../../stores/graphStore";
 import { CanvasEditorInner, CanvasPanelModeContext } from "../Editor/CanvasEditor";
@@ -30,12 +30,14 @@ export function CanvasPanel() {
     setShowPicker(false);
   };
 
-  const currentName = activeCanvasPath?.split("/").pop() ?? null;
+  const currentName = activeCanvasPath?.split("/").pop()?.replace(/\.canvas$/i, "") ?? null;
 
   return (
     <div className="canvas-panel">
       <div className="canvas-panel-header">
-        <LayoutDashboard size={14} style={{ flexShrink: 0, color: "var(--text-muted)" }} />
+        <div className="canvas-panel-icon">
+          <LayoutDashboard size={14} />
+        </div>
         <button
           className="canvas-panel-selector"
           onClick={() => setShowPicker(!showPicker)}
@@ -44,7 +46,8 @@ export function CanvasPanel() {
           <span className="canvas-panel-selector-label">
             {currentName ?? "No canvas open"}
           </span>
-          <FolderOpen size={12} />
+          <span className="canvas-panel-selector-badge">.canvas</span>
+          <ChevronDown size={12} className={`canvas-panel-chevron${showPicker ? " canvas-panel-chevron--open" : ""}`} />
         </button>
         <button
           className="canvas-panel-create-btn"
@@ -59,18 +62,26 @@ export function CanvasPanel() {
           {canvasFiles.length === 0 ? (
             <div className="canvas-panel-picker-empty">No canvas files found</div>
           ) : (
-            canvasFiles.map((f) => (
-              <div
-                key={f}
-                className={`canvas-panel-picker-item${f === activeCanvasPath ? " active" : ""}`}
-                onClick={() => {
-                  openCanvasInPanel(f);
-                  setShowPicker(false);
-                }}
-              >
-                {f}
-              </div>
-            ))
+            canvasFiles.map((f) => {
+              const fileName = f.split("/").pop()?.replace(/\.canvas$/i, "") ?? f;
+              const dir = f.includes("/") ? f.slice(0, f.lastIndexOf("/")) : null;
+              return (
+                <div
+                  key={f}
+                  className={`canvas-panel-picker-item${f === activeCanvasPath ? " active" : ""}`}
+                  onClick={() => {
+                    openCanvasInPanel(f);
+                    setShowPicker(false);
+                  }}
+                >
+                  <LayoutDashboard size={13} className="canvas-panel-picker-icon" />
+                  <div className="canvas-panel-picker-info">
+                    <span className="canvas-panel-picker-name">{fileName}</span>
+                    {dir && <span className="canvas-panel-picker-dir">{dir}</span>}
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       )}

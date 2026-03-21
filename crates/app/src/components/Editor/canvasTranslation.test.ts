@@ -64,6 +64,23 @@ describe("canvasToFlow", () => {
     expect(nodes[0].zIndex).toBe(-1);
   });
 
+  it("converts text node with shape", () => {
+    const canvas: JsonCanvas = {
+      nodes: [{ id: "t2", type: "text", text: "Sticky", shape: "sticky", x: 0, y: 0, width: 200, height: 200 }],
+    };
+    const { nodes } = canvasToFlow(canvas);
+    expect(nodes[0].data).toEqual({ text: "Sticky", shape: "sticky" });
+  });
+
+  it("handles text node without shape (backward compat)", () => {
+    const canvas: JsonCanvas = {
+      nodes: [{ id: "t3", type: "text", text: "Old", x: 0, y: 0, width: 200, height: 100 }],
+    };
+    const { nodes } = canvasToFlow(canvas);
+    expect(nodes[0].data).toEqual({ text: "Old" });
+    expect(nodes[0].data.shape).toBeUndefined();
+  });
+
   it("preserves color", () => {
     const canvas: JsonCanvas = {
       nodes: [{ id: "c1", type: "text", text: "hi", x: 0, y: 0, width: 100, height: 50, color: "#ff0000" }],
@@ -165,6 +182,35 @@ describe("flowToCanvas", () => {
   });
 });
 
+describe("flowToCanvas", () => {
+  it("writes shape for non-default text node", () => {
+    const canvas = flowToCanvas(
+      [{ id: "t1", type: "canvasText", position: { x: 0, y: 0 }, data: { text: "Hi", shape: "callout" }, style: { width: 260, height: 120 } }],
+      [],
+    );
+    const n = canvas.nodes![0] as { shape?: string };
+    expect(n.shape).toBe("callout");
+  });
+
+  it("omits shape when rectangle", () => {
+    const canvas = flowToCanvas(
+      [{ id: "t2", type: "canvasText", position: { x: 0, y: 0 }, data: { text: "Hi", shape: "rectangle" }, style: { width: 250, height: 100 } }],
+      [],
+    );
+    const n = canvas.nodes![0] as { shape?: string };
+    expect(n.shape).toBeUndefined();
+  });
+
+  it("omits shape when undefined", () => {
+    const canvas = flowToCanvas(
+      [{ id: "t3", type: "canvasText", position: { x: 0, y: 0 }, data: { text: "Hi" }, style: { width: 250, height: 100 } }],
+      [],
+    );
+    const n = canvas.nodes![0] as { shape?: string };
+    expect(n.shape).toBeUndefined();
+  });
+});
+
 describe("round-trip", () => {
   it("preserves data through canvasToFlow → flowToCanvas", () => {
     const original: JsonCanvas = {
@@ -204,5 +250,30 @@ describe("round-trip", () => {
     expect(edge.fromSide).toBe("right");
     expect(edge.toSide).toBe("left");
     expect(edge.label).toBe("refs");
+  });
+
+  it("preserves shape through round-trip", () => {
+    const original: JsonCanvas = {
+      nodes: [
+        { id: "s1", type: "text", text: "Diamond", shape: "diamond", x: 0, y: 0, width: 160, height: 160 },
+      ],
+    };
+    const { nodes } = canvasToFlow(original);
+    const result = flowToCanvas(nodes, []);
+    const n = result.nodes![0] as { shape?: string; text: string };
+    expect(n.shape).toBe("diamond");
+    expect(n.text).toBe("Diamond");
+  });
+
+  it("produces clean output for text node without shape", () => {
+    const original: JsonCanvas = {
+      nodes: [
+        { id: "t1", type: "text", text: "Plain", x: 0, y: 0, width: 250, height: 100 },
+      ],
+    };
+    const { nodes } = canvasToFlow(original);
+    const result = flowToCanvas(nodes, []);
+    const n = result.nodes![0];
+    expect("shape" in n).toBe(false);
   });
 });

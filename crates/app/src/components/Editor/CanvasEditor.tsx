@@ -20,7 +20,9 @@ import { useUIStore } from "../../stores/uiStore";
 import { log } from "../../utils/logger";
 import { canvasToFlow, flowToCanvas } from "./canvasTranslation";
 import type { JsonCanvas } from "./canvasTranslation";
-import { StickyNote, FileText, Layers } from "lucide-react";
+import { StickyNote, FileText, Layers, ChevronDown } from "lucide-react";
+import * as LucideIcons from "lucide-react";
+import { CANVAS_SHAPES } from "./canvasShapes";
 import { useGraphStore } from "../../stores/graphStore";
 import { CanvasFileNode, CanvasTextNode, CanvasLinkNode, CanvasGroupNode, CanvasEdge } from "./canvasNodes";
 
@@ -284,6 +286,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const reactFlowInstance = useReactFlow();
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; flowX: number; flowY: number } | null>(null);
   const [showNoteSelect, setShowNoteSelect] = useState(false);
+  const [showCtxShapes, setShowCtxShapes] = useState(false);
   const [noteFilter, setNoteFilter] = useState("");
 
   // Element context menu (right-click on a node or edge)
@@ -338,6 +341,36 @@ export function CanvasEditorInner({ path }: { path: string }) {
     requestAnimationFrame(() => scheduleSave());
   }, [setNodes, setEdges, elemCtxMenu, closeElemCtxMenu, scheduleSave]);
 
+  const duplicateSelected = useCallback(() => {
+    const selectedNodeIds = new Set(
+      nodesRef.current.filter((n) => n.selected).map((n) => n.id),
+    );
+    if (elemCtxMenu?.nodeId) selectedNodeIds.add(elemCtxMenu.nodeId);
+    if (selectedNodeIds.size === 0) return;
+
+    const offset = 30;
+    const now = Date.now();
+    const idMap = new Map<string, string>();
+    const nodesToClone = nodesRef.current.filter((n) => selectedNodeIds.has(n.id));
+    // Build old-to-new ID map
+    nodesToClone.forEach((n, i) => {
+      idMap.set(n.id, `node-${now}-${i}-${Math.random().toString(36).slice(2, 6)}`);
+    });
+    const newNodes = nodesToClone.map((n) => ({
+      ...n,
+      id: idMap.get(n.id)!,
+      position: { x: n.position.x + offset, y: n.position.y + offset },
+      data: { ...n.data },
+      style: n.style ? { ...n.style } : undefined,
+      selected: false,
+      // Remap parentId if the parent was also duplicated
+      ...(n.parentId && idMap.has(n.parentId) ? { parentId: idMap.get(n.parentId) } : {}),
+    }));
+    setNodes((nds) => [...nds, ...newNodes]);
+    closeElemCtxMenu();
+    requestAnimationFrame(() => scheduleSave());
+  }, [setNodes, elemCtxMenu, closeElemCtxMenu, scheduleSave]);
+
   // Close element context menu on click elsewhere
   useEffect(() => {
     if (!elemCtxMenu) return;
@@ -362,6 +395,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const closeCtxMenu = useCallback(() => {
     setCtxMenu(null);
     setShowNoteSelect(false);
+    setShowCtxShapes(false);
     setNoteFilter("");
   }, []);
 
@@ -400,6 +434,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   // ── Toolbar: add node at viewport center ────────────────────────────────
   const [toolbarPicker, setToolbarPicker] = useState(false);
   const [toolbarFilter, setToolbarFilter] = useState("");
+  const [toolbarShapePicker, setToolbarShapePicker] = useState(false);
 
   const addNodeAtCenter = useCallback(
     (type: string, data: Record<string, unknown>, width = 250, height = 100) => {
@@ -538,13 +573,22 @@ export function CanvasEditorInner({ path }: { path: string }) {
           />
         )}
         <Panel position="bottom-center" className="canvas-toolbar">
-          <button
-            className="canvas-toolbar-btn"
-            title="Add text card"
-            onClick={() => addNodeAtCenter("canvasText", { text: "New text card" })}
-          >
-            <StickyNote size={22} />
-          </button>
+          <div className="canvas-toolbar-split">
+            <button
+              className="canvas-toolbar-btn"
+              title="Add text card"
+              onClick={() => { addNodeAtCenter("canvasText", { text: "New text card" }); setToolbarShapePicker(false); }}
+            >
+              <StickyNote size={22} />
+            </button>
+            <button
+              className="canvas-toolbar-btn canvas-toolbar-btn--caret"
+              title="Choose shape"
+              onClick={() => { setToolbarShapePicker(!toolbarShapePicker); setToolbarPicker(false); }}
+            >
+              <ChevronDown size={14} />
+            </button>
+          </div>
           <button
             className="canvas-toolbar-btn"
             title="Add note reference"
@@ -561,6 +605,27 @@ export function CanvasEditorInner({ path }: { path: string }) {
           </button>
         </Panel>
       </ReactFlow>
+      {toolbarShapePicker && (
+        <div className="canvas-toolbar-shape-picker" onClick={(e) => e.stopPropagation()}>
+          {CANVAS_SHAPES.map((s) => {
+            const Icon = (LucideIcons as Record<string, React.ComponentType<{ size?: number }>>)[s.icon];
+            return (
+              <button
+                key={s.id}
+                className="canvas-toolbar-shape-btn"
+                title={s.label}
+                onClick={() => {
+                  addNodeAtCenter("canvasText", { text: "New text card", shape: s.id }, s.defaultWidth, s.defaultHeight);
+                  setToolbarShapePicker(false);
+                }}
+              >
+                {Icon && <Icon size={18} />}
+                <span>{s.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       {toolbarPicker && (
         <div className="canvas-toolbar-picker" onClick={(e) => e.stopPropagation()}>
           <input
@@ -594,13 +659,19 @@ export function CanvasEditorInner({ path }: { path: string }) {
           style={{ left: ctxMenu.x, top: ctxMenu.y, minWidth: 180 }}
           onClick={(e) => e.stopPropagation()}
         >
-          {!showNoteSelect ? (
+          {!showNoteSelect && !showCtxShapes ? (
             <>
               <div
                 className="context-menu-item"
                 onClick={() => addNodeAtMenu("canvasText", { text: "New text card" })}
               >
                 Add Text Card
+              </div>
+              <div
+                className="context-menu-item"
+                onClick={() => { setShowCtxShapes(true); setShowNoteSelect(false); }}
+              >
+                Add Shaped Card...
               </div>
               <div
                 className="context-menu-item"
@@ -616,6 +687,22 @@ export function CanvasEditorInner({ path }: { path: string }) {
                 Add Group
               </div>
             </>
+          ) : showCtxShapes ? (
+            <div className="canvas-ctx-shape-list">
+              {CANVAS_SHAPES.map((s) => {
+                const Icon = (LucideIcons as Record<string, React.ComponentType<{ size?: number }>>)[s.icon];
+                return (
+                  <div
+                    key={s.id}
+                    className="context-menu-item"
+                    onClick={() => addNodeAtMenu("canvasText", { text: "New text card", shape: s.id }, s.defaultWidth, s.defaultHeight)}
+                  >
+                    {Icon && <Icon size={14} />}
+                    <span style={{ marginLeft: 8 }}>{s.label}</span>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <div className="canvas-note-picker" onClick={(e) => e.stopPropagation()}>
               <input
@@ -651,6 +738,11 @@ export function CanvasEditorInner({ path }: { path: string }) {
           style={{ left: elemCtxMenu.x, top: elemCtxMenu.y, minWidth: 140 }}
           onClick={(e) => e.stopPropagation()}
         >
+          {elemCtxMenu.nodeId && (
+            <div className="context-menu-item" onClick={duplicateSelected}>
+              Duplicate
+            </div>
+          )}
           <div className="context-menu-item context-menu-item--danger" onClick={deleteSelected}>
             Delete
           </div>

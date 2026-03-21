@@ -4,18 +4,16 @@ import {
   BaseEdge, EdgeLabelRenderer, getBezierPath, useReactFlow,
 } from "@xyflow/react";
 import type { NodeProps, EdgeProps } from "@xyflow/react";
-import { Trash2, Palette, Paintbrush, PenLine } from "lucide-react";
+import { Trash2, Palette, Paintbrush, PenLine, Shapes } from "lucide-react";
+import * as LucideIcons from "lucide-react";
+import { CANVAS_SHAPES, getShapeDefinition } from "./canvasShapes";
+import type { CanvasShapeId } from "./canvasShapes";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { useTabStore } from "../../stores/tabStore";
 import { useCanvasPanelMode } from "./CanvasEditor";
-import { useUIStore } from "../../stores/uiStore";
-import { getNodeColor } from "../GraphView/graphStyles";
 
-/** Convert an opacity percentage (0–100) to a 2-digit hex alpha suffix. */
-function opacityToHex(pct: number): string {
-  return Math.round((pct / 100) * 255).toString(16).padStart(2, "0");
-}
+import { getNodeColor } from "../GraphView/graphStyles";
 
 // JSON Canvas preset colors
 const CANVAS_COLORS = [
@@ -26,6 +24,46 @@ const CANVAS_COLORS = [
   { id: "5", color: "#3498db", label: "Cyan" },
   { id: "6", color: "#9b59b6", label: "Purple" },
 ];
+
+// ── Color picker dropdown (shared by node + edge toolbars) ────────────────────
+
+function ColorPickerDropdown({
+  onSelect,
+  onClear,
+  clearLabel = "Clear",
+}: {
+  onSelect: (color: string) => void;
+  onClear: () => void;
+  clearLabel?: string;
+}) {
+  return (
+    <div className="canvas-color-picker">
+      {CANVAS_COLORS.map((c) => (
+        <button
+          key={c.id}
+          className="canvas-color-swatch"
+          style={{ backgroundColor: c.color }}
+          title={c.label}
+          onClick={() => onSelect(c.color)}
+        />
+      ))}
+      <label className="canvas-color-swatch canvas-color-swatch--custom" title="Custom color">
+        <input
+          type="color"
+          className="canvas-color-input-hidden"
+          onChange={(e) => onSelect(e.target.value)}
+        />
+      </label>
+      <button
+        className="canvas-color-swatch canvas-color-swatch--clear"
+        title={clearLabel}
+        onClick={onClear}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
 
 // ── Shared handles ────────────────────────────────────────────────────────────
 
@@ -46,10 +84,11 @@ function FourHandles() {
 
 // ── Node toolbar (delete + color) ─────────────────────────────────────────────
 
-function CanvasNodeToolbar({ id, selected }: { id: string; selected: boolean }) {
+function CanvasNodeToolbar({ id, selected, shape }: { id: string; selected: boolean; shape?: string }) {
   const { setNodes, setEdges } = useReactFlow();
   const [showColors, setShowColors] = useState(false);
   const [showBgColors, setShowBgColors] = useState(false);
+  const [showShapes, setShowShapes] = useState(false);
 
   const handleDelete = () => {
     setNodes((nds) => nds.filter((n) => n.id !== id));
@@ -115,24 +154,7 @@ function CanvasNodeToolbar({ id, selected }: { id: string; selected: boolean }) 
             <Palette size={16} />
           </button>
           {showColors && (
-            <div className="canvas-color-picker">
-              {CANVAS_COLORS.map((c) => (
-                <button
-                  key={c.id}
-                  className="canvas-color-swatch"
-                  style={{ backgroundColor: c.color }}
-                  title={c.label}
-                  onClick={() => handleColor(c.color)}
-                />
-              ))}
-              <button
-                className="canvas-color-swatch canvas-color-swatch--clear"
-                title="Clear color"
-                onClick={handleClearColor}
-              >
-                ×
-              </button>
-            </div>
+            <ColorPickerDropdown onSelect={handleColor} onClear={handleClearColor} clearLabel="Clear color" />
           )}
         </div>
         <div className="canvas-node-toolbar-color-wrapper">
@@ -144,26 +166,45 @@ function CanvasNodeToolbar({ id, selected }: { id: string; selected: boolean }) 
             <Paintbrush size={16} />
           </button>
           {showBgColors && (
-            <div className="canvas-color-picker">
-              {CANVAS_COLORS.map((c) => (
-                <button
-                  key={c.id}
-                  className="canvas-color-swatch"
-                  style={{ backgroundColor: c.color }}
-                  title={c.label}
-                  onClick={() => handleBgColor(c.color)}
-                />
-              ))}
-              <button
-                className="canvas-color-swatch canvas-color-swatch--clear"
-                title="Clear background"
-                onClick={handleClearBgColor}
-              >
-                ×
-              </button>
-            </div>
+            <ColorPickerDropdown onSelect={handleBgColor} onClear={handleClearBgColor} clearLabel="Clear background" />
           )}
         </div>
+        {shape !== undefined && (
+          <div className="canvas-node-toolbar-color-wrapper">
+            <button
+              className="canvas-node-toolbar-btn"
+              title="Shape"
+              onClick={() => { setShowShapes(!showShapes); setShowColors(false); setShowBgColors(false); }}
+            >
+              <Shapes size={16} />
+            </button>
+            {showShapes && (
+              <div className="canvas-shape-picker">
+                {CANVAS_SHAPES.map((s) => {
+                  const Icon = (LucideIcons as Record<string, React.ComponentType<{ size?: number }>>)[s.icon];
+                  const active = (shape || "rectangle") === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      className={`canvas-shape-picker-btn${active ? " canvas-shape-picker-btn--active" : ""}`}
+                      title={s.label}
+                      onClick={() => {
+                        setNodes((nds) =>
+                          nds.map((n) =>
+                            n.id === id ? { ...n, data: { ...n.data, shape: s.id } } : n,
+                          ),
+                        );
+                        setShowShapes(false);
+                      }}
+                    >
+                      {Icon && <Icon size={16} />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </NodeToolbar>
   );
@@ -190,10 +231,9 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
   const filePath = d.file ?? "";
   const node = useGraphStore((s) => s.nodes.get(filePath));
   const panelMode = useCanvasPanelMode();
-  const bgAlpha = opacityToHex(useUIStore((s) => s.canvasCardBgOpacity));
 
-  const openFile = (e: React.MouseEvent) => {
-    e.stopPropagation();
+
+  const openFile = () => {
     const lp = filePath.toLowerCase();
     if (node) {
       useGraphStore.getState().selectNode(filePath);
@@ -216,9 +256,8 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
   return (
     <div
       className="canvas-file-node"
-      style={{ borderLeftColor: borderColor, ...(d.bgColor ? { backgroundColor: d.bgColor + bgAlpha } : {}) }}
-      onClick={panelMode ? openFile : undefined}
-      onDoubleClick={panelMode ? undefined : openFile}
+      style={{ borderLeftColor: borderColor, ...(d.bgColor ? { backgroundColor: d.bgColor } : {}) }}
+      onDoubleClick={openFile}
     >
       <Resizer selected={selected} minWidth={150} minHeight={50} />
       <CanvasNodeToolbar id={id} selected={selected} />
@@ -252,16 +291,62 @@ export const CanvasFileNode = memo(CanvasFileNodeInner);
 // ── Text Node ─────────────────────────────────────────────────────────────────
 
 function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
-  const d = data as { text?: string; color?: string; bgColor?: string };
+  const d = data as { text?: string; color?: string; bgColor?: string; shape?: string };
   const text = d.text ?? "";
   const borderColor = d.color ?? undefined;
-  const bgAlpha = opacityToHex(useUIStore((s) => s.canvasCardBgOpacity));
+  const shapeDef = getShapeDefinition(d.shape);
+
+  const { setNodes } = useReactFlow();
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState(text);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (editing && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.select();
+    }
+  }, [editing]);
+
+  const commitEdit = () => {
+    setNodes((nds) =>
+      nds.map((n) => n.id === id ? { ...n, data: { ...n.data, text: editValue } } : n),
+    );
+    setEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      setEditValue(text);
+      setEditing(false);
+    }
+    // Don't propagate so React Flow doesn't handle Delete/Backspace while typing
+    e.stopPropagation();
+  };
 
   return (
-    <div className="canvas-text-node" style={{ ...(borderColor ? { borderColor } : {}), ...(d.bgColor ? { backgroundColor: d.bgColor + bgAlpha } : {}) }}>
+    <div
+      className={`canvas-text-node${shapeDef.cssClass ? ` ${shapeDef.cssClass}` : ""}`}
+      style={{ ...(borderColor ? { borderColor } : {}), ...(d.bgColor ? { backgroundColor: d.bgColor } : {}) }}
+      onDoubleClick={() => { setEditValue(text); setEditing(true); }}
+    >
       <Resizer selected={selected} />
-      <CanvasNodeToolbar id={id} selected={selected} />
-      <div className="canvas-text-node-body">{text}</div>
+      <CanvasNodeToolbar id={id} selected={selected} shape={d.shape ?? "rectangle"} />
+      {editing ? (
+        <textarea
+          ref={textareaRef}
+          className="canvas-text-node-edit"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={commitEdit}
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+        />
+      ) : (
+        <div className="canvas-text-node-body">{text || "\u00A0"}</div>
+      )}
       <FourHandles />
     </div>
   );
@@ -274,7 +359,7 @@ export const CanvasTextNode = memo(CanvasTextNodeInner);
 function CanvasLinkNodeInner({ id, data, selected }: NodeProps) {
   const d = data as { url?: string; color?: string; bgColor?: string };
   const url = d.url ?? "";
-  const bgAlpha = opacityToHex(useUIStore((s) => s.canvasCardBgOpacity));
+
   let displayUrl: string;
   try {
     displayUrl = new URL(url).hostname;
@@ -283,7 +368,7 @@ function CanvasLinkNodeInner({ id, data, selected }: NodeProps) {
   }
 
   return (
-    <div className="canvas-link-node" style={{ ...(d.color ? { borderColor: d.color } : {}), ...(d.bgColor ? { backgroundColor: d.bgColor + bgAlpha } : {}) }}>
+    <div className="canvas-link-node" style={{ ...(d.color ? { borderColor: d.color } : {}), ...(d.bgColor ? { backgroundColor: d.bgColor } : {}) }}>
       <Resizer selected={selected} />
       <CanvasNodeToolbar id={id} selected={selected} />
       <span className="canvas-link-node-url" title={url}>{displayUrl}</span>
@@ -390,8 +475,7 @@ function CanvasEdgeInner({
     setEdges((eds) => eds.filter((e) => e.id !== id));
   };
 
-  const handleColor = (e: React.MouseEvent, color: string) => {
-    e.stopPropagation();
+  const handleColor = (color: string) => {
     const markerId = `brainmap-arrow-${color}`;
     setEdges((eds) =>
       eds.map((ed) => {
@@ -407,8 +491,7 @@ function CanvasEdgeInner({
     setShowColors(false);
   };
 
-  const handleClearColor = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleClearColor = () => {
     setEdges((eds) =>
       eds.map((ed) => {
         if (ed.id !== id) return ed;
@@ -485,24 +568,7 @@ function CanvasEdgeInner({
                 <Palette size={16} />
               </button>
               {showColors && (
-                <div className="canvas-color-picker">
-                  {CANVAS_COLORS.map((c) => (
-                    <button
-                      key={c.id}
-                      className="canvas-color-swatch"
-                      style={{ backgroundColor: c.color }}
-                      title={c.label}
-                      onClick={(e) => handleColor(e, c.color)}
-                    />
-                  ))}
-                  <button
-                    className="canvas-color-swatch canvas-color-swatch--clear"
-                    title="Clear color"
-                    onClick={handleClearColor}
-                  >
-                    ×
-                  </button>
-                </div>
+                <ColorPickerDropdown onSelect={handleColor} onClear={handleClearColor} clearLabel="Clear color" />
               )}
             </div>
           </div>
