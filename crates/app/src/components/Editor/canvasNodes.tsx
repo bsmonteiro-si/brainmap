@@ -516,12 +516,71 @@ export const CanvasLinkNode = memo(CanvasLinkNodeInner);
 function CanvasGroupNodeInner({ id, data, selected }: NodeProps) {
   const d = data as { label?: string; color?: string };
   const bgColor = d.color ?? "var(--bg-tertiary)";
+  const label = d.label ?? "";
+
+  const { setNodes } = useReactFlow();
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState(label);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const cancelledRef = useRef(false);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const commitEdit = () => {
+    if (cancelledRef.current) { cancelledRef.current = false; return; }
+    const trimmed = editValue.trim();
+    setNodes((nds) =>
+      nds.map((n) => n.id === id ? { ...n, data: { ...n.data, label: trimmed || undefined } } : n),
+    );
+    setEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      cancelledRef.current = true;
+      setEditValue(label);
+      setEditing(false);
+    } else if (e.key === "Enter") {
+      commitEdit();
+    }
+    e.stopPropagation();
+  };
+
+  const startEditing = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    cancelledRef.current = false;
+    setEditValue(label);
+    setEditing(true);
+  };
 
   return (
     <div className="canvas-group-node" style={{ backgroundColor: bgColor }}>
       <Resizer selected={selected} minWidth={200} minHeight={150} />
       <CanvasNodeToolbar id={id} selected={selected} />
-      {d.label && <div className="canvas-group-node-label">{d.label}</div>}
+      <div className="canvas-group-node-label" style={d.color ? { color: d.color } : undefined} onDoubleClick={startEditing}>
+        {editing ? (
+          <input
+            ref={inputRef}
+            className="canvas-group-node-label-edit"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={commitEdit}
+            placeholder="Group"
+            style={d.color ? { color: d.color } : undefined}
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+        ) : (
+          <span>{label || "Group"}</span>
+        )}
+      </div>
       <FourHandles />
     </div>
   );

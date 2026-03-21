@@ -144,6 +144,12 @@ export function CanvasEditorInner({ path }: { path: string }) {
   nodesRef.current = nodes;
   edgesRef.current = edges;
 
+  // ── Undo/Redo stacks ─────────────────────────────────────────────────────
+  const MAX_CANVAS_UNDO = 30;
+  const undoStackRef = useRef<{ nodes: string; edges: string }[]>([]);
+  const redoStackRef = useRef<{ nodes: string; edges: string }[]>([]);
+  const isUndoingRef = useRef(false);
+
   // Load file on mount
   useEffect(() => {
     mountedRef.current = true;
@@ -276,26 +282,106 @@ export function CanvasEditorInner({ path }: { path: string }) {
     };
   }, [path]);
 
-  // Wire change handlers to trigger save
+  // ── Undo/Redo helpers ──────────────────────────────────────────────────
+
+  const pushSnapshot = useCallback(() => {
+    if (isUndoingRef.current) return;
+    const snap = {
+      nodes: JSON.stringify(nodesRef.current),
+      edges: JSON.stringify(edgesRef.current),
+    };
+    const top = undoStackRef.current[undoStackRef.current.length - 1];
+    if (top && top.nodes === snap.nodes && top.edges === snap.edges) return;
+    undoStackRef.current.push(snap);
+    if (undoStackRef.current.length > MAX_CANVAS_UNDO) undoStackRef.current.shift();
+    redoStackRef.current = [];
+  }, []);
+
+  const canvasUndo = useCallback(() => {
+    if (undoStackRef.current.length === 0) return;
+    redoStackRef.current.push({
+      nodes: JSON.stringify(nodesRef.current),
+      edges: JSON.stringify(edgesRef.current),
+    });
+    const snap = undoStackRef.current.pop()!;
+    isUndoingRef.current = true;
+    setNodes(JSON.parse(snap.nodes));
+    setEdges(JSON.parse(snap.edges));
+    requestAnimationFrame(() => {
+      isUndoingRef.current = false;
+      scheduleSave();
+    });
+  }, [setNodes, setEdges, scheduleSave]);
+
+  const canvasRedo = useCallback(() => {
+    if (redoStackRef.current.length === 0) return;
+    undoStackRef.current.push({
+      nodes: JSON.stringify(nodesRef.current),
+      edges: JSON.stringify(edgesRef.current),
+    });
+    const snap = redoStackRef.current.pop()!;
+    isUndoingRef.current = true;
+    setNodes(JSON.parse(snap.nodes));
+    setEdges(JSON.parse(snap.edges));
+    requestAnimationFrame(() => {
+      isUndoingRef.current = false;
+      scheduleSave();
+    });
+  }, [setNodes, setEdges, scheduleSave]);
+
+  // Cmd+Z / Cmd+Y (capture phase to intercept before global handler)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      // Don't intercept when editing text inside a node
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("textarea, input")) return;
+      if (e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        canvasUndo();
+      } else if (e.key === "y" || (e.key === "z" && e.shiftKey)) {
+        e.preventDefault();
+        e.stopPropagation();
+        canvasRedo();
+      }
+    };
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
+  }, [canvasUndo, canvasRedo]);
+
+  // Wire change handlers to trigger save + undo snapshots
   const handleNodesChange: typeof onNodesChange = useCallback(
     (changes) => {
+      // Push undo snapshot for meaningful changes (not mid-drag)
+      const meaningful = changes.some((c: { type: string; dragging?: boolean }) =>
+        c.type === "remove" ||
+        c.type === "add" ||
+        (c.type === "position" && c.dragging === false) ||
+        c.type === "dimensions",
+      );
+      if (meaningful) pushSnapshot();
       onNodesChange(changes);
-      // Schedule save after React processes the state update
       requestAnimationFrame(() => scheduleSave());
     },
-    [onNodesChange, scheduleSave],
+    [onNodesChange, scheduleSave, pushSnapshot],
   );
 
   const handleEdgesChange: typeof onEdgesChange = useCallback(
     (changes) => {
+      const meaningful = changes.some((c: { type: string }) =>
+        c.type === "remove" || c.type === "add",
+      );
+      if (meaningful) pushSnapshot();
       onEdgesChange(changes);
       requestAnimationFrame(() => scheduleSave());
     },
-    [onEdgesChange, scheduleSave],
+    [onEdgesChange, scheduleSave, pushSnapshot],
   );
 
   const onConnect: OnConnect = useCallback(
     (connection) => {
+      pushSnapshot();
       setEdges((eds) =>
         addEdge(
           { ...connection, markerEnd: "brainmap-arrow", data: { isNew: true } },
@@ -304,7 +390,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
       );
       requestAnimationFrame(() => scheduleSave());
     },
-    [setEdges, scheduleSave],
+    [setEdges, scheduleSave, pushSnapshot],
   );
 
   // ── Context menu for adding nodes ────────────────────────────────────────
@@ -338,6 +424,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const closeElemCtxMenu = useCallback(() => setElemCtxMenu(null), []);
 
   const deleteSelected = useCallback(() => {
+    pushSnapshot();
     const selectedNodeIds = new Set(
       nodesRef.current.filter((n) => n.selected).map((n) => n.id),
     );
@@ -364,9 +451,10 @@ export function CanvasEditorInner({ path }: { path: string }) {
     }
     closeElemCtxMenu();
     requestAnimationFrame(() => scheduleSave());
-  }, [setNodes, setEdges, elemCtxMenu, closeElemCtxMenu, scheduleSave]);
+  }, [setNodes, setEdges, elemCtxMenu, closeElemCtxMenu, scheduleSave, pushSnapshot]);
 
   const duplicateSelected = useCallback(() => {
+    pushSnapshot();
     const selectedNodeIds = new Set(
       nodesRef.current.filter((n) => n.selected).map((n) => n.id),
     );
@@ -405,7 +493,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
     if (newEdges.length > 0) setEdges((eds) => [...eds, ...newEdges]);
     closeElemCtxMenu();
     requestAnimationFrame(() => scheduleSave());
-  }, [setNodes, setEdges, elemCtxMenu, closeElemCtxMenu, scheduleSave]);
+  }, [setNodes, setEdges, elemCtxMenu, closeElemCtxMenu, scheduleSave, pushSnapshot]);
 
   // Close element context menu on click elsewhere
   useEffect(() => {
@@ -450,6 +538,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const addNodeAtMenu = useCallback(
     (type: string, data: Record<string, unknown>, width = 250, height = 100) => {
       if (!ctxMenu) return;
+      pushSnapshot();
       const id = `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       setNodes((nds) => [
         ...nds,
@@ -486,6 +575,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
 
   const addNodeAtCenter = useCallback(
     (type: string, data: Record<string, unknown>, width = 250, height = 100) => {
+      pushSnapshot();
       const viewport = reactFlowInstance.getViewport();
       const container = document.querySelector(".canvas-container");
       const cw = container?.clientWidth ?? 800;

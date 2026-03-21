@@ -5296,7 +5296,6 @@ body {
   border-radius: 8px;
   width: 100%;
   height: 100%;
-  opacity: 0.3;
 }
 
 .canvas-group-node-label {
@@ -5308,6 +5307,26 @@ body {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  cursor: default;
+}
+
+.canvas-group-node-label-edit {
+  all: unset;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  text-transform: uppercase;
+  letter-spacing: inherit;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 0 4px;
+  min-width: 60px;
+}
+
+.canvas-group-node-label-edit::placeholder {
+  color: var(--text-muted);
 }
 
 /* ── Canvas note picker ── */
