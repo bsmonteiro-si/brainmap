@@ -207,6 +207,10 @@ interface PersistedPrefs {
   canvasStickyShadow?: number;
   canvasStickyFoldSize?: number;
   canvasStickyPin?: boolean;
+  canvasStickyTape?: boolean;
+  canvasStickyLines?: boolean;
+  canvasStickyCurl?: boolean;
+  canvasStickyStripe?: boolean;
   canvasRoundedRadius?: number;
   canvasPanelFontFamily?: string;
   canvasPanelFontSize?: number;
@@ -344,6 +348,10 @@ interface UIState {
   canvasStickyShadow: number;
   canvasStickyFoldSize: number;
   canvasStickyPin: boolean;
+  canvasStickyTape: boolean;
+  canvasStickyLines: boolean;
+  canvasStickyCurl: boolean;
+  canvasStickyStripe: boolean;
   canvasRoundedRadius: number;
   canvasPanelFontFamily: string;
   canvasPanelFontSize: number;
@@ -374,6 +382,10 @@ interface UIState {
   setCanvasStickyShadow: (v: number) => void;
   setCanvasStickyFoldSize: (v: number) => void;
   setCanvasStickyPin: (v: boolean) => void;
+  setCanvasStickyTape: (v: boolean) => void;
+  setCanvasStickyLines: (v: boolean) => void;
+  setCanvasStickyCurl: (v: boolean) => void;
+  setCanvasStickyStripe: (v: boolean) => void;
   setCanvasRoundedRadius: (v: number) => void;
   setCanvasPanelFontFamily: (v: string) => void;
   setCanvasPanelFontSize: (v: number) => void;
@@ -570,6 +582,10 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasStickyShadow: storedPrefs.canvasStickyShadow ?? 6,
   canvasStickyFoldSize: storedPrefs.canvasStickyFoldSize ?? 20,
   canvasStickyPin: storedPrefs.canvasStickyPin ?? false,
+  canvasStickyTape: storedPrefs.canvasStickyTape ?? false,
+  canvasStickyLines: storedPrefs.canvasStickyLines ?? false,
+  canvasStickyCurl: storedPrefs.canvasStickyCurl ?? true,
+  canvasStickyStripe: storedPrefs.canvasStickyStripe ?? true,
   canvasRoundedRadius: storedPrefs.canvasRoundedRadius ?? 24,
   canvasPanelFontFamily: storedPrefs.canvasPanelFontFamily ?? DEFAULT_UI_FONT,
   canvasPanelFontSize: storedPrefs.canvasPanelFontSize ?? 12,
@@ -767,6 +783,22 @@ export const useUIStore = create<UIState>((set, get) => ({
   setCanvasStickyPin: (canvasStickyPin: boolean) => {
     set({ canvasStickyPin });
     savePrefs({ canvasStickyPin });
+  },
+  setCanvasStickyTape: (canvasStickyTape: boolean) => {
+    set({ canvasStickyTape });
+    savePrefs({ canvasStickyTape });
+  },
+  setCanvasStickyLines: (canvasStickyLines: boolean) => {
+    set({ canvasStickyLines });
+    savePrefs({ canvasStickyLines });
+  },
+  setCanvasStickyCurl: (canvasStickyCurl: boolean) => {
+    set({ canvasStickyCurl });
+    savePrefs({ canvasStickyCurl });
+  },
+  setCanvasStickyStripe: (canvasStickyStripe: boolean) => {
+    set({ canvasStickyStripe });
+    savePrefs({ canvasStickyStripe });
   },
   setCanvasRoundedRadius: (canvasRoundedRadius: number) => {
     set({ canvasRoundedRadius });

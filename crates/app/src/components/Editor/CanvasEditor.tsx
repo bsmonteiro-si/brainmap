@@ -112,6 +112,10 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const canvasStickyShadow = useUIStore((s) => s.canvasStickyShadow);
   const canvasStickyFoldSize = useUIStore((s) => s.canvasStickyFoldSize);
   const canvasStickyPin = useUIStore((s) => s.canvasStickyPin);
+  const canvasStickyTape = useUIStore((s) => s.canvasStickyTape);
+  const canvasStickyLines = useUIStore((s) => s.canvasStickyLines);
+  const canvasStickyCurl = useUIStore((s) => s.canvasStickyCurl);
+  const canvasStickyStripe = useUIStore((s) => s.canvasStickyStripe);
   const canvasRoundedRadius = useUIStore((s) => s.canvasRoundedRadius);
   const colorMode: ColorMode = canvasTheme;
   const containerClass = `canvas-container${canvasTheme === "light" ? " canvas-light" : ""}`;
@@ -123,6 +127,10 @@ export function CanvasEditorInner({ path }: { path: string }) {
     "--sticky-shadow": `${canvasStickyShadow}px`,
     "--sticky-fold": `${canvasStickyFoldSize}px`,
     "--sticky-pin": canvasStickyPin ? "block" : "none",
+    "--sticky-tape": canvasStickyTape ? "block" : "none",
+    "--sticky-lines": canvasStickyLines ? "block" : "none",
+    "--sticky-curl": canvasStickyCurl ? "1" : "0",
+    "--sticky-stripe": canvasStickyStripe ? "1" : "0",
     "--rounded-radius": `${canvasRoundedRadius}px`,
   } as React.CSSProperties;
 

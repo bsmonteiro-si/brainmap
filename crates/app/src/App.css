@@ -5133,9 +5133,25 @@ body {
   border: none;
   background: var(--sticky-color, #fef3c7);
   border-radius: 2px;
-  box-shadow: 2px 2px var(--sticky-shadow, 6px) rgba(0, 0, 0, 0.15);
+  box-shadow:
+    2px 2px var(--sticky-shadow, 6px) rgba(0, 0, 0, 0.15),
+    inset 0 calc(-8px * var(--sticky-curl, 1)) 12px -8px rgba(0, 0, 0, 0.06);
   transform: rotate(calc(-1 * var(--sticky-rotation, 1.5deg)));
   position: relative;
+}
+
+/* Adhesive stripe at top — subtle darker band */
+.canvas-text-node[data-shape="sticky"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(6px * var(--sticky-stripe, 1));
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 2px 2px 0 0;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .canvas-text-node[data-shape="sticky"],
@@ -5155,22 +5171,58 @@ body {
   background: linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, 0.08) 50%);
   border-radius: 0 0 2px 0;
   pointer-events: none;
+  z-index: 1;
 }
 
-/* Pushpin decoration */
-.canvas-text-node[data-shape="sticky"]::before {
+/* Body needs relative positioning for pin/tape pseudo-elements */
+.canvas-text-node[data-shape="sticky"] .canvas-text-node-body {
+  position: relative;
+  overflow: visible;
+}
+
+/* Lined paper effect — toggled via background-image */
+.canvas-text-node[data-shape="sticky"][data-sticky-lines="true"] .canvas-text-node-body {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 23px,
+    rgba(0, 0, 0, 0.06) 23px,
+    rgba(0, 0, 0, 0.06) 24px
+  );
+  background-size: 100% 24px;
+  background-position: 0 0;
+  background-repeat: repeat;
+}
+
+/* Tape strip — semi-transparent rectangle at top center */
+.canvas-text-node[data-shape="sticky"][data-sticky-tape="true"] .canvas-text-node-body::before {
   content: "";
-  display: var(--sticky-pin, none);
   position: absolute;
-  top: -6px;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%) rotate(2deg);
+  width: 60px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Pushpin decoration — red circle at top center */
+.canvas-text-node[data-shape="sticky"][data-sticky-pin="true"] .canvas-text-node-body::after {
+  content: "";
+  position: absolute;
+  top: -16px;
   left: 50%;
   transform: translateX(-50%);
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: #e74c3c;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  z-index: 2;
+  background: radial-gradient(circle at 40% 35%, #f75a5a, #c0392b);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  z-index: 3;
+  pointer-events: none;
 }
 
 .canvas-text-node[data-shape="callout"] {

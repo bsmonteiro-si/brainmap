@@ -21,6 +21,7 @@ interface JsonCanvasTextNode extends JsonCanvasNodeBase {
   fontSize?: number;
   fontFamily?: string;
   textAlign?: string;
+  textVAlign?: string;
 }
 
 interface JsonCanvasFileNode extends JsonCanvasNodeBase {
@@ -97,6 +98,7 @@ export function canvasToFlow(canvas: JsonCanvas): { nodes: Node[]; edges: Edge[]
         if (cn.fontSize) data.fontSize = cn.fontSize;
         if (cn.fontFamily) data.fontFamily = cn.fontFamily;
         if (cn.textAlign) data.textAlign = cn.textAlign;
+        if (cn.textVAlign) data.textVAlign = cn.textVAlign;
         break;
       case "file":
         data.file = cn.file;
@@ -187,6 +189,7 @@ export function flowToCanvas(nodes: Node[], edges: Edge[]): JsonCanvas {
         if (data.fontSize && data.fontSize !== 13) node.fontSize = Number(data.fontSize);
         if (data.fontFamily) node.fontFamily = String(data.fontFamily);
         if (data.textAlign && data.textAlign !== "center") node.textAlign = String(data.textAlign);
+        if (data.textVAlign && data.textVAlign !== "center") node.textVAlign = String(data.textVAlign);
         return node;
       }
       case "file": {

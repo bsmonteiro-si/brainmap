@@ -4,7 +4,7 @@ import {
   BaseEdge, EdgeLabelRenderer, getBezierPath, useReactFlow,
 } from "@xyflow/react";
 import type { NodeProps, EdgeProps } from "@xyflow/react";
-import { Trash2, Palette, Paintbrush, PenLine, Shapes, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify } from "lucide-react";
+import { Trash2, Palette, Paintbrush, PenLine, Shapes, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, AlignStartVertical, AlignCenterVertical, AlignEndVertical } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES, getShapeDefinition } from "./canvasShapes";
 import type { CanvasShapeId } from "./canvasShapes";
@@ -37,6 +37,11 @@ const TEXT_ALIGNMENTS = [
   { id: "center", icon: AlignCenter, label: "Center" },
   { id: "right", icon: AlignRight, label: "Right" },
   { id: "justify", icon: AlignJustify, label: "Justify" },
+] as const;
+const VERTICAL_ALIGNMENTS = [
+  { id: "top", icon: AlignStartVertical, label: "Top" },
+  { id: "center", icon: AlignCenterVertical, label: "Center" },
+  { id: "bottom", icon: AlignEndVertical, label: "Bottom" },
 ] as const;
 
 // ── Color picker dropdown (shared by node + edge toolbars) ────────────────────
@@ -98,9 +103,9 @@ function FourHandles() {
 
 // ── Node toolbar (delete + color) ─────────────────────────────────────────────
 
-function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlign }: {
+function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlign, textVAlign }: {
   id: string; selected: boolean; shape?: string;
-  fontSize?: number; fontFamily?: string; textAlign?: string;
+  fontSize?: number; fontFamily?: string; textAlign?: string; textVAlign?: string;
 }) {
   const { setNodes, setEdges } = useReactFlow();
   const [showColors, setShowColors] = useState(false);
@@ -279,6 +284,21 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
                     ))}
                   </div>
                 </div>
+                <div className="canvas-text-format-section">
+                  <span className="canvas-text-format-section-label">Vertical</span>
+                  <div className="canvas-text-format-row">
+                    {VERTICAL_ALIGNMENTS.map((a) => (
+                      <button
+                        key={a.id}
+                        className={`canvas-text-format-btn${(textVAlign ?? "center") === a.id ? " canvas-text-format-btn--active" : ""}`}
+                        title={a.label}
+                        onClick={() => { setNodeData({ textVAlign: a.id }); }}
+                      >
+                        <a.icon size={14} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -369,7 +389,7 @@ export const CanvasFileNode = memo(CanvasFileNodeInner);
 // ── Text Node ─────────────────────────────────────────────────────────────────
 
 function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
-  const d = data as { text?: string; color?: string; bgColor?: string; shape?: string; fontSize?: number; fontFamily?: string; textAlign?: string };
+  const d = data as { text?: string; color?: string; bgColor?: string; shape?: string; fontSize?: number; fontFamily?: string; textAlign?: string; textVAlign?: string };
   const text = d.text ?? "";
   const borderColor = d.color ?? undefined;
   const shapeDef = getShapeDefinition(d.shape);
@@ -378,6 +398,11 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
     ...(d.fontSize ? { fontSize: d.fontSize } : {}),
     ...(d.fontFamily ? { fontFamily: d.fontFamily } : {}),
     ...(d.textAlign ? { textAlign: d.textAlign as React.CSSProperties["textAlign"] } : {}),
+  };
+
+  const vAlignMap: Record<string, string> = { top: "flex-start", center: "center", bottom: "flex-end" };
+  const bodyStyle: React.CSSProperties = {
+    alignItems: vAlignMap[d.textVAlign ?? "center"] ?? "center",
   };
 
   const { setNodes } = useReactFlow();
@@ -424,9 +449,9 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
       onDoubleClick={() => { setEditValue(text); setEditing(true); }}
     >
       <Resizer selected={selected} />
-      <CanvasNodeToolbar id={id} selected={selected} shape={d.shape ?? "rectangle"} fontSize={d.fontSize} fontFamily={d.fontFamily} textAlign={d.textAlign} />
+      <CanvasNodeToolbar id={id} selected={selected} shape={d.shape ?? "rectangle"} fontSize={d.fontSize} fontFamily={d.fontFamily} textAlign={d.textAlign} textVAlign={d.textVAlign} />
       {editing ? (
-        <div className="canvas-text-node-body">
+        <div className="canvas-text-node-body" style={bodyStyle}>
           <textarea
             ref={textareaRef}
             className="canvas-text-node-edit"
@@ -441,7 +466,7 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
           />
         </div>
       ) : (
-        <div className="canvas-text-node-body" style={textStyles}>{text || "\u00A0"}</div>
+        <div className="canvas-text-node-body" style={{ ...textStyles, ...bodyStyle }}>{text || "\u00A0"}</div>
       )}
       <FourHandles />
     </div>
