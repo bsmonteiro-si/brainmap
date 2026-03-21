@@ -78,6 +78,10 @@ export function SettingsModal() {
   const canvasStickyShadow = useUIStore((s) => s.canvasStickyShadow);
   const canvasStickyFoldSize = useUIStore((s) => s.canvasStickyFoldSize);
   const canvasStickyPin = useUIStore((s) => s.canvasStickyPin);
+  const canvasStickyTape = useUIStore((s) => s.canvasStickyTape);
+  const canvasStickyLines = useUIStore((s) => s.canvasStickyLines);
+  const canvasStickyCurl = useUIStore((s) => s.canvasStickyCurl);
+  const canvasStickyStripe = useUIStore((s) => s.canvasStickyStripe);
   const canvasRoundedRadius = useUIStore((s) => s.canvasRoundedRadius);
   const canvasPanelFontFamily = useUIStore((s) => s.canvasPanelFontFamily);
   const canvasPanelFontSize = useUIStore((s) => s.canvasPanelFontSize);
@@ -95,6 +99,10 @@ export function SettingsModal() {
   const setCanvasStickyShadow = useUIStore((s) => s.setCanvasStickyShadow);
   const setCanvasStickyFoldSize = useUIStore((s) => s.setCanvasStickyFoldSize);
   const setCanvasStickyPin = useUIStore((s) => s.setCanvasStickyPin);
+  const setCanvasStickyTape = useUIStore((s) => s.setCanvasStickyTape);
+  const setCanvasStickyLines = useUIStore((s) => s.setCanvasStickyLines);
+  const setCanvasStickyCurl = useUIStore((s) => s.setCanvasStickyCurl);
+  const setCanvasStickyStripe = useUIStore((s) => s.setCanvasStickyStripe);
   const setCanvasRoundedRadius = useUIStore((s) => s.setCanvasRoundedRadius);
   const setCanvasPanelFontFamily = useUIStore((s) => s.setCanvasPanelFontFamily);
   const setCanvasPanelFontSize = useUIStore((s) => s.setCanvasPanelFontSize);
@@ -915,6 +923,50 @@ export function SettingsModal() {
               onChange={(e) => setCanvasStickyPin(e.target.checked)}
             />
             Show pushpin
+          </label>
+        </div>
+        <div className="settings-row" style={{ alignItems: "center" }}>
+          <span className="settings-label">Tape strip</span>
+          <label className="settings-checkbox-label">
+            <input
+              type="checkbox"
+              checked={canvasStickyTape}
+              onChange={(e) => setCanvasStickyTape(e.target.checked)}
+            />
+            Show tape
+          </label>
+        </div>
+        <div className="settings-row" style={{ alignItems: "center" }}>
+          <span className="settings-label">Paper lines</span>
+          <label className="settings-checkbox-label">
+            <input
+              type="checkbox"
+              checked={canvasStickyLines}
+              onChange={(e) => setCanvasStickyLines(e.target.checked)}
+            />
+            Show ruled lines
+          </label>
+        </div>
+        <div className="settings-row" style={{ alignItems: "center" }}>
+          <span className="settings-label">Bottom curl</span>
+          <label className="settings-checkbox-label">
+            <input
+              type="checkbox"
+              checked={canvasStickyCurl}
+              onChange={(e) => setCanvasStickyCurl(e.target.checked)}
+            />
+            Curled bottom edge
+          </label>
+        </div>
+        <div className="settings-row" style={{ alignItems: "center" }}>
+          <span className="settings-label">Top stripe</span>
+          <label className="settings-checkbox-label">
+            <input
+              type="checkbox"
+              checked={canvasStickyStripe}
+              onChange={(e) => setCanvasStickyStripe(e.target.checked)}
+            />
+            Adhesive stripe
           </label>
         </div>
         <div className="settings-row">

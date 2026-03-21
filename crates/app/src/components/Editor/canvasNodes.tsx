@@ -11,6 +11,7 @@ import type { CanvasShapeId } from "./canvasShapes";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { useTabStore } from "../../stores/tabStore";
+import { useUIStore } from "../../stores/uiStore";
 import { useCanvasPanelMode } from "./CanvasEditor";
 
 import { getNodeColor } from "../GraphView/graphStyles";
@@ -441,10 +442,20 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
     e.stopPropagation();
   };
 
+  const isSticky = (d.shape || "rectangle") === "sticky";
+  const stickyPin = useUIStore((s) => s.canvasStickyPin);
+  const stickyTape = useUIStore((s) => s.canvasStickyTape);
+  const stickyLines = useUIStore((s) => s.canvasStickyLines);
+
   return (
     <div
       className="canvas-text-node"
       data-shape={d.shape || "rectangle"}
+      {...(isSticky ? {
+        "data-sticky-pin": stickyPin ? "true" : undefined,
+        "data-sticky-tape": stickyTape ? "true" : undefined,
+        "data-sticky-lines": stickyLines ? "true" : undefined,
+      } : {})}
       style={{ ...(borderColor ? { borderColor } : {}), ...(d.bgColor ? { backgroundColor: d.bgColor } : {}) }}
       onDoubleClick={() => { setEditValue(text); setEditing(true); }}
     >
