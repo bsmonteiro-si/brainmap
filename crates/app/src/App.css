@@ -4591,7 +4591,8 @@ body {
   border-radius: 6px;
   background: var(--bg-secondary);
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: inherit;
+  font-family: inherit;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
@@ -4611,7 +4612,7 @@ body {
 }
 
 .canvas-panel-selector-badge {
-  font-size: 10px;
+  font-size: 0.8em;
   font-weight: 600;
   padding: 1px 5px;
   border-radius: 4px;
@@ -4664,7 +4665,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 7px 12px;
-  font-size: 12px;
+  font-size: inherit;
   color: var(--text-secondary);
   cursor: pointer;
   border-radius: 4px;
@@ -4694,7 +4695,7 @@ body {
 }
 
 .canvas-panel-picker-dir {
-  font-size: 10px;
+  font-size: 0.82em;
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4724,7 +4725,7 @@ body {
 
 .canvas-panel-picker-empty {
   padding: 16px 12px;
-  font-size: 12px;
+  font-size: inherit;
   color: var(--text-muted);
   text-align: center;
 }
@@ -5139,23 +5140,23 @@ body {
 }
 
 .canvas-text-node[data-shape="callout"] {
-  border-radius: 12px;
+  border-radius: 16px;
   border-style: solid;
   border-width: 1px;
   position: relative;
-  padding-bottom: 18px;
+  padding-bottom: 14px;
 }
 
 .canvas-text-node[data-shape="callout"]::after {
   content: "";
   position: absolute;
-  bottom: -8px;
-  left: 20px;
+  bottom: -6px;
+  left: 18px;
   width: 0;
   height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 8px solid var(--border-color);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--border-color);
   pointer-events: none;
 }
 
