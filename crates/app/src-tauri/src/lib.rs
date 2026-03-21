@@ -61,6 +61,7 @@ pub fn run() {
             commands::save_pdf_highlights,
             commands::write_plain_file,
             commands::write_raw_note,
+            commands::convert_to_note,
             commands::reveal_in_file_manager,
             commands::open_in_default_app,
             commands::duplicate_note,

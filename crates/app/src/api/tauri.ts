@@ -154,6 +154,10 @@ export class TauriBridge implements BrainMapAPI {
     return invoke<void>("write_raw_note", { path, content });
   }
 
+  async convertToNote(path: string, noteType?: string): Promise<string> {
+    return invoke<string>("convert_to_note", { path, note_type: noteType });
+  }
+
   async moveNote(oldPath: string, newPath: string): Promise<{ new_path: string; rewritten_paths: string[] }> {
     return invoke("move_note", { oldPath, newPath });
   }

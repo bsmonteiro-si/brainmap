@@ -78,6 +78,18 @@ pub fn handle_create_note(
     Ok(rp.as_str().to_string())
 }
 
+/// Convert a plain .md file into a BrainMap note.
+pub fn handle_convert_to_note(
+    ws: &mut Workspace,
+    path: &str,
+    note_type: Option<String>,
+) -> Result<(String, brainmap_core::model::GraphDiff), String> {
+    let diff = ws
+        .convert_to_note(path, note_type.as_deref())
+        .map_err(|e: BrainMapError| e.to_string())?;
+    Ok((path.to_string(), diff))
+}
+
 /// Update an existing note.
 pub fn handle_update_note(
     ws: &mut Workspace,

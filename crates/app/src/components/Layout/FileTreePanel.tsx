@@ -415,6 +415,22 @@ function ContextMenu({
     }
   };
 
+  const handleConvertToNote = async () => {
+    if (!state.node) return;
+    onClose();
+    try {
+      const api = await getAPI();
+      const path = state.node.fullPath;
+      await api.convertToNote(path);
+      // Close plain-file tab if open, reopen as a note
+      useTabStore.getState().closeTab(path);
+      await useEditorStore.getState().openNote(path);
+      useGraphStore.getState().selectNode(path);
+    } catch (e) {
+      log.error("files", "failed to convert to note", { error: String(e) });
+    }
+  };
+
   const handleMoveTo = () => {
     if (!state.node) return;
     onClose();
@@ -539,6 +555,11 @@ function ContextMenu({
           <div className="context-menu-item" onClick={handleNewNoteHere}>
             {isRootLevelFile ? "New Note at Root" : "New Note in Folder"}
           </div>
+          {state.node!.fullPath.endsWith('.md') && (
+            <div className="context-menu-item" onClick={handleConvertToNote}>
+              Convert to Note
+            </div>
+          )}
           <div className="context-menu-item" onClick={handleRename}>
             Rename
           </div>

@@ -113,6 +113,7 @@ export interface BrainMapAPI {
   savePdfHighlights(pdfPath: string, highlights: PdfHighlight[]): Promise<void>;
   writePlainFile(path: string, body: string): Promise<void>;
   writeRawNote(path: string, content: string): Promise<void>;
+  convertToNote(path: string, noteType?: string): Promise<string>;
   moveNote(oldPath: string, newPath: string): Promise<{ new_path: string; rewritten_paths: string[] }>;
   movePlainFile(oldPath: string, newPath: string): Promise<string>;
   moveFolder(oldFolder: string, newFolder: string): Promise<{ new_folder: string; moved_notes: [string, string][]; rewritten_paths: string[] }>;

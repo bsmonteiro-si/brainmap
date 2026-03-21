@@ -719,6 +719,35 @@ pub fn write_raw_note(
 }
 
 #[tauri::command]
+pub fn convert_to_note(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    path: String,
+    note_type: Option<String>,
+) -> Result<String, String> {
+    let root = state.resolve_root(None)?;
+    let abs_path = state.with_slot(&root, |slot| {
+        handlers::validate_relative_path(&slot.workspace.root, &path)
+    })?;
+    state.register_expected_write(&root, abs_path);
+
+    let (created_path, diff) = state.with_slot_mut(&root, |slot| {
+        handlers::handle_convert_to_note(&mut slot.workspace, &path, note_type)
+    })?;
+
+    emit_topology_event(
+        &app,
+        &root,
+        diff.added_nodes.iter().map(node_to_payload).collect(),
+        diff.removed_nodes.iter().map(|p| p.as_str().to_string()).collect(),
+        diff.added_edges.iter().map(edge_to_payload).collect(),
+        diff.removed_edges.iter().map(edge_to_payload).collect(),
+    );
+
+    Ok(created_path)
+}
+
+#[tauri::command]
 pub fn list_workspace_files(state: State<'_, AppState>) -> Result<Vec<String>, String> {
     state.with_active(|ws| Ok(handlers::handle_list_workspace_files(ws)))
 }

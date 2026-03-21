@@ -384,6 +384,77 @@ impl Workspace {
         Ok(path)
     }
 
+    /// Convert a plain `.md` file into a BrainMap note by prepending YAML frontmatter.
+    /// The existing file body is preserved. Returns a `GraphDiff` from indexing.
+    pub fn convert_to_note(
+        &mut self,
+        rel_path: &str,
+        note_type: Option<&str>,
+    ) -> Result<GraphDiff> {
+        let path = RelativePath::new(rel_path);
+        if self.notes.contains_key(&path) {
+            return Err(BrainMapError::DuplicatePath(rel_path.to_string()));
+        }
+
+        let file_path = self.root.join(rel_path);
+        if !file_path.exists() {
+            return Err(BrainMapError::FileNotFound(rel_path.to_string()));
+        }
+        if file_path.extension().and_then(|e| e.to_str()) != Some("md") {
+            return Err(BrainMapError::InvalidYaml(
+                "only .md files can be converted to notes".to_string(),
+            ));
+        }
+
+        let body = std::fs::read_to_string(&file_path)?;
+
+        // Guard against files that already have frontmatter delimiters
+        if body.trim_start().starts_with("---") {
+            return Err(BrainMapError::InvalidYaml(
+                "file already contains frontmatter delimiters; remove them first or use create_note".to_string(),
+            ));
+        }
+
+        // Derive title from filename stem: replace hyphens/underscores with spaces
+        let title = Path::new(rel_path)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Untitled")
+            .replace(['-', '_'], " ");
+
+        let today = Local::now().date_naive();
+        let nt = note_type.unwrap_or("concept");
+        let frontmatter = Frontmatter {
+            id: NoteId::new(),
+            title: title.clone(),
+            note_type: nt.to_string(),
+            tags: vec![],
+            status: None,
+            created: today,
+            modified: today,
+            source: None,
+            summary: None,
+            links: vec![],
+            extra: HashMap::new(),
+        };
+
+        let note = Note {
+            path: path.clone(),
+            frontmatter,
+            body,
+            inline_links: vec![],
+        };
+
+        let content = parser::serialize_note(&note)?;
+        std::fs::write(&file_path, &content)?;
+
+        // Re-parse via add_file to extract inline links, add to graph/index/notes
+        let diff = self.add_file(rel_path)?;
+
+        info!(path = rel_path, title = %title, note_type = nt, "plain file converted to note");
+        Ok(diff)
+    }
+
     pub fn read_note(&self, rel_path: &str) -> Result<&Note> {
         let path = RelativePath::new(rel_path);
         self.notes
@@ -1670,5 +1741,105 @@ Body.
             ws.graph.get_node(&RelativePath::new("Folder")).is_none(),
             "empty folder node should be pruned after deleting the last note"
         );
+    }
+
+    #[test]
+    fn test_convert_plain_md_to_note() {
+        let dir = TempDir::new().unwrap();
+        let mut ws = Workspace::open_or_init(dir.path()).unwrap();
+
+        // Write a plain .md file (no frontmatter)
+        std::fs::write(dir.path().join("my-research.md"), "Some plain content here.\n").unwrap();
+
+        let diff = ws.convert_to_note("my-research.md", None).unwrap();
+        assert!(!diff.added_nodes.is_empty(), "should add node to graph");
+
+        // Verify it's now a note
+        let note = ws.read_note("my-research.md").unwrap();
+        assert_eq!(note.frontmatter.title, "my research");
+        assert_eq!(note.frontmatter.note_type, "concept");
+        assert!(note.body.contains("Some plain content here."));
+
+        // Verify it's in the graph
+        let rp = RelativePath::new("my-research.md");
+        let nd = ws.graph.get_node(&rp).unwrap();
+        assert_eq!(nd.title, "my research");
+    }
+
+    #[test]
+    fn test_convert_with_inline_links() {
+        let dir = TempDir::new().unwrap();
+        let mut ws = Workspace::open_or_init(dir.path()).unwrap();
+
+        std::fs::write(
+            dir.path().join("linked.md"),
+            "See [other](other.md) for details.\n",
+        )
+        .unwrap();
+
+        let diff = ws.convert_to_note("linked.md", None).unwrap();
+        // Should have mentioned-in edge from inline link
+        let rp = RelativePath::new("linked.md");
+        let edges = ws.graph.edges_for(&rp, &Direction::Both);
+        let inline_edges: Vec<_> = edges.iter().filter(|e| e.rel == "mentioned-in").collect();
+        assert_eq!(inline_edges.len(), 1);
+        assert!(!diff.added_edges.is_empty());
+    }
+
+    #[test]
+    fn test_convert_already_a_note_errors() {
+        let dir = TempDir::new().unwrap();
+        let mut ws = Workspace::open_or_init(dir.path()).unwrap();
+
+        ws.create_note("existing.md", "Existing", "concept", vec![], None, None, None, HashMap::new(), String::new()).unwrap();
+
+        let result = ws.convert_to_note("existing.md", None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("existing.md"));
+    }
+
+    #[test]
+    fn test_convert_non_md_errors() {
+        let dir = TempDir::new().unwrap();
+        let mut ws = Workspace::open_or_init(dir.path()).unwrap();
+
+        std::fs::write(dir.path().join("file.txt"), "text content").unwrap();
+
+        let result = ws.convert_to_note("file.txt", None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_convert_missing_file_errors() {
+        let dir = TempDir::new().unwrap();
+        let mut ws = Workspace::open_or_init(dir.path()).unwrap();
+
+        let result = ws.convert_to_note("nonexistent.md", None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_convert_with_custom_note_type() {
+        let dir = TempDir::new().unwrap();
+        let mut ws = Workspace::open_or_init(dir.path()).unwrap();
+
+        std::fs::write(dir.path().join("person.md"), "A person bio.\n").unwrap();
+
+        ws.convert_to_note("person.md", Some("person")).unwrap();
+        let note = ws.read_note("person.md").unwrap();
+        assert_eq!(note.frontmatter.note_type, "person");
+    }
+
+    #[test]
+    fn test_convert_file_with_frontmatter_delimiters_errors() {
+        let dir = TempDir::new().unwrap();
+        let mut ws = Workspace::open_or_init(dir.path()).unwrap();
+
+        // File with existing frontmatter-like content that wasn't parsed as a note
+        std::fs::write(dir.path().join("bad.md"), "---\ntitle: broken\n---\nbody\n").unwrap();
+
+        let result = ws.convert_to_note("bad.md", None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("frontmatter"));
     }
 }
