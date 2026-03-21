@@ -212,6 +212,8 @@ interface PersistedPrefs {
   canvasStickyCurl?: boolean;
   canvasStickyStripe?: boolean;
   canvasRoundedRadius?: number;
+  canvasGroupFontFamily?: string;
+  canvasGroupFontSize?: number;
   canvasPanelFontFamily?: string;
   canvasPanelFontSize?: number;
   codeTheme?: string;
@@ -353,6 +355,8 @@ interface UIState {
   canvasStickyCurl: boolean;
   canvasStickyStripe: boolean;
   canvasRoundedRadius: number;
+  canvasGroupFontFamily: string;
+  canvasGroupFontSize: number;
   canvasPanelFontFamily: string;
   canvasPanelFontSize: number;
   codeTheme: string;
@@ -387,6 +391,8 @@ interface UIState {
   setCanvasStickyCurl: (v: boolean) => void;
   setCanvasStickyStripe: (v: boolean) => void;
   setCanvasRoundedRadius: (v: number) => void;
+  setCanvasGroupFontFamily: (v: string) => void;
+  setCanvasGroupFontSize: (v: number) => void;
   setCanvasPanelFontFamily: (v: string) => void;
   setCanvasPanelFontSize: (v: number) => void;
   setCodeTheme: (theme: string) => void;
@@ -587,6 +593,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasStickyCurl: storedPrefs.canvasStickyCurl ?? true,
   canvasStickyStripe: storedPrefs.canvasStickyStripe ?? true,
   canvasRoundedRadius: storedPrefs.canvasRoundedRadius ?? 24,
+  canvasGroupFontFamily: storedPrefs.canvasGroupFontFamily ?? "sans-serif",
+  canvasGroupFontSize: storedPrefs.canvasGroupFontSize ?? 13,
   canvasPanelFontFamily: storedPrefs.canvasPanelFontFamily ?? DEFAULT_UI_FONT,
   canvasPanelFontSize: storedPrefs.canvasPanelFontSize ?? 12,
   codeTheme: storedPrefs.codeTheme ?? "GitHub Dark",
@@ -803,6 +811,14 @@ export const useUIStore = create<UIState>((set, get) => ({
   setCanvasRoundedRadius: (canvasRoundedRadius: number) => {
     set({ canvasRoundedRadius });
     savePrefs({ canvasRoundedRadius });
+  },
+  setCanvasGroupFontFamily: (canvasGroupFontFamily: string) => {
+    set({ canvasGroupFontFamily });
+    savePrefs({ canvasGroupFontFamily });
+  },
+  setCanvasGroupFontSize: (canvasGroupFontSize: number) => {
+    set({ canvasGroupFontSize });
+    savePrefs({ canvasGroupFontSize });
   },
   setCanvasPanelFontFamily: (canvasPanelFontFamily: string) => {
     set({ canvasPanelFontFamily });

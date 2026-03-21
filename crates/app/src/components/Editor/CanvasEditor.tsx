@@ -10,6 +10,7 @@ import {
   useEdgesState,
   useReactFlow,
   ReactFlowProvider,
+  SelectionMode,
 } from "@xyflow/react";
 import type { OnConnect, ColorMode } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -20,7 +21,7 @@ import { useUIStore } from "../../stores/uiStore";
 import { log } from "../../utils/logger";
 import { canvasToFlow, flowToCanvas } from "./canvasTranslation";
 import type { JsonCanvas } from "./canvasTranslation";
-import { StickyNote, FileText, FilePlus, Layers, ChevronDown } from "lucide-react";
+import { StickyNote, FileText, FilePlus, Layers, ChevronDown, MousePointer2, Hand, Group } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES } from "./canvasShapes";
 import { useGraphStore } from "../../stores/graphStore";
@@ -101,6 +102,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [interactionMode, setInteractionMode] = useState<"pan" | "select">("pan");
 
   const canvasTheme = useUIStore((s) => s.canvasTheme);
   const canvasShowDots = useUIStore((s) => s.canvasShowDots);
@@ -117,6 +119,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const canvasStickyCurl = useUIStore((s) => s.canvasStickyCurl);
   const canvasStickyStripe = useUIStore((s) => s.canvasStickyStripe);
   const canvasRoundedRadius = useUIStore((s) => s.canvasRoundedRadius);
+  const canvasGroupFontFamily = useUIStore((s) => s.canvasGroupFontFamily);
+  const canvasGroupFontSize = useUIStore((s) => s.canvasGroupFontSize);
   const colorMode: ColorMode = canvasTheme;
   const containerClass = `canvas-container${canvasTheme === "light" ? " canvas-light" : ""}`;
   const shapeVars = {
@@ -132,6 +136,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
     "--sticky-curl": canvasStickyCurl ? "1" : "0",
     "--sticky-stripe": canvasStickyStripe ? "1" : "0",
     "--rounded-radius": `${canvasRoundedRadius}px`,
+    "--group-font-family": canvasGroupFontFamily,
+    "--group-font-size": `${canvasGroupFontSize}px`,
   } as React.CSSProperties;
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -143,6 +149,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const edgesRef = useRef(edges);
   nodesRef.current = nodes;
   edgesRef.current = edges;
+
+  const selectedCount = useMemo(() => nodes.filter((n) => n.selected).length, [nodes]);
 
   // ── Undo/Redo stacks ─────────────────────────────────────────────────────
   const MAX_CANVAS_UNDO = 30;
@@ -531,6 +539,51 @@ export function CanvasEditorInner({ path }: { path: string }) {
     return () => window.removeEventListener("keydown", handler);
   }, [duplicateSelected]);
 
+  // V/H to switch interaction mode
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("textarea, input")) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "v") setInteractionMode("select");
+      else if (e.key === "h") setInteractionMode("pan");
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  // Group selected elements
+  const groupSelected = useCallback(() => {
+    const selected = nodesRef.current.filter((n) => n.selected);
+    if (selected.length < 2) return;
+    pushSnapshot();
+
+    // Compute bounding box
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const n of selected) {
+      const w = (n.style?.width as number) ?? (n.measured?.width ?? 250);
+      const h = (n.style?.height as number) ?? (n.measured?.height ?? 100);
+      minX = Math.min(minX, n.position.x);
+      minY = Math.min(minY, n.position.y);
+      maxX = Math.max(maxX, n.position.x + w);
+      maxY = Math.max(maxY, n.position.y + h);
+    }
+
+    const pad = 40;
+    const groupId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const groupNode = {
+      id: groupId,
+      type: "canvasGroup",
+      position: { x: minX - pad, y: minY - pad },
+      data: { label: "Group" },
+      style: { width: maxX - minX + pad * 2, height: maxY - minY + pad * 2 },
+      zIndex: -1,
+    };
+
+    setNodes((nds) => [groupNode, ...nds.map((n) => ({ ...n, selected: false }))]);
+    requestAnimationFrame(() => scheduleSave());
+  }, [setNodes, scheduleSave, pushSnapshot]);
+
   // Pane context menu (right-click on empty canvas)
   const handlePaneContextMenu = useCallback(
     (event: ReactMouseEvent) => {
@@ -714,6 +767,9 @@ export function CanvasEditorInner({ path }: { path: string }) {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         colorMode={colorMode}
+        panOnDrag={interactionMode === "pan"}
+        selectionOnDrag={interactionMode === "select"}
+        selectionMode={SelectionMode.Partial}
         deleteKeyCode={["Backspace", "Delete"]}
         fitView
         fitViewOptions={{ padding: 0.2 }}
@@ -752,6 +808,21 @@ export function CanvasEditorInner({ path }: { path: string }) {
           />
         )}
         <Panel position="bottom-center" className="canvas-toolbar">
+          <button
+            className={`canvas-toolbar-btn${interactionMode === "pan" ? " canvas-toolbar-btn--active" : ""}`}
+            title="Pan mode (H)"
+            onClick={() => setInteractionMode("pan")}
+          >
+            <Hand size={22} />
+          </button>
+          <button
+            className={`canvas-toolbar-btn${interactionMode === "select" ? " canvas-toolbar-btn--active" : ""}`}
+            title="Select mode (V)"
+            onClick={() => setInteractionMode("select")}
+          >
+            <MousePointer2 size={22} />
+          </button>
+          <div className="canvas-toolbar-separator" />
           <div className="canvas-toolbar-split">
             <button
               className="canvas-toolbar-btn"
@@ -790,6 +861,19 @@ export function CanvasEditorInner({ path }: { path: string }) {
           >
             <FilePlus size={22} />
           </button>
+          {selectedCount >= 2 && (
+            <>
+              <div className="canvas-toolbar-separator" />
+              <button
+                className="canvas-toolbar-btn"
+                title="Group selected elements"
+                onClick={groupSelected}
+              >
+                <Group size={22} />
+              </button>
+              <span className="canvas-toolbar-selection-count">{selectedCount} selected</span>
+            </>
+          )}
         </Panel>
       </ReactFlow>
       {toolbarShapePicker && (

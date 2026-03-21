@@ -104,6 +104,10 @@ export function SettingsModal() {
   const setCanvasStickyCurl = useUIStore((s) => s.setCanvasStickyCurl);
   const setCanvasStickyStripe = useUIStore((s) => s.setCanvasStickyStripe);
   const setCanvasRoundedRadius = useUIStore((s) => s.setCanvasRoundedRadius);
+  const canvasGroupFontFamily = useUIStore((s) => s.canvasGroupFontFamily);
+  const canvasGroupFontSize = useUIStore((s) => s.canvasGroupFontSize);
+  const setCanvasGroupFontFamily = useUIStore((s) => s.setCanvasGroupFontFamily);
+  const setCanvasGroupFontSize = useUIStore((s) => s.setCanvasGroupFontSize);
   const setCanvasPanelFontFamily = useUIStore((s) => s.setCanvasPanelFontFamily);
   const setCanvasPanelFontSize = useUIStore((s) => s.setCanvasPanelFontSize);
   const codeTheme = useUIStore((s) => s.codeTheme);
@@ -982,6 +986,30 @@ export function SettingsModal() {
                 onChange={(e) => setCanvasRoundedRadius(Number(e.target.value))}
               />
               <span className="settings-size-value">{canvasRoundedRadius}px</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">Group Label</div>
+        <div className="settings-row">
+          <span className="settings-label">Family</span>
+          <FontFamilySelect value={canvasGroupFontFamily} onChange={setCanvasGroupFontFamily} />
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Size</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={10}
+                max={24}
+                step={1}
+                value={canvasGroupFontSize}
+                onChange={(e) => setCanvasGroupFontSize(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasGroupFontSize}px</span>
             </div>
           </div>
         </div>
