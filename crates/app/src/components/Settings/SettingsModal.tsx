@@ -72,6 +72,8 @@ export function SettingsModal() {
   const canvasDotOpacity = useUIStore((s) => s.canvasDotOpacity);
   const canvasArrowSize = useUIStore((s) => s.canvasArrowSize);
   const canvasCardBgOpacity = useUIStore((s) => s.canvasCardBgOpacity);
+  const canvasPanelFontFamily = useUIStore((s) => s.canvasPanelFontFamily);
+  const canvasPanelFontSize = useUIStore((s) => s.canvasPanelFontSize);
   const setFilesTheme = useUIStore((s) => s.setFilesTheme);
   const setEditorTheme = useUIStore((s) => s.setEditorTheme);
   const setExcalidrawTheme = useUIStore((s) => s.setExcalidrawTheme);
@@ -80,6 +82,8 @@ export function SettingsModal() {
   const setCanvasDotOpacity = useUIStore((s) => s.setCanvasDotOpacity);
   const setCanvasArrowSize = useUIStore((s) => s.setCanvasArrowSize);
   const setCanvasCardBgOpacity = useUIStore((s) => s.setCanvasCardBgOpacity);
+  const setCanvasPanelFontFamily = useUIStore((s) => s.setCanvasPanelFontFamily);
+  const setCanvasPanelFontSize = useUIStore((s) => s.setCanvasPanelFontSize);
   const codeTheme = useUIStore((s) => s.codeTheme);
   const setCodeTheme = useUIStore((s) => s.setCodeTheme);
   const effectiveEditorTheme = useUIStore((s) => s.effectiveEditorTheme);
@@ -795,6 +799,30 @@ export function SettingsModal() {
                 onChange={(e) => setCanvasCardBgOpacity(Number(e.target.value))}
               />
               <span className="settings-size-value">{canvasCardBgOpacity}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">Panel Font</div>
+        <div className="settings-row">
+          <span className="settings-label">Family</span>
+          <FontFamilySelect value={canvasPanelFontFamily} onChange={setCanvasPanelFontFamily} />
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Size</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={10}
+                max={20}
+                step={1}
+                value={canvasPanelFontSize}
+                onChange={(e) => setCanvasPanelFontSize(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasPanelFontSize}px</span>
             </div>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { closeTabAndNavigateNext } from "../../stores/tabActions";
 import { getAPI } from "../../api/bridge";
 import { useUndoStore } from "../../stores/undoStore";
 import { log } from "../../utils/logger";
+import { pickFolder } from "../../api/pickFolder";
 
 /** Derive a human-readable title from a file path like "Concepts/My-Note.md" */
 function titleFromPath(path: string): string {
@@ -29,6 +30,7 @@ export function CreateNoteDialog() {
   const saveAsBody = useUIStore((s) => s.createNoteSaveAsBody);
   const saveAsTabId = useUIStore((s) => s.createNoteSaveAsTabId);
   const noteTypes = useWorkspaceStore((s) => s.noteTypes);
+  const workspaceRoot = useWorkspaceStore((s) => s.info?.root ?? null);
 
   const isCreateAndLink = createNoteMode === "create-and-link" && linkSource !== null;
   const isSaveAs = saveAsBody != null && saveAsTabId != null;
@@ -77,6 +79,19 @@ export function CreateNoteDialog() {
     setTitle(value);
     setTitleManuallyEdited(true);
   };
+
+  const handleBrowseFolder = useCallback(async () => {
+    const absPath = await pickFolder();
+    if (!absPath || !workspaceRoot) return;
+    const normalizedRoot = workspaceRoot.replace(/\/$/, "");
+    if (!absPath.startsWith(normalizedRoot)) return; // outside workspace
+    const relative = absPath.slice(normalizedRoot.length + 1); // strip root + separator
+    // Keep the current filename, change the folder prefix
+    const basename = path.split("/").pop() ?? path;
+    const newPath = relative ? `${relative}/${basename}` : basename;
+    setPath(newPath);
+    setPathDirty(true);
+  }, [workspaceRoot, path]);
 
   // Validate inline — only show errors after the user has edited the field
   const notePathError = isNoteMode && pathDirty && path.length > 0 && path.trim().length === 0
@@ -389,16 +404,28 @@ export function CreateNoteDialog() {
 
         <div style={fieldGroupStyle}>
           <label style={labelStyle} htmlFor="cn-path">Path *</label>
-          <input
-            id="cn-path"
-            ref={pathRef}
-            type="text"
-            style={pathError ? inputErrorStyle : inputStyle}
-            value={path}
-            onChange={(e) => handlePathChange(e.target.value)}
-            placeholder={isCanvasMode ? "My Canvas" : isExcalidrawMode ? "My Drawing" : isNoteMode ? "Concepts/My-Note" : "config.json"}
-            disabled={isSubmitting}
-          />
+          <div style={{ display: "flex", gap: 6 }}>
+            <input
+              id="cn-path"
+              ref={pathRef}
+              type="text"
+              style={pathError ? { ...inputErrorStyle, flex: 1 } : { ...inputStyle, flex: 1 }}
+              value={path}
+              onChange={(e) => handlePathChange(e.target.value)}
+              placeholder={isCanvasMode ? "My Canvas" : isExcalidrawMode ? "My Drawing" : isNoteMode ? "Concepts/My-Note" : "config.json"}
+              disabled={isSubmitting}
+            />
+            {isSpecialFileMode && (
+              <button
+                type="button"
+                style={btnSecondaryStyle}
+                onClick={handleBrowseFolder}
+                disabled={isSubmitting}
+              >
+                Browse
+              </button>
+            )}
+          </div>
           {pathError && <span style={inlineErrorStyle}>{pathError}</span>}
           {isNoteMode && !isSaveAs && (
             <span style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 1 }}>.md extension added automatically</span>
@@ -457,7 +484,7 @@ export function CreateNoteDialog() {
           </>
         )}
 
-        {!isSaveAs && (
+        {!isSaveAs && !isSpecialFileMode && (
           <div style={fieldGroupStyle}>
             <label style={labelStyle} htmlFor="cn-body">Body (optional)</label>
             <textarea

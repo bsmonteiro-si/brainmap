@@ -201,6 +201,8 @@ interface PersistedPrefs {
   canvasDotOpacity?: number;
   canvasArrowSize?: number;
   canvasCardBgOpacity?: number;
+  canvasPanelFontFamily?: string;
+  canvasPanelFontSize?: number;
   codeTheme?: string;
   homeNotes?: Record<string, string>; // workspaceRoot → notePath
   tooltipFontSize?: number;
@@ -328,6 +330,8 @@ interface UIState {
   canvasDotOpacity: number;
   canvasArrowSize: number;
   canvasCardBgOpacity: number;
+  canvasPanelFontFamily: string;
+  canvasPanelFontSize: number;
   codeTheme: string;
   homeNotePath: string | null;
   customFileOrder: Record<string, string[]>;
@@ -349,6 +353,8 @@ interface UIState {
   setCanvasDotOpacity: (opacity: number) => void;
   setCanvasArrowSize: (size: number) => void;
   setCanvasCardBgOpacity: (opacity: number) => void;
+  setCanvasPanelFontFamily: (v: string) => void;
+  setCanvasPanelFontSize: (v: number) => void;
   setCodeTheme: (theme: string) => void;
   toggleGraphMode: () => void;
   openCommandPalette: () => void;
@@ -536,6 +542,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasDotOpacity: storedPrefs.canvasDotOpacity ?? 50,
   canvasArrowSize: storedPrefs.canvasArrowSize ?? 25,
   canvasCardBgOpacity: storedPrefs.canvasCardBgOpacity ?? 15,
+  canvasPanelFontFamily: storedPrefs.canvasPanelFontFamily ?? DEFAULT_UI_FONT,
+  canvasPanelFontSize: storedPrefs.canvasPanelFontSize ?? 12,
   codeTheme: storedPrefs.codeTheme ?? "GitHub Dark",
   graphMode: "navigate",
   commandPaletteOpen: false,
@@ -705,6 +713,14 @@ export const useUIStore = create<UIState>((set, get) => ({
   setCanvasCardBgOpacity: (canvasCardBgOpacity: number) => {
     set({ canvasCardBgOpacity });
     savePrefs({ canvasCardBgOpacity });
+  },
+  setCanvasPanelFontFamily: (canvasPanelFontFamily: string) => {
+    set({ canvasPanelFontFamily });
+    savePrefs({ canvasPanelFontFamily });
+  },
+  setCanvasPanelFontSize: (canvasPanelFontSize: number) => {
+    set({ canvasPanelFontSize });
+    savePrefs({ canvasPanelFontSize });
   },
 
   toggleGraphMode: () => {

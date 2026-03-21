@@ -326,7 +326,8 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
 
   return (
     <div
-      className={`canvas-text-node${shapeDef.cssClass ? ` ${shapeDef.cssClass}` : ""}`}
+      className="canvas-text-node"
+      data-shape={d.shape || "rectangle"}
       style={{ ...(borderColor ? { borderColor } : {}), ...(d.bgColor ? { backgroundColor: d.bgColor } : {}) }}
       onDoubleClick={() => { setEditValue(text); setEditing(true); }}
     >

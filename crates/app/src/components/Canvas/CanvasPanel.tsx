@@ -8,6 +8,8 @@ import { CanvasEditorInner, CanvasPanelModeContext } from "../Editor/CanvasEdito
 export function CanvasPanel() {
   const activeCanvasPath = useUIStore((s) => s.activeCanvasPath);
   const openCanvasInPanel = useUIStore((s) => s.openCanvasInPanel);
+  const canvasPanelFontFamily = useUIStore((s) => s.canvasPanelFontFamily);
+  const canvasPanelFontSize = useUIStore((s) => s.canvasPanelFontSize);
   const workspaceFiles = useGraphStore((s) => s.workspaceFiles);
   const [showPicker, setShowPicker] = useState(false);
 
@@ -33,7 +35,7 @@ export function CanvasPanel() {
   const currentName = activeCanvasPath?.split("/").pop()?.replace(/\.canvas$/i, "") ?? null;
 
   return (
-    <div className="canvas-panel">
+    <div className="canvas-panel" style={{ fontFamily: canvasPanelFontFamily, fontSize: canvasPanelFontSize }}>
       <div className="canvas-panel-header">
         <div className="canvas-panel-icon">
           <LayoutDashboard size={14} />
