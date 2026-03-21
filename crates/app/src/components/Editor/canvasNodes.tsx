@@ -4,7 +4,7 @@ import {
   BaseEdge, EdgeLabelRenderer, getBezierPath, useReactFlow,
 } from "@xyflow/react";
 import type { NodeProps, EdgeProps } from "@xyflow/react";
-import { Trash2, Palette, Paintbrush, PenLine, Shapes } from "lucide-react";
+import { Trash2, Palette, Paintbrush, PenLine, Shapes, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES, getShapeDefinition } from "./canvasShapes";
 import type { CanvasShapeId } from "./canvasShapes";
@@ -24,6 +24,19 @@ const CANVAS_COLORS = [
   { id: "5", color: "#3498db", label: "Cyan" },
   { id: "6", color: "#9b59b6", label: "Purple" },
 ];
+
+const FONT_SIZES = [11, 13, 16, 20, 24];
+const FONT_FAMILIES = [
+  { id: "sans-serif", label: "Sans" },
+  { id: "serif", label: "Serif" },
+  { id: "monospace", label: "Mono" },
+];
+const TEXT_ALIGNMENTS = [
+  { id: "left", icon: AlignLeft, label: "Left" },
+  { id: "center", icon: AlignCenter, label: "Center" },
+  { id: "right", icon: AlignRight, label: "Right" },
+  { id: "justify", icon: AlignJustify, label: "Justify" },
+] as const;
 
 // ── Color picker dropdown (shared by node + edge toolbars) ────────────────────
 
@@ -84,11 +97,20 @@ function FourHandles() {
 
 // ── Node toolbar (delete + color) ─────────────────────────────────────────────
 
-function CanvasNodeToolbar({ id, selected, shape }: { id: string; selected: boolean; shape?: string }) {
+function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlign }: {
+  id: string; selected: boolean; shape?: string;
+  fontSize?: number; fontFamily?: string; textAlign?: string;
+}) {
   const { setNodes, setEdges } = useReactFlow();
   const [showColors, setShowColors] = useState(false);
   const [showBgColors, setShowBgColors] = useState(false);
   const [showShapes, setShowShapes] = useState(false);
+  const [showTextFormat, setShowTextFormat] = useState(false);
+
+  const closeAllDropdowns = () => { setShowColors(false); setShowBgColors(false); setShowShapes(false); setShowTextFormat(false); };
+  const setNodeData = (patch: Record<string, unknown>) => {
+    setNodes((nds) => nds.map((n) => n.id === id ? { ...n, data: { ...n.data, ...patch } } : n));
+  };
 
   const handleDelete = () => {
     setNodes((nds) => nds.filter((n) => n.id !== id));
@@ -189,11 +211,7 @@ function CanvasNodeToolbar({ id, selected, shape }: { id: string; selected: bool
                       className={`canvas-shape-picker-btn${active ? " canvas-shape-picker-btn--active" : ""}`}
                       title={s.label}
                       onClick={() => {
-                        setNodes((nds) =>
-                          nds.map((n) =>
-                            n.id === id ? { ...n, data: { ...n.data, shape: s.id } } : n,
-                          ),
-                        );
+                        setNodeData({ shape: s.id });
                         setShowShapes(false);
                       }}
                     >
@@ -201,6 +219,65 @@ function CanvasNodeToolbar({ id, selected, shape }: { id: string; selected: bool
                     </button>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        )}
+        {shape !== undefined && (
+          <div className="canvas-node-toolbar-color-wrapper">
+            <button
+              className="canvas-node-toolbar-btn"
+              title="Text formatting"
+              onClick={() => { const next = !showTextFormat; closeAllDropdowns(); setShowTextFormat(next); }}
+            >
+              <Type size={16} />
+            </button>
+            {showTextFormat && (
+              <div className="canvas-text-format-picker">
+                <div className="canvas-text-format-section">
+                  <span className="canvas-text-format-section-label">Size</span>
+                  <div className="canvas-text-format-row">
+                    {FONT_SIZES.map((s) => (
+                      <button
+                        key={s}
+                        className={`canvas-text-format-btn${(fontSize ?? 13) === s ? " canvas-text-format-btn--active" : ""}`}
+                        onClick={() => { setNodeData({ fontSize: s }); }}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="canvas-text-format-section">
+                  <span className="canvas-text-format-section-label">Font</span>
+                  <div className="canvas-text-format-row">
+                    {FONT_FAMILIES.map((f) => (
+                      <button
+                        key={f.id}
+                        className={`canvas-text-format-btn${(fontFamily ?? "") === f.id ? " canvas-text-format-btn--active" : ""}`}
+                        style={{ fontFamily: f.id }}
+                        onClick={() => { setNodeData({ fontFamily: fontFamily === f.id ? undefined : f.id }); }}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="canvas-text-format-section">
+                  <span className="canvas-text-format-section-label">Align</span>
+                  <div className="canvas-text-format-row">
+                    {TEXT_ALIGNMENTS.map((a) => (
+                      <button
+                        key={a.id}
+                        className={`canvas-text-format-btn${(textAlign ?? "left") === a.id ? " canvas-text-format-btn--active" : ""}`}
+                        title={a.label}
+                        onClick={() => { setNodeData({ textAlign: a.id }); }}
+                      >
+                        <a.icon size={14} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>

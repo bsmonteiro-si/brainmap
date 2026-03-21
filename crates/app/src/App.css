@@ -4566,6 +4566,7 @@ body {
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
   background: rgba(16, 185, 129, 0.04);
+  position: relative;
 }
 
 .canvas-panel-icon {
@@ -4653,11 +4654,17 @@ body {
 }
 
 .canvas-panel-picker {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
   border-bottom: 1px solid var(--border-color);
   max-height: 220px;
   overflow-y: auto;
   padding: 4px 0;
   background: var(--bg-secondary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .canvas-panel-picker-item {
@@ -5147,17 +5154,33 @@ body {
   padding-bottom: 14px;
 }
 
+/* Outer tail triangle (border color) */
 .canvas-text-node[data-shape="callout"]::after {
   content: "";
   position: absolute;
-  bottom: -10px;
-  left: 6px;
+  bottom: -18px;
+  left: 14px;
   width: 0;
   height: 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-top: 10px solid var(--border-color);
+  border-left: 18px solid transparent;
+  border-right: 18px solid transparent;
+  border-top: 18px solid var(--border-color);
   pointer-events: none;
+}
+
+/* Inner tail triangle (background fill, overlaps border to look continuous) */
+.canvas-text-node[data-shape="callout"]::before {
+  content: "";
+  position: absolute;
+  bottom: -16px;
+  left: 15px;
+  width: 0;
+  height: 0;
+  border-left: 17px solid transparent;
+  border-right: 17px solid transparent;
+  border-top: 17px solid var(--bg-primary);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .canvas-text-node[data-shape="diamond"] {
@@ -5399,6 +5422,10 @@ body {
 
 .canvas-container.canvas-light .canvas-text-node[data-shape="callout"]::after {
   border-top-color: #ddd;
+}
+
+.canvas-container.canvas-light .canvas-text-node[data-shape="callout"]::before {
+  border-top-color: #fff;
 }
 
 .canvas-container.canvas-light .canvas-text-node[data-shape="diamond"] {
