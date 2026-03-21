@@ -74,6 +74,10 @@ export function SettingsModal() {
   const canvasCardBgOpacity = useUIStore((s) => s.canvasCardBgOpacity);
   const canvasCalloutTailSize = useUIStore((s) => s.canvasCalloutTailSize);
   const canvasStickyRotation = useUIStore((s) => s.canvasStickyRotation);
+  const canvasStickyColor = useUIStore((s) => s.canvasStickyColor);
+  const canvasStickyShadow = useUIStore((s) => s.canvasStickyShadow);
+  const canvasStickyFoldSize = useUIStore((s) => s.canvasStickyFoldSize);
+  const canvasStickyPin = useUIStore((s) => s.canvasStickyPin);
   const canvasRoundedRadius = useUIStore((s) => s.canvasRoundedRadius);
   const canvasPanelFontFamily = useUIStore((s) => s.canvasPanelFontFamily);
   const canvasPanelFontSize = useUIStore((s) => s.canvasPanelFontSize);
@@ -87,6 +91,10 @@ export function SettingsModal() {
   const setCanvasCardBgOpacity = useUIStore((s) => s.setCanvasCardBgOpacity);
   const setCanvasCalloutTailSize = useUIStore((s) => s.setCanvasCalloutTailSize);
   const setCanvasStickyRotation = useUIStore((s) => s.setCanvasStickyRotation);
+  const setCanvasStickyColor = useUIStore((s) => s.setCanvasStickyColor);
+  const setCanvasStickyShadow = useUIStore((s) => s.setCanvasStickyShadow);
+  const setCanvasStickyFoldSize = useUIStore((s) => s.setCanvasStickyFoldSize);
+  const setCanvasStickyPin = useUIStore((s) => s.setCanvasStickyPin);
   const setCanvasRoundedRadius = useUIStore((s) => s.setCanvasRoundedRadius);
   const setCanvasPanelFontFamily = useUIStore((s) => s.setCanvasPanelFontFamily);
   const setCanvasPanelFontSize = useUIStore((s) => s.setCanvasPanelFontSize);
@@ -843,6 +851,71 @@ export function SettingsModal() {
               <span className="settings-size-value">{canvasStickyRotation}°</span>
             </div>
           </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Sticky color</span>
+          <div className="settings-control">
+            <div style={{ display: "flex", gap: 4 }}>
+              {[
+                { color: "#fef3c7", label: "Yellow" },
+                { color: "#fce4ec", label: "Pink" },
+                { color: "#e3f2fd", label: "Blue" },
+                { color: "#e8f5e9", label: "Green" },
+                { color: "#fff3e0", label: "Orange" },
+              ].map((c) => (
+                <button
+                  key={c.color}
+                  className={`canvas-color-swatch${canvasStickyColor === c.color ? " canvas-color-swatch--selected" : ""}`}
+                  style={{ backgroundColor: c.color, width: 24, height: 24, border: canvasStickyColor === c.color ? "2px solid var(--accent)" : "1px solid var(--border-color)", borderRadius: 4, cursor: "pointer" }}
+                  title={c.label}
+                  onClick={() => setCanvasStickyColor(c.color)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Sticky shadow</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={0}
+                max={20}
+                step={1}
+                value={canvasStickyShadow}
+                onChange={(e) => setCanvasStickyShadow(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasStickyShadow}px</span>
+            </div>
+          </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Sticky fold</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={0}
+                max={40}
+                step={2}
+                value={canvasStickyFoldSize}
+                onChange={(e) => setCanvasStickyFoldSize(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasStickyFoldSize}px</span>
+            </div>
+          </div>
+        </div>
+        <div className="settings-row" style={{ alignItems: "center" }}>
+          <span className="settings-label">Sticky pin</span>
+          <label className="settings-checkbox-label">
+            <input
+              type="checkbox"
+              checked={canvasStickyPin}
+              onChange={(e) => setCanvasStickyPin(e.target.checked)}
+            />
+            Show pushpin
+          </label>
         </div>
         <div className="settings-row">
           <span className="settings-label">Rounded radius</span>

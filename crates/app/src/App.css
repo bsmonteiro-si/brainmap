@@ -5097,8 +5097,7 @@ body {
 
 .canvas-text-node-edit {
   width: 100%;
-  flex: 1;
-  min-height: 40px;
+  min-height: 20px;
   padding: 0;
   margin: 0;
   border: none;
@@ -5108,6 +5107,7 @@ body {
   font-size: 13px;
   font-family: inherit;
   resize: none;
+  overflow: hidden;
   white-space: pre-wrap;
   word-break: break-word;
   text-align: center;
@@ -5131,9 +5131,9 @@ body {
 
 .canvas-text-node[data-shape="sticky"] {
   border: none;
-  background: #fef3c7;
+  background: var(--sticky-color, #fef3c7);
   border-radius: 2px;
-  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 2px 2px var(--sticky-shadow, 6px) rgba(0, 0, 0, 0.15);
   transform: rotate(calc(-1 * var(--sticky-rotation, 1.5deg)));
   position: relative;
 }
@@ -5144,16 +5144,33 @@ body {
   color: #1a1a1a;
 }
 
+/* Corner fold */
 .canvas-text-node[data-shape="sticky"]::after {
   content: "";
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 20px;
-  height: 20px;
+  width: var(--sticky-fold, 20px);
+  height: var(--sticky-fold, 20px);
   background: linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, 0.08) 50%);
   border-radius: 0 0 2px 0;
   pointer-events: none;
+}
+
+/* Pushpin decoration */
+.canvas-text-node[data-shape="sticky"]::before {
+  content: "";
+  display: var(--sticky-pin, none);
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #e74c3c;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  z-index: 2;
 }
 
 .canvas-text-node[data-shape="callout"] {

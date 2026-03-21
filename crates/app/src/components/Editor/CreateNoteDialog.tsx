@@ -428,16 +428,14 @@ export function CreateNoteDialog() {
               placeholder={isCanvasMode ? "My Canvas" : isExcalidrawMode ? "My Drawing" : isNoteMode ? "Concepts/My-Note" : "config.json"}
               disabled={isSubmitting}
             />
-            {isSpecialFileMode && (
-              <button
-                type="button"
-                style={btnSecondaryStyle}
-                onClick={handleBrowseFolder}
-                disabled={isSubmitting}
-              >
-                Browse
-              </button>
-            )}
+            <button
+              type="button"
+              style={btnSecondaryStyle}
+              onClick={handleBrowseFolder}
+              disabled={isSubmitting}
+            >
+              Browse
+            </button>
           </div>
           {pathError && <span style={inlineErrorStyle}>{pathError}</span>}
           {isNoteMode && !isSaveAs && (

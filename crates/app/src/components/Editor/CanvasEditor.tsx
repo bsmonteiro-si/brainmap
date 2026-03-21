@@ -365,7 +365,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
     if (elemCtxMenu?.nodeId) selectedNodeIds.add(elemCtxMenu.nodeId);
     if (selectedNodeIds.size === 0) return;
 
-    const offset = 30;
+    const offset = 80;
     const now = Date.now();
     const idMap = new Map<string, string>();
     const nodesToClone = nodesRef.current.filter((n) => selectedNodeIds.has(n.id));
@@ -383,10 +383,21 @@ export function CanvasEditorInner({ path }: { path: string }) {
       // Remap parentId if the parent was also duplicated
       ...(n.parentId && idMap.has(n.parentId) ? { parentId: idMap.get(n.parentId) } : {}),
     }));
+    // Duplicate edges whose both endpoints are in the duplicated set
+    const newEdges = edgesRef.current
+      .filter((e) => idMap.has(e.source) && idMap.has(e.target))
+      .map((e) => ({
+        ...e,
+        id: `edge-${now}-${Math.random().toString(36).slice(2, 6)}`,
+        source: idMap.get(e.source)!,
+        target: idMap.get(e.target)!,
+        selected: false,
+      }));
     setNodes((nds) => [...nds, ...newNodes]);
+    if (newEdges.length > 0) setEdges((eds) => [...eds, ...newEdges]);
     closeElemCtxMenu();
     requestAnimationFrame(() => scheduleSave());
-  }, [setNodes, elemCtxMenu, closeElemCtxMenu, scheduleSave]);
+  }, [setNodes, setEdges, elemCtxMenu, closeElemCtxMenu, scheduleSave]);
 
   // Close element context menu on click elsewhere
   useEffect(() => {
@@ -395,6 +406,18 @@ export function CanvasEditorInner({ path }: { path: string }) {
     window.addEventListener("click", handler);
     return () => window.removeEventListener("click", handler);
   }, [elemCtxMenu, closeElemCtxMenu]);
+
+  // Cmd+D to duplicate selected elements
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "d") {
+        e.preventDefault();
+        duplicateSelected();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [duplicateSelected]);
 
   // Pane context menu (right-click on empty canvas)
   const handlePaneContextMenu = useCallback(

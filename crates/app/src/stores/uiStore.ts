@@ -791,7 +791,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   closeCommandPalette: () => set({ commandPaletteOpen: false }),
   openCreateNoteDialog: (pathOrOpts?: string | CreateNoteDialogOpts) => {
     if (typeof pathOrOpts === "string" || pathOrOpts === undefined) {
-      set({ createNoteDialogOpen: true, createNoteOnCreatedCallback: null, createNoteInitialPath: pathOrOpts ?? null, createNoteInitialTitle: null, createNoteMode: "default", createFileKind: "note", createAndLinkSource: null, createNoteSaveAsBody: null, createNoteSaveAsTabId: null });
+      set({ createNoteDialogOpen: true, createNoteInitialPath: pathOrOpts ?? null, createNoteInitialTitle: null, createNoteMode: "default", createFileKind: "note", createAndLinkSource: null, createNoteSaveAsBody: null, createNoteSaveAsTabId: null });
     } else {
       set({
         createNoteDialogOpen: true,

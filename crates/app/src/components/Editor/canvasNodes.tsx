@@ -392,6 +392,14 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
     }
   }, [editing]);
 
+  useEffect(() => {
+    if (editing && textareaRef.current) {
+      const ta = textareaRef.current;
+      ta.style.height = "0";
+      ta.style.height = ta.scrollHeight + "px";
+    }
+  }, [editing, editValue]);
+
   const commitEdit = () => {
     setNodes((nds) =>
       nds.map((n) => n.id === id ? { ...n, data: { ...n.data, text: editValue } } : n),
@@ -418,18 +426,20 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
       <Resizer selected={selected} />
       <CanvasNodeToolbar id={id} selected={selected} shape={d.shape ?? "rectangle"} fontSize={d.fontSize} fontFamily={d.fontFamily} textAlign={d.textAlign} />
       {editing ? (
-        <textarea
-          ref={textareaRef}
-          className="canvas-text-node-edit"
-          style={textStyles}
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={commitEdit}
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-        />
+        <div className="canvas-text-node-body">
+          <textarea
+            ref={textareaRef}
+            className="canvas-text-node-edit"
+            style={textStyles}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={commitEdit}
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+        </div>
       ) : (
         <div className="canvas-text-node-body" style={textStyles}>{text || "\u00A0"}</div>
       )}
