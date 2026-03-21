@@ -543,7 +543,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target?.closest("textarea, input")) return;
+      if (target?.closest("textarea, input, [contenteditable]")) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "v") setInteractionMode("select");
       else if (e.key === "h") setInteractionMode("pan");
@@ -561,8 +561,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
     // Compute bounding box
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const n of selected) {
-      const w = (n.style?.width as number) ?? (n.measured?.width ?? 250);
-      const h = (n.style?.height as number) ?? (n.measured?.height ?? 100);
+      const w = parseFloat(String(n.style?.width ?? "")) || n.measured?.width || 250;
+      const h = parseFloat(String(n.style?.height ?? "")) || n.measured?.height || 100;
       minX = Math.min(minX, n.position.x);
       minY = Math.min(minY, n.position.y);
       maxX = Math.max(maxX, n.position.x + w);
@@ -771,6 +771,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
         selectionOnDrag={interactionMode === "select"}
         selectionMode={SelectionMode.Partial}
         deleteKeyCode={["Backspace", "Delete"]}
+        elevateNodesOnSelect={false}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         defaultEdgeOptions={{ markerEnd: "brainmap-arrow" }}
