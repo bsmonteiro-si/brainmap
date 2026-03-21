@@ -3527,6 +3527,11 @@ body {
   align-items: center;
   justify-content: center;
 }
+.settings-overlay.positioned {
+  align-items: flex-start;
+  justify-content: flex-start;
+  background: transparent;
+}
 .settings-modal {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
@@ -3609,6 +3614,11 @@ body {
   border-bottom: 1px solid var(--border-color);
   font-weight: 600;
   font-size: var(--ui-font-lg);
+  cursor: grab;
+  user-select: none;
+}
+.settings-header.dragging {
+  cursor: grabbing;
 }
 .settings-header button {
   background: none;
@@ -4768,6 +4778,10 @@ body {
   font-size: var(--ui-font-size);
 }
 
+.canvas-container .react-flow__edge .react-flow__edge-path {
+  stroke-width: var(--edge-width, 1);
+}
+
 /* Light mode overrides — canvas nodes use these variables instead of global theme */
 .canvas-container.canvas-light {
   --bg-primary: #ffffff;
@@ -4833,7 +4847,7 @@ body {
 .canvas-handle {
   width: 14px !important;
   height: 14px !important;
-  background: var(--accent) !important;
+  background: var(--canvas-selection-color, var(--accent)) !important;
   border: 2px solid var(--bg-primary) !important;
   opacity: 0;
   transition: opacity 0.15s;
@@ -4852,20 +4866,20 @@ body {
 /* Resize lines — full-border resize like Obsidian */
 .canvas-resize-line {
   border-color: transparent !important;
-  border-width: 4px !important;
+  border-width: var(--canvas-selection-width, 4px) !important;
   transition: border-color 0.15s;
 }
 
 .react-flow__node:hover .canvas-resize-line,
 .react-flow__node.selected .canvas-resize-line {
-  border-color: var(--accent) !important;
+  border-color: var(--canvas-selection-color, var(--accent)) !important;
 }
 
 .canvas-resize-handle {
   width: 8px !important;
   height: 8px !important;
   border-radius: 2px !important;
-  background: var(--accent) !important;
+  background: var(--canvas-selection-color, var(--accent)) !important;
   border: 1px solid var(--bg-primary) !important;
 }
 

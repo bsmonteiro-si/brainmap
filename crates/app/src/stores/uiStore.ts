@@ -200,6 +200,7 @@ interface PersistedPrefs {
   canvasShowDots?: boolean;
   canvasDotOpacity?: number;
   canvasArrowSize?: number;
+  canvasEdgeWidth?: number;
   canvasCardBgOpacity?: number;
   canvasCalloutTailSize?: number;
   canvasStickyRotation?: number;
@@ -214,6 +215,8 @@ interface PersistedPrefs {
   canvasRoundedRadius?: number;
   canvasGroupFontFamily?: string;
   canvasGroupFontSize?: number;
+  canvasSelectionColor?: string;
+  canvasSelectionWidth?: number;
   canvasPanelFontFamily?: string;
   canvasPanelFontSize?: number;
   codeTheme?: string;
@@ -288,6 +291,7 @@ interface UIState {
   createFolderInitialPath: string | null;
   settingsOpen: boolean;
   settingsSize: { width: number; height: number };
+  settingsPosition: { x: number; y: number } | null;
   showEdgeLabels: boolean;
   showLegend: boolean;
   graphLayout: GraphLayout;
@@ -343,6 +347,7 @@ interface UIState {
   canvasShowDots: boolean;
   canvasDotOpacity: number;
   canvasArrowSize: number;
+  canvasEdgeWidth: number;
   canvasCardBgOpacity: number;
   canvasCalloutTailSize: number;
   canvasStickyRotation: number;
@@ -357,6 +362,8 @@ interface UIState {
   canvasRoundedRadius: number;
   canvasGroupFontFamily: string;
   canvasGroupFontSize: number;
+  canvasSelectionColor: string;
+  canvasSelectionWidth: number;
   canvasPanelFontFamily: string;
   canvasPanelFontSize: number;
   codeTheme: string;
@@ -379,6 +386,7 @@ interface UIState {
   setCanvasShowDots: (show: boolean) => void;
   setCanvasDotOpacity: (opacity: number) => void;
   setCanvasArrowSize: (size: number) => void;
+  setCanvasEdgeWidth: (v: number) => void;
   setCanvasCardBgOpacity: (opacity: number) => void;
   setCanvasCalloutTailSize: (v: number) => void;
   setCanvasStickyRotation: (v: number) => void;
@@ -393,6 +401,8 @@ interface UIState {
   setCanvasRoundedRadius: (v: number) => void;
   setCanvasGroupFontFamily: (v: string) => void;
   setCanvasGroupFontSize: (v: number) => void;
+  setCanvasSelectionColor: (v: string) => void;
+  setCanvasSelectionWidth: (v: number) => void;
   setCanvasPanelFontFamily: (v: string) => void;
   setCanvasPanelFontSize: (v: number) => void;
   setCodeTheme: (theme: string) => void;
@@ -408,6 +418,7 @@ interface UIState {
   openSettings: () => void;
   closeSettings: () => void;
   setSettingsSize: (size: { width: number; height: number }) => void;
+  setSettingsPosition: (pos: { x: number; y: number } | null) => void;
   toggleEdgeLabels: () => void;
   toggleLegend: () => void;
   setGraphLayout: (layout: GraphLayout) => void;
@@ -581,6 +592,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasShowDots: storedPrefs.canvasShowDots ?? true,
   canvasDotOpacity: storedPrefs.canvasDotOpacity ?? 50,
   canvasArrowSize: storedPrefs.canvasArrowSize ?? 25,
+  canvasEdgeWidth: storedPrefs.canvasEdgeWidth ?? 1,
   canvasCardBgOpacity: storedPrefs.canvasCardBgOpacity ?? 15,
   canvasCalloutTailSize: storedPrefs.canvasCalloutTailSize ?? 18,
   canvasStickyRotation: storedPrefs.canvasStickyRotation ?? 1.5,
@@ -595,6 +607,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasRoundedRadius: storedPrefs.canvasRoundedRadius ?? 24,
   canvasGroupFontFamily: storedPrefs.canvasGroupFontFamily ?? "sans-serif",
   canvasGroupFontSize: storedPrefs.canvasGroupFontSize ?? 13,
+  canvasSelectionColor: storedPrefs.canvasSelectionColor ?? "#4a9eff",
+  canvasSelectionWidth: storedPrefs.canvasSelectionWidth ?? 4,
   canvasPanelFontFamily: storedPrefs.canvasPanelFontFamily ?? DEFAULT_UI_FONT,
   canvasPanelFontSize: storedPrefs.canvasPanelFontSize ?? 12,
   codeTheme: storedPrefs.codeTheme ?? "GitHub Dark",
@@ -615,6 +629,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   createFolderInitialPath: null,
   settingsOpen: false,
   settingsSize: storedPrefs.settingsSize ?? { width: 640, height: Math.round(window.innerHeight * 0.5) },
+  settingsPosition: null,
   showEdgeLabels: false,
   showLegend: false,
   graphLayout: "force",
@@ -764,6 +779,10 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ canvasArrowSize });
     savePrefs({ canvasArrowSize });
   },
+  setCanvasEdgeWidth: (canvasEdgeWidth: number) => {
+    set({ canvasEdgeWidth });
+    savePrefs({ canvasEdgeWidth });
+  },
   setCanvasCardBgOpacity: (canvasCardBgOpacity: number) => {
     set({ canvasCardBgOpacity });
     savePrefs({ canvasCardBgOpacity });
@@ -820,6 +839,14 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ canvasGroupFontSize });
     savePrefs({ canvasGroupFontSize });
   },
+  setCanvasSelectionColor: (canvasSelectionColor: string) => {
+    set({ canvasSelectionColor });
+    savePrefs({ canvasSelectionColor });
+  },
+  setCanvasSelectionWidth: (canvasSelectionWidth: number) => {
+    set({ canvasSelectionWidth });
+    savePrefs({ canvasSelectionWidth });
+  },
   setCanvasPanelFontFamily: (canvasPanelFontFamily: string) => {
     set({ canvasPanelFontFamily });
     savePrefs({ canvasPanelFontFamily });
@@ -858,11 +885,14 @@ export const useUIStore = create<UIState>((set, get) => ({
   closeUnsavedChangesDialog: () => set({ unsavedChangesDialogOpen: false, unsavedChangesTabId: null }),
   openCreateFolderDialog: (initialPath?: string) => set({ createFolderDialogOpen: true, createFolderInitialPath: initialPath ?? null }),
   closeCreateFolderDialog: () => set({ createFolderDialogOpen: false, createFolderInitialPath: null }),
-  openSettings: () => set({ settingsOpen: true }),
+  openSettings: () => set({ settingsOpen: true, settingsPosition: null }),
   closeSettings: () => set({ settingsOpen: false }),
   setSettingsSize: (size) => {
     set({ settingsSize: size });
     savePrefs({ settingsSize: size });
+  },
+  setSettingsPosition: (pos) => {
+    set({ settingsPosition: pos });
   },
 
   toggleEdgeLabels: () => set((s) => ({ showEdgeLabels: !s.showEdgeLabels })),

@@ -12,6 +12,7 @@ interface JsonCanvasNodeBase {
   height: number;
   color?: string;
   bgColor?: string;
+  parentId?: string;
 }
 
 interface JsonCanvasTextNode extends JsonCanvasNodeBase {
@@ -119,11 +120,26 @@ export function canvasToFlow(canvas: JsonCanvas): { nodes: Node[]; edges: Edge[]
       type: rfType,
       position: { x: cn.x, y: cn.y },
       data,
-      style: { width: cn.width, height: cn.height },
+      style: (
+        cn.type === "group" ||
+        (cn.type === "text" && (cn.shape === "circle" || cn.shape === "diamond"))
+      )
+        ? { width: cn.width, height: cn.height }
+        : { width: cn.width, minHeight: cn.height },
       // Groups should render behind other nodes
       ...(cn.type === "group" ? { zIndex: -1 } : {}),
+      ...(cn.parentId ? { parentId: cn.parentId } : {}),
     };
   });
+
+  // React Flow requires parent nodes to precede children in the array
+  const parentIds = new Set(nodes.filter((n) => n.parentId).map((n) => n.parentId!));
+  if (parentIds.size > 0) {
+    const parents = nodes.filter((n) => parentIds.has(n.id));
+    const rest = nodes.filter((n) => !parentIds.has(n.id));
+    nodes.length = 0;
+    nodes.push(...parents, ...rest);
+  }
 
   const edges: Edge[] = (canvas.edges ?? []).map((ce) => {
     const edge: Edge = {
@@ -168,11 +184,13 @@ export function flowToCanvas(nodes: Node[], edges: Edge[]): JsonCanvas {
       x: Math.round(n.position.x),
       y: Math.round(n.position.y),
       width: Math.round(
+        (typeof n.width === "number" ? n.width : null) ??
         (typeof style.width === "number" ? style.width : null) ??
         measured.width ??
         250,
       ),
       height: Math.round(
+        (typeof n.height === "number" ? n.height : null) ??
         (typeof style.height === "number" ? style.height : null) ??
         measured.height ??
         100,
@@ -181,6 +199,7 @@ export function flowToCanvas(nodes: Node[], edges: Edge[]): JsonCanvas {
 
     if (data.color) base.color = String(data.color);
     if (data.bgColor) base.bgColor = String(data.bgColor);
+    if (n.parentId) base.parentId = n.parentId;
 
     switch (canvasType) {
       case "text": {

@@ -108,6 +108,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const canvasShowDots = useUIStore((s) => s.canvasShowDots);
   const canvasDotOpacity = useUIStore((s) => s.canvasDotOpacity);
   const canvasArrowSize = useUIStore((s) => s.canvasArrowSize);
+  const canvasEdgeWidth = useUIStore((s) => s.canvasEdgeWidth);
   const canvasCalloutTailSize = useUIStore((s) => s.canvasCalloutTailSize);
   const canvasStickyRotation = useUIStore((s) => s.canvasStickyRotation);
   const canvasStickyColor = useUIStore((s) => s.canvasStickyColor);
@@ -121,6 +122,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const canvasRoundedRadius = useUIStore((s) => s.canvasRoundedRadius);
   const canvasGroupFontFamily = useUIStore((s) => s.canvasGroupFontFamily);
   const canvasGroupFontSize = useUIStore((s) => s.canvasGroupFontSize);
+  const canvasSelectionColor = useUIStore((s) => s.canvasSelectionColor);
+  const canvasSelectionWidth = useUIStore((s) => s.canvasSelectionWidth);
   const colorMode: ColorMode = canvasTheme;
   const containerClass = `canvas-container${canvasTheme === "light" ? " canvas-light" : ""}`;
   const shapeVars = {
@@ -138,6 +141,9 @@ export function CanvasEditorInner({ path }: { path: string }) {
     "--rounded-radius": `${canvasRoundedRadius}px`,
     "--group-font-family": canvasGroupFontFamily,
     "--group-font-size": `${canvasGroupFontSize}px`,
+    "--edge-width": `${canvasEdgeWidth}px`,
+    "--canvas-selection-color": canvasSelectionColor,
+    "--canvas-selection-width": `${canvasSelectionWidth}px`,
   } as React.CSSProperties;
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -459,6 +465,17 @@ export function CanvasEditorInner({ path }: { path: string }) {
     if (elemCtxMenu?.nodeId) selectedNodeIds.add(elemCtxMenu.nodeId);
     if (elemCtxMenu?.edgeId) selectedEdgeIds.add(elemCtxMenu.edgeId);
 
+    // Cascade: also delete children of deleted group nodes (fixed-point for nesting)
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const n of nodesRef.current) {
+        if (n.parentId && selectedNodeIds.has(n.parentId) && !selectedNodeIds.has(n.id)) {
+          selectedNodeIds.add(n.id);
+          changed = true;
+        }
+      }
+    }
     if (selectedNodeIds.size > 0) {
       setNodes((nds) => nds.filter((n) => !selectedNodeIds.has(n.id)));
     }
@@ -554,35 +571,92 @@ export function CanvasEditorInner({ path }: { path: string }) {
 
   // Group selected elements
   const groupSelected = useCallback(() => {
-    const selected = nodesRef.current.filter((n) => n.selected);
+    const selected = nodesRef.current.filter((n) => n.selected && n.type !== "canvasGroup");
     if (selected.length < 2) return;
     pushSnapshot();
 
-    // Compute bounding box
+    // Compute bounding box of selected nodes (using absolute positions)
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const n of selected) {
       const w = parseFloat(String(n.style?.width ?? "")) || n.measured?.width || 250;
       const h = parseFloat(String(n.style?.height ?? "")) || n.measured?.height || 100;
-      minX = Math.min(minX, n.position.x);
-      minY = Math.min(minY, n.position.y);
-      maxX = Math.max(maxX, n.position.x + w);
-      maxY = Math.max(maxY, n.position.y + h);
+      // If node has a parent, its position is relative — convert to absolute
+      const absX = n.parentId
+        ? n.position.x + (nodesRef.current.find((p) => p.id === n.parentId)?.position.x ?? 0)
+        : n.position.x;
+      const absY = n.parentId
+        ? n.position.y + (nodesRef.current.find((p) => p.id === n.parentId)?.position.y ?? 0)
+        : n.position.y;
+      minX = Math.min(minX, absX);
+      minY = Math.min(minY, absY);
+      maxX = Math.max(maxX, absX + w);
+      maxY = Math.max(maxY, absY + h);
     }
 
     const pad = 40;
+    const groupX = minX - pad;
+    const groupY = minY - pad;
     const groupId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const groupNode = {
       id: groupId,
       type: "canvasGroup",
-      position: { x: minX - pad, y: minY - pad },
+      position: { x: groupX, y: groupY },
       data: { label: "Group" },
       style: { width: maxX - minX + pad * 2, height: maxY - minY + pad * 2 },
       zIndex: -1,
+      selected: false,
     };
 
-    setNodes((nds) => [groupNode, ...nds.map((n) => ({ ...n, selected: false }))]);
+    const selectedIds = new Set(selected.map((n) => n.id));
+    setNodes((nds) => [
+      groupNode,
+      ...nds.map((n) => {
+        if (!selectedIds.has(n.id)) return { ...n, selected: false };
+        // Convert to position relative to new group
+        const absX = n.parentId
+          ? n.position.x + (nds.find((p) => p.id === n.parentId)?.position.x ?? 0)
+          : n.position.x;
+        const absY = n.parentId
+          ? n.position.y + (nds.find((p) => p.id === n.parentId)?.position.y ?? 0)
+          : n.position.y;
+        return {
+          ...n,
+          parentId: groupId,
+          position: { x: absX - groupX, y: absY - groupY },
+          selected: false,
+        };
+      }),
+    ]);
     requestAnimationFrame(() => scheduleSave());
   }, [setNodes, scheduleSave, pushSnapshot]);
+
+  // Ungroup: remove group node and restore children to absolute positions
+  const ungroupSelected = useCallback(() => {
+    const clickedId = elemCtxMenu?.nodeId;
+    if (!clickedId) return;
+    const groupNode = nodesRef.current.find((n) => n.id === clickedId);
+    if (!groupNode || groupNode.type !== "canvasGroup") return;
+    pushSnapshot();
+
+    const groupX = groupNode.position.x;
+    const groupY = groupNode.position.y;
+
+    setNodes((nds) =>
+      nds
+        .filter((n) => n.id !== clickedId) // remove the group
+        .map((n) => {
+          if (n.parentId !== clickedId) return n;
+          // Restore absolute position
+          return {
+            ...n,
+            parentId: undefined,
+            position: { x: n.position.x + groupX, y: n.position.y + groupY },
+          };
+        }),
+    );
+    closeElemCtxMenu();
+    requestAnimationFrame(() => scheduleSave());
+  }, [setNodes, elemCtxMenu, closeElemCtxMenu, scheduleSave, pushSnapshot]);
 
   // Pane context menu (right-click on empty canvas)
   const handlePaneContextMenu = useCallback(
@@ -1016,22 +1090,38 @@ export function CanvasEditorInner({ path }: { path: string }) {
           )}
         </div>
       )}
-      {elemCtxMenu && (
-        <div
-          className="context-menu"
-          style={{ left: elemCtxMenu.x, top: elemCtxMenu.y, minWidth: 140 }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {elemCtxMenu.nodeId && (
-            <div className="context-menu-item" onClick={duplicateSelected}>
-              Duplicate
+      {elemCtxMenu && (() => {
+        const clickedNode = elemCtxMenu.nodeId ? nodesRef.current.find((n) => n.id === elemCtxMenu.nodeId) : undefined;
+        const isGroup = clickedNode?.type === "canvasGroup";
+        const hasChildren = isGroup && nodesRef.current.some((n) => n.parentId === clickedNode.id);
+        const canGroup = selectedCount >= 2;
+        return (
+          <div
+            className="context-menu"
+            style={{ left: elemCtxMenu.x, top: elemCtxMenu.y, minWidth: 140 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {elemCtxMenu.nodeId && (
+              <div className="context-menu-item" onClick={duplicateSelected}>
+                Duplicate
+              </div>
+            )}
+            {canGroup && (
+              <div className="context-menu-item" onClick={() => { groupSelected(); closeElemCtxMenu(); }}>
+                Group Selection
+              </div>
+            )}
+            {isGroup && hasChildren && (
+              <div className="context-menu-item" onClick={ungroupSelected}>
+                Ungroup
+              </div>
+            )}
+            <div className="context-menu-item context-menu-item--danger" onClick={deleteSelected}>
+              Delete
             </div>
-          )}
-          <div className="context-menu-item context-menu-item--danger" onClick={deleteSelected}>
-            Delete
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

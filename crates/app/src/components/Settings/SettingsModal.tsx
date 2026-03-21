@@ -64,6 +64,8 @@ export function SettingsModal() {
   const closeSettings = useUIStore((s) => s.closeSettings);
   const settingsSize = useUIStore((s) => s.settingsSize);
   const setSettingsSize = useUIStore((s) => s.setSettingsSize);
+  const settingsPosition = useUIStore((s) => s.settingsPosition);
+  const setSettingsPosition = useUIStore((s) => s.setSettingsPosition);
   const filesTheme = useUIStore((s) => s.filesTheme);
   const editorTheme = useUIStore((s) => s.editorTheme);
   const excalidrawTheme = useUIStore((s) => s.excalidrawTheme);
@@ -71,6 +73,7 @@ export function SettingsModal() {
   const canvasShowDots = useUIStore((s) => s.canvasShowDots);
   const canvasDotOpacity = useUIStore((s) => s.canvasDotOpacity);
   const canvasArrowSize = useUIStore((s) => s.canvasArrowSize);
+  const canvasEdgeWidth = useUIStore((s) => s.canvasEdgeWidth);
   const canvasCardBgOpacity = useUIStore((s) => s.canvasCardBgOpacity);
   const canvasCalloutTailSize = useUIStore((s) => s.canvasCalloutTailSize);
   const canvasStickyRotation = useUIStore((s) => s.canvasStickyRotation);
@@ -92,6 +95,7 @@ export function SettingsModal() {
   const setCanvasShowDots = useUIStore((s) => s.setCanvasShowDots);
   const setCanvasDotOpacity = useUIStore((s) => s.setCanvasDotOpacity);
   const setCanvasArrowSize = useUIStore((s) => s.setCanvasArrowSize);
+  const setCanvasEdgeWidth = useUIStore((s) => s.setCanvasEdgeWidth);
   const setCanvasCardBgOpacity = useUIStore((s) => s.setCanvasCardBgOpacity);
   const setCanvasCalloutTailSize = useUIStore((s) => s.setCanvasCalloutTailSize);
   const setCanvasStickyRotation = useUIStore((s) => s.setCanvasStickyRotation);
@@ -108,6 +112,10 @@ export function SettingsModal() {
   const canvasGroupFontSize = useUIStore((s) => s.canvasGroupFontSize);
   const setCanvasGroupFontFamily = useUIStore((s) => s.setCanvasGroupFontFamily);
   const setCanvasGroupFontSize = useUIStore((s) => s.setCanvasGroupFontSize);
+  const canvasSelectionColor = useUIStore((s) => s.canvasSelectionColor);
+  const canvasSelectionWidth = useUIStore((s) => s.canvasSelectionWidth);
+  const setCanvasSelectionColor = useUIStore((s) => s.setCanvasSelectionColor);
+  const setCanvasSelectionWidth = useUIStore((s) => s.setCanvasSelectionWidth);
   const setCanvasPanelFontFamily = useUIStore((s) => s.setCanvasPanelFontFamily);
   const setCanvasPanelFontSize = useUIStore((s) => s.setCanvasPanelFontSize);
   const codeTheme = useUIStore((s) => s.codeTheme);
@@ -187,6 +195,9 @@ export function SettingsModal() {
     panelSizes[tab]?.content ?? BUILTIN_TAB_SIZES[tab].content;
 
   const dragRef = useRef<{ startX: number; startY: number; startW: number; startH: number; mode: "right" | "bottom" | "corner" } | null>(null);
+  const moveRef = useRef<{ startX: number; startY: number; startLeft: number; startTop: number } | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
 
   const onResizeStart = useCallback((e: React.MouseEvent, mode: "right" | "bottom" | "corner") => {
     e.preventDefault();
@@ -195,17 +206,19 @@ export function SettingsModal() {
     const startW = settingsSize.width;
     const startH = settingsSize.height;
     dragRef.current = { startX, startY, startW, startH, mode };
+    const positioned = useUIStore.getState().settingsPosition != null;
 
     const onMouseMove = (ev: MouseEvent) => {
       const d = dragRef.current;
       if (!d) return;
       let w = d.startW;
       let h = d.startH;
+      const factor = positioned ? 1 : 2;
       if (d.mode === "right" || d.mode === "corner") {
-        w = Math.max(400, Math.min(window.innerWidth * 0.9, d.startW + (ev.clientX - d.startX) * 2));
+        w = Math.max(400, Math.min(window.innerWidth * 0.9, d.startW + (ev.clientX - d.startX) * factor));
       }
       if (d.mode === "bottom" || d.mode === "corner") {
-        h = Math.max(300, Math.min(window.innerHeight * 0.9, d.startH + (ev.clientY - d.startY) * 2));
+        h = Math.max(300, Math.min(window.innerHeight * 0.9, d.startH + (ev.clientY - d.startY) * factor));
       }
       setSettingsSize({ width: w, height: h });
     };
@@ -219,6 +232,40 @@ export function SettingsModal() {
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
   }, [settingsSize, setSettingsSize]);
+
+  const onMoveStart = useCallback((e: React.MouseEvent) => {
+    // Only drag on left mouse button, ignore clicks on the close button
+    if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
+    e.preventDefault();
+    const rect = modalRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const startLeft = rect.left;
+    const startTop = rect.top;
+    moveRef.current = { startX: e.clientX, startY: e.clientY, startLeft, startTop };
+    setDragging(true);
+
+    const onMouseMove = (ev: MouseEvent) => {
+      const m = moveRef.current;
+      if (!m) return;
+      const x = Math.max(0, Math.min(window.innerWidth - 100, m.startLeft + (ev.clientX - m.startX)));
+      const y = Math.max(0, Math.min(window.innerHeight - 50, m.startTop + (ev.clientY - m.startY)));
+      setSettingsPosition({ x, y });
+    };
+
+    const onMouseUp = () => {
+      moveRef.current = null;
+      setDragging(false);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  }, [setSettingsPosition]);
+
+  const onHeaderDoubleClick = useCallback(() => {
+    setSettingsPosition(null);
+  }, [setSettingsPosition]);
 
   const renderGeneral = () => (
     <>
@@ -808,6 +855,22 @@ export function SettingsModal() {
             </div>
           </div>
         </div>
+        <div className="settings-row">
+          <span className="settings-label">Edge width</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={1}
+                max={5}
+                step={0.5}
+                value={canvasEdgeWidth}
+                onChange={(e) => setCanvasEdgeWidth(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasEdgeWidth}px</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="settings-section">
@@ -1016,6 +1079,36 @@ export function SettingsModal() {
       </div>
 
       <div className="settings-section">
+        <div className="settings-section-title">Selection</div>
+        <div className="settings-row">
+          <span className="settings-label">Color</span>
+          <div className="settings-control">
+            <input
+              type="color"
+              value={canvasSelectionColor}
+              onChange={(e) => setCanvasSelectionColor(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Border width</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={1}
+                max={8}
+                step={1}
+                value={canvasSelectionWidth}
+                onChange={(e) => setCanvasSelectionWidth(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasSelectionWidth}px</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
         <div className="settings-section-title">Panel Font</div>
         <div className="settings-row">
           <span className="settings-label">Family</span>
@@ -1053,13 +1146,22 @@ export function SettingsModal() {
   };
 
   return (
-    <div className="settings-overlay" onClick={closeSettings}>
+    <div className={`settings-overlay${settingsPosition ? " positioned" : ""}`} onClick={closeSettings}>
       <div
+        ref={modalRef}
         className="settings-modal"
-        style={{ width: settingsSize.width, height: settingsSize.height }}
+        style={{
+          width: settingsSize.width,
+          height: settingsSize.height,
+          ...(settingsPosition ? { position: "fixed", left: settingsPosition.x, top: settingsPosition.y } : {}),
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="settings-header">
+        <div
+          className={`settings-header${dragging ? " dragging" : ""}`}
+          onMouseDown={onMoveStart}
+          onDoubleClick={onHeaderDoubleClick}
+        >
           <span>Settings</span>
           <button onClick={closeSettings} title="Close" aria-label="Close settings">×</button>
         </div>
