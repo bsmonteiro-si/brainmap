@@ -13,6 +13,7 @@ import {
   type DecorationSet,
 } from "@codemirror/view";
 import { RangeSetBuilder, StateField, type Text, type Extension } from "@codemirror/state";
+import { scanFencedBlocks } from "./cmMarkdownDecorations";
 
 // ---------------------------------------------------------------------------
 // Regex
@@ -35,8 +36,13 @@ export interface CheckboxMatch {
 }
 
 export function scanCheckboxes(doc: Text): CheckboxMatch[] {
+  const fenced = new Set<number>();
+  for (const b of scanFencedBlocks(doc)) {
+    for (let ln = b.startLine; ln <= b.endLine; ln++) fenced.add(ln);
+  }
   const results: CheckboxMatch[] = [];
   for (let i = 1; i <= doc.lines; i++) {
+    if (fenced.has(i)) continue;
     const line = doc.line(i);
     const match = line.text.match(CHECKBOX_RE);
     if (match) {

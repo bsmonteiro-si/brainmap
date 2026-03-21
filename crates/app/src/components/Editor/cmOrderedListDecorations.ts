@@ -12,6 +12,7 @@ import {
   type DecorationSet,
 } from "@codemirror/view";
 import { RangeSetBuilder, StateField, type Text, type Extension } from "@codemirror/state";
+import { scanFencedBlocks } from "./cmMarkdownDecorations";
 
 /**
  * Matches ordered list markers:
@@ -61,8 +62,13 @@ export interface OrderedMatch {
 }
 
 export function scanOrderedMarkers(doc: Text): OrderedMatch[] {
+  const fenced = new Set<number>();
+  for (const b of scanFencedBlocks(doc)) {
+    for (let ln = b.startLine; ln <= b.endLine; ln++) fenced.add(ln);
+  }
   const results: OrderedMatch[] = [];
   for (let i = 1; i <= doc.lines; i++) {
+    if (fenced.has(i)) continue;
     const line = doc.line(i);
     const m = line.text.match(ORDERED_RE);
     if (m) {

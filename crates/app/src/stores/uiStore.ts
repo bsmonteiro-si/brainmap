@@ -143,7 +143,7 @@ export const DEFAULT_NODE_LABEL_BG_PADDING = 3;
 export const DEFAULT_EDGE_LABEL_SIZE = 8;
 export const DEFAULT_MERMAID_MAX_HEIGHT = 400;
 
-export type LeftTab = "files" | "graph" | "search";
+export type LeftTab = "files" | "graph" | "search" | "canvas";
 
 interface TabPanelSizes {
   content?: number;
@@ -154,12 +154,14 @@ interface PanelSizes {
   files?: TabPanelSizes;
   graph?: TabPanelSizes;
   search?: TabPanelSizes;
+  canvas?: TabPanelSizes;
 }
 
 export const BUILTIN_TAB_SIZES: Record<LeftTab, Required<TabPanelSizes>> = {
   files: { content: 20, editor: 80 },
   graph: { content: 80, editor: 20 },
   search: { content: 20, editor: 80 },
+  canvas: { content: 60, editor: 40 },
 };
 
 export function getDefaultTabSizes(prefs: PersistedPrefs): Record<LeftTab, Required<TabPanelSizes>> {
@@ -169,6 +171,7 @@ export function getDefaultTabSizes(prefs: PersistedPrefs): Record<LeftTab, Requi
     files: { content: custom.files?.content ?? BUILTIN_TAB_SIZES.files.content, editor: custom.files?.editor ?? BUILTIN_TAB_SIZES.files.editor },
     graph: { content: custom.graph?.content ?? BUILTIN_TAB_SIZES.graph.content, editor: custom.graph?.editor ?? BUILTIN_TAB_SIZES.graph.editor },
     search: { content: custom.search?.content ?? BUILTIN_TAB_SIZES.search.content, editor: custom.search?.editor ?? BUILTIN_TAB_SIZES.search.editor },
+    canvas: { content: custom.canvas?.content ?? BUILTIN_TAB_SIZES.canvas.content, editor: custom.canvas?.editor ?? BUILTIN_TAB_SIZES.canvas.editor },
   };
 }
 
@@ -196,6 +199,9 @@ interface PersistedPrefs {
   canvasTheme?: "light" | "dark";
   canvasShowDots?: boolean;
   canvasDotOpacity?: number;
+  canvasArrowSize?: number;
+  canvasCardBgOpacity?: number;
+  codeTheme?: string;
   homeNotes?: Record<string, string>; // workspaceRoot → notePath
   tooltipFontSize?: number;
   tooltipPillSize?: number;
@@ -256,7 +262,7 @@ interface UIState {
   createNoteInitialPath: string | null;
   createNoteInitialTitle: string | null;
   createNoteMode: CreateNoteMode;
-  createFileKind: "note" | "file";
+  createFileKind: "note" | "file" | "canvas" | "excalidraw";
   createAndLinkSource: CreateAndLinkSource | null;
   createNoteSaveAsBody: string | null;
   createNoteSaveAsTabId: string | null;
@@ -271,6 +277,7 @@ interface UIState {
   graphLayout: GraphLayout;
   focusMode: boolean;
   activeLeftTab: LeftTab;
+  activeCanvasPath: string | null;
   leftPanelCollapsed: boolean;
   treeExpandedFolders: Set<string>;
   fileSortOrder: FileSortOrder;
@@ -319,6 +326,9 @@ interface UIState {
   canvasTheme: "light" | "dark";
   canvasShowDots: boolean;
   canvasDotOpacity: number;
+  canvasArrowSize: number;
+  canvasCardBgOpacity: number;
+  codeTheme: string;
   homeNotePath: string | null;
   customFileOrder: Record<string, string[]>;
 
@@ -337,6 +347,9 @@ interface UIState {
   setCanvasTheme: (theme: "light" | "dark") => void;
   setCanvasShowDots: (show: boolean) => void;
   setCanvasDotOpacity: (opacity: number) => void;
+  setCanvasArrowSize: (size: number) => void;
+  setCanvasCardBgOpacity: (opacity: number) => void;
+  setCodeTheme: (theme: string) => void;
   toggleGraphMode: () => void;
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
@@ -354,6 +367,7 @@ interface UIState {
   setGraphLayout: (layout: GraphLayout) => void;
   toggleFocusMode: () => void;
   setActiveLeftTab: (tab: LeftTab) => void;
+  openCanvasInPanel: (path: string) => void;
   toggleLeftPanel: () => void;
   toggleFolder: (fullPath: string) => void;
   collapseAllFolders: () => void;
@@ -446,7 +460,7 @@ function loadStoredSizes(): PanelSizes {
     // For tabs with no stored sizes, apply user's custom defaults from prefs
     const customDefaults = loadStoredPrefs().defaultTabSizes;
     if (customDefaults) {
-      const tabs: LeftTab[] = ["files", "graph", "search"];
+      const tabs: LeftTab[] = ["files", "graph", "search", "canvas"];
       for (const tab of tabs) {
         if (!result[tab] && customDefaults[tab]) {
           result[tab] = customDefaults[tab];
@@ -520,6 +534,9 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasTheme: storedPrefs.canvasTheme ?? "dark",
   canvasShowDots: storedPrefs.canvasShowDots ?? true,
   canvasDotOpacity: storedPrefs.canvasDotOpacity ?? 50,
+  canvasArrowSize: storedPrefs.canvasArrowSize ?? 25,
+  canvasCardBgOpacity: storedPrefs.canvasCardBgOpacity ?? 15,
+  codeTheme: storedPrefs.codeTheme ?? "GitHub Dark",
   graphMode: "navigate",
   commandPaletteOpen: false,
   createNoteDialogOpen: false,
@@ -541,6 +558,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   graphLayout: "force",
   focusMode: false,
   activeLeftTab: "files",
+  activeCanvasPath: null,
   leftPanelCollapsed: false,
   treeExpandedFolders: new Set<string>(),
   fileSortOrder: storedPrefs.fileSortOrder ?? "name-asc" as FileSortOrder,
@@ -668,6 +686,10 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ canvasTheme });
     savePrefs({ canvasTheme });
   },
+  setCodeTheme: (codeTheme: string) => {
+    set({ codeTheme });
+    savePrefs({ codeTheme });
+  },
   setCanvasShowDots: (canvasShowDots: boolean) => {
     set({ canvasShowDots });
     savePrefs({ canvasShowDots });
@@ -675,6 +697,14 @@ export const useUIStore = create<UIState>((set, get) => ({
   setCanvasDotOpacity: (canvasDotOpacity: number) => {
     set({ canvasDotOpacity });
     savePrefs({ canvasDotOpacity });
+  },
+  setCanvasArrowSize: (canvasArrowSize: number) => {
+    set({ canvasArrowSize });
+    savePrefs({ canvasArrowSize });
+  },
+  setCanvasCardBgOpacity: (canvasCardBgOpacity: number) => {
+    set({ canvasCardBgOpacity });
+    savePrefs({ canvasCardBgOpacity });
   },
 
   toggleGraphMode: () => {
@@ -721,6 +751,7 @@ export const useUIStore = create<UIState>((set, get) => ({
     return { focusMode: next, leftPanelCollapsed: next };
   }),
   setActiveLeftTab: (tab: LeftTab) => set({ activeLeftTab: tab, leftPanelCollapsed: false }),
+  openCanvasInPanel: (path: string) => set({ activeCanvasPath: path, activeLeftTab: "canvas", leftPanelCollapsed: false }),
   toggleLeftPanel: () => set((s) => ({ leftPanelCollapsed: !s.leftPanelCollapsed })),
 
   toggleFolder: (fullPath: string) =>
@@ -950,6 +981,7 @@ export const useUIStore = create<UIState>((set, get) => ({
     emptyFolders: new Set<string>(),
     treeExpandedFolders: new Set<string>(),
     activeLeftTab: "files" as LeftTab,
+    activeCanvasPath: null,
     leftPanelCollapsed: false,
     homeNotePath: null,
     customFileOrder: {},

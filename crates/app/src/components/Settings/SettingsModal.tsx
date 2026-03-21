@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
-import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES, THEME_OPTIONS, SOURCE_STYLE_OPTIONS, EXAMPLE_STYLE_OPTIONS, MATH_STYLE_OPTIONS, ATTENTION_STYLE_OPTIONS, BULLET_STYLE_OPTIONS, BOLD_WEIGHT_OPTIONS, ARROW_COLOR_OPTIONS, ARROW_TYPE_LABELS, ALL_ARROW_TYPES } from "../../stores/uiStore";
+import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES, THEME_OPTIONS, THEME_BASE, SOURCE_STYLE_OPTIONS, EXAMPLE_STYLE_OPTIONS, MATH_STYLE_OPTIONS, ATTENTION_STYLE_OPTIONS, BULLET_STYLE_OPTIONS, BOLD_WEIGHT_OPTIONS, ARROW_COLOR_OPTIONS, ARROW_TYPE_LABELS, ALL_ARROW_TYPES } from "../../stores/uiStore";
 import type { LeftTab, ComponentTheme, ThemeName, SourceStyle, ExampleStyle, MathStyle, AttentionStyle, BulletStyle, ArrowColorStyle, ArrowType } from "../../stores/uiStore";
+import { DARK_CODE_THEMES, LIGHT_CODE_THEMES, resolveCodeTheme } from "../Editor/cmCodeHighlight";
 
 const SECTIONS = [
   { id: "general", label: "General" },
@@ -8,6 +9,7 @@ const SECTIONS = [
   { id: "editor", label: "Editor" },
   { id: "formatting", label: "Formatting" },
   { id: "graph", label: "Graph" },
+  { id: "canvas", label: "Canvas" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -68,12 +70,22 @@ export function SettingsModal() {
   const canvasTheme = useUIStore((s) => s.canvasTheme);
   const canvasShowDots = useUIStore((s) => s.canvasShowDots);
   const canvasDotOpacity = useUIStore((s) => s.canvasDotOpacity);
+  const canvasArrowSize = useUIStore((s) => s.canvasArrowSize);
+  const canvasCardBgOpacity = useUIStore((s) => s.canvasCardBgOpacity);
   const setFilesTheme = useUIStore((s) => s.setFilesTheme);
   const setEditorTheme = useUIStore((s) => s.setEditorTheme);
   const setExcalidrawTheme = useUIStore((s) => s.setExcalidrawTheme);
   const setCanvasTheme = useUIStore((s) => s.setCanvasTheme);
   const setCanvasShowDots = useUIStore((s) => s.setCanvasShowDots);
   const setCanvasDotOpacity = useUIStore((s) => s.setCanvasDotOpacity);
+  const setCanvasArrowSize = useUIStore((s) => s.setCanvasArrowSize);
+  const setCanvasCardBgOpacity = useUIStore((s) => s.setCanvasCardBgOpacity);
+  const codeTheme = useUIStore((s) => s.codeTheme);
+  const setCodeTheme = useUIStore((s) => s.setCodeTheme);
+  const effectiveEditorTheme = useUIStore((s) => s.effectiveEditorTheme);
+  const editorIsDark = THEME_BASE[effectiveEditorTheme] === "dark";
+  const codeThemeOptions = editorIsDark ? DARK_CODE_THEMES : LIGHT_CODE_THEMES;
+  const resolvedCodeTheme = resolveCodeTheme(codeTheme, editorIsDark);
   const uiFontFamily = useUIStore((s) => s.uiFontFamily);
   const uiFontSize = useUIStore((s) => s.uiFontSize);
   const editorFontFamily = useUIStore((s) => s.editorFontFamily);
@@ -226,6 +238,19 @@ export function SettingsModal() {
           </div>
         </div>
         <div className="settings-row">
+          <span className="settings-label">Code Theme</span>
+          <div className="settings-control">
+            <select
+              value={resolvedCodeTheme}
+              onChange={(e) => setCodeTheme(e.target.value)}
+            >
+              {codeThemeOptions.map((t) => (
+                <option key={t.label} value={t.label}>{t.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="settings-row">
           <span className="settings-label">Excalidraw</span>
           <div className="settings-control">
             <select
@@ -237,47 +262,6 @@ export function SettingsModal() {
             </select>
           </div>
         </div>
-        <div className="settings-row">
-          <span className="settings-label">Canvas</span>
-          <div className="settings-control">
-            <select
-              value={canvasTheme}
-              onChange={(e) => setCanvasTheme(e.target.value as "light" | "dark")}
-            >
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </div>
-        </div>
-        <div className="settings-row" style={{ alignItems: "center" }}>
-          <span className="settings-label">Canvas dots</span>
-          <label className="settings-checkbox-label">
-            <input
-              type="checkbox"
-              checked={canvasShowDots}
-              onChange={(e) => setCanvasShowDots(e.target.checked)}
-            />
-            Show grid dots
-          </label>
-        </div>
-        {canvasShowDots && (
-          <div className="settings-row">
-            <span className="settings-label">Dot intensity</span>
-            <div className="settings-control">
-              <div className="settings-size-row">
-                <input
-                  type="range"
-                  min={10}
-                  max={100}
-                  step={10}
-                  value={canvasDotOpacity}
-                  onChange={(e) => setCanvasDotOpacity(Number(e.target.value))}
-                />
-                <span className="settings-size-value">{canvasDotOpacity}%</span>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── Interface Font ── */}
@@ -316,7 +300,7 @@ export function SettingsModal() {
       {/* ── Panel Layout ── */}
       <div className="settings-section">
         <div className="settings-section-title">Panel Layout</div>
-        {(["files", "graph", "search"] as LeftTab[]).map((tab) => (
+        {(["files", "graph", "search", "canvas"] as LeftTab[]).map((tab) => (
           <div className="settings-row" key={tab}>
             <span className="settings-label" style={{ textTransform: "capitalize" }}>{tab}</span>
             <div className="settings-control">
@@ -725,6 +709,99 @@ export function SettingsModal() {
     </>
   );
 
+  const renderCanvas = () => (
+    <>
+      <div className="settings-section">
+        <div className="settings-section-title">Theme</div>
+        <div className="settings-row">
+          <span className="settings-label">Canvas theme</span>
+          <div className="settings-control">
+            <select
+              value={canvasTheme}
+              onChange={(e) => setCanvasTheme(e.target.value as "light" | "dark")}
+            >
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">Grid</div>
+        <div className="settings-row" style={{ alignItems: "center" }}>
+          <span className="settings-label">Grid dots</span>
+          <label className="settings-checkbox-label">
+            <input
+              type="checkbox"
+              checked={canvasShowDots}
+              onChange={(e) => setCanvasShowDots(e.target.checked)}
+            />
+            Show grid dots
+          </label>
+        </div>
+        {canvasShowDots && (
+          <div className="settings-row">
+            <span className="settings-label">Dot intensity</span>
+            <div className="settings-control">
+              <div className="settings-size-row">
+                <input
+                  type="range"
+                  min={10}
+                  max={100}
+                  step={10}
+                  value={canvasDotOpacity}
+                  onChange={(e) => setCanvasDotOpacity(Number(e.target.value))}
+                />
+                <span className="settings-size-value">{canvasDotOpacity}%</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">Edges</div>
+        <div className="settings-row">
+          <span className="settings-label">Arrow size</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={10}
+                max={50}
+                step={5}
+                value={canvasArrowSize}
+                onChange={(e) => setCanvasArrowSize(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasArrowSize}px</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">Cards</div>
+        <div className="settings-row">
+          <span className="settings-label">Fill opacity</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={5}
+                max={100}
+                step={5}
+                value={canvasCardBgOpacity}
+                onChange={(e) => setCanvasCardBgOpacity(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasCardBgOpacity}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
   const renderContent = () => {
     switch (activeSection) {
       case "general": return renderGeneral();
@@ -732,6 +809,7 @@ export function SettingsModal() {
       case "editor": return renderEditor();
       case "formatting": return renderFormatting();
       case "graph": return renderGraph();
+      case "canvas": return renderCanvas();
     }
   };
 

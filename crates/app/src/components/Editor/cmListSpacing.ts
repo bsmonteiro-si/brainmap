@@ -13,6 +13,7 @@ import {
   type DecorationSet,
 } from "@codemirror/view";
 import { RangeSetBuilder, type Extension } from "@codemirror/state";
+import { scanFencedBlocks } from "./cmMarkdownDecorations";
 
 const LIST_LINE_RE = /^\s*(?:[-*+]|\d+[.)]) /;
 
@@ -20,12 +21,17 @@ const listLineDeco = Decoration.line({ class: "cm-list-line" });
 const listFirstDeco = Decoration.line({ class: "cm-list-line cm-list-first" });
 
 function buildDecorations(view: EditorView): DecorationSet {
+  const fenced = new Set<number>();
+  for (const b of scanFencedBlocks(view.state.doc)) {
+    for (let ln = b.startLine; ln <= b.endLine; ln++) fenced.add(ln);
+  }
   const builder = new RangeSetBuilder<Decoration>();
   for (const { from, to } of view.visibleRanges) {
     let prevWasList = false;
     for (let pos = from; pos <= to; ) {
       const line = view.state.doc.lineAt(pos);
-      const isList = LIST_LINE_RE.test(line.text);
+      const lineNum = line.number;
+      const isList = !fenced.has(lineNum) && LIST_LINE_RE.test(line.text);
       if (isList) {
         builder.add(line.from, line.from, prevWasList ? listLineDeco : listFirstDeco);
       }

@@ -4,8 +4,7 @@ import { EditorState } from "@codemirror/state";
 import { markdown } from "@codemirror/lang-markdown";
 import { GFM } from "@lezer/markdown";
 import { defaultKeymap, history, historyKeymap, redo, indentWithTab } from "@codemirror/commands";
-import { syntaxHighlighting, HighlightStyle, defaultHighlightStyle, indentUnit } from "@codemirror/language";
-import { oneDarkHighlightStyle } from "@codemirror/theme-one-dark";
+import { syntaxHighlighting, HighlightStyle, indentUnit } from "@codemirror/language";
 import { languages } from "@codemirror/language-data";
 import { search, searchKeymap } from "@codemirror/search";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
@@ -28,6 +27,7 @@ import { smartPaste } from "./cmSmartPaste";
 import { createSlashAutocompletion } from "./cmSlashCommands";
 import { headingFoldService } from "./cmHeadingFold";
 import { mermaidDecorations, clearMermaidCache } from "./cmMermaidDecorations";
+import { buildCodeHighlight, resolveCodeTheme } from "./cmCodeHighlight";
 
 const ACCENT = "#4a9eff";
 const ACCENT_DARK = "#5aaeFF";
@@ -121,6 +121,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
   const bulletStyle = useUIStore((s) => s.bulletStyle);
   const arrowLigatures = useUIStore((s) => s.arrowLigatures);
   const arrowEnabledTypes = useUIStore((s) => s.arrowEnabledTypes);
+  const codeTheme = useUIStore((s) => s.codeTheme);
   const wsRoot = useWorkspaceStore((s) => s.info?.root);
 
   // Keep refs up-to-date
@@ -137,6 +138,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
       ...(lineWrapping ? [EditorView.lineWrapping] : []),
       ...(showLineNumbers ? [lineNumbers()] : []),
       ...(spellCheck ? [EditorView.contentAttributes.of({ spellcheck: "true" })] : []),
+      EditorView.contentAttributes.of({ autocorrect: "off", autocapitalize: "off" }),
       indentUnit.of(" ".repeat(editorIndentSize)),
     ];
 
@@ -150,7 +152,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
         // getHighlighters() returns both; using { fallback: true } on either causes it to be ignored
         // when the other is present.
         syntaxHighlighting(buildMarkdownHighlight(isDark)),
-        syntaxHighlighting(isDark ? oneDarkHighlightStyle : defaultHighlightStyle),
+        syntaxHighlighting(buildCodeHighlight(resolveCodeTheme(codeTheme, isDark))),
         linkNavigation(notePath),
         calloutDecorations(),
         listSpacing(),
@@ -236,7 +238,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
       viewRef.current = null;
       onViewReady?.(null);
     };
-  }, [notePath, effectiveTheme, uiZoom, editorFontFamily, editorFontSize, readOnly, raw, wsRoot, showLineNumbers, lineWrapping, spellCheck, editorIndentSize, bulletStyle, arrowLigatures, arrowEnabledTypes]);
+  }, [notePath, effectiveTheme, uiZoom, editorFontFamily, editorFontSize, readOnly, raw, wsRoot, showLineNumbers, lineWrapping, spellCheck, editorIndentSize, bulletStyle, arrowLigatures, arrowEnabledTypes, codeTheme]);
 
   // Sync external content changes (e.g., after save or conflict resolution)
   // without recreating the editor

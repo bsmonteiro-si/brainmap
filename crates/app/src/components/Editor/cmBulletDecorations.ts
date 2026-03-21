@@ -10,6 +10,7 @@ import {
 } from "@codemirror/view";
 import { RangeSetBuilder, StateField, type Text, type Extension } from "@codemirror/state";
 import { BULLET_PRESETS, type BulletStyle } from "../../stores/uiStore";
+import { scanFencedBlocks } from "./cmMarkdownDecorations";
 
 const BULLET_RE = /^(\s*)([-*+]) /;
 /** Lines that are task-list checkboxes — bullet is replaced by the checkbox widget. */
@@ -56,8 +57,13 @@ export interface BulletMatch {
 }
 
 export function scanBullets(doc: Text): BulletMatch[] {
+  const fenced = new Set<number>();
+  for (const b of scanFencedBlocks(doc)) {
+    for (let ln = b.startLine; ln <= b.endLine; ln++) fenced.add(ln);
+  }
   const results: BulletMatch[] = [];
   for (let i = 1; i <= doc.lines; i++) {
+    if (fenced.has(i)) continue;
     const line = doc.line(i);
     const m = line.text.match(BULLET_RE);
     if (m && !CHECKBOX_RE.test(line.text)) {
