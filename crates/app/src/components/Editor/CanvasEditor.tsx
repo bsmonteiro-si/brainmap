@@ -149,6 +149,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const undoStackRef = useRef<{ nodes: string; edges: string }[]>([]);
   const redoStackRef = useRef<{ nodes: string; edges: string }[]>([]);
   const isUndoingRef = useRef(false);
+  const isDraggingRef = useRef(false);
+  const isResizingRef = useRef(false);
 
   // Load file on mount
   useEffect(() => {
@@ -353,14 +355,28 @@ export function CanvasEditorInner({ path }: { path: string }) {
   // Wire change handlers to trigger save + undo snapshots
   const handleNodesChange: typeof onNodesChange = useCallback(
     (changes) => {
-      // Push undo snapshot for meaningful changes (not mid-drag)
-      const meaningful = changes.some((c: { type: string; dragging?: boolean }) =>
-        c.type === "remove" ||
-        c.type === "add" ||
-        (c.type === "position" && c.dragging === false) ||
-        c.type === "dimensions",
-      );
-      if (meaningful) pushSnapshot();
+      // Snapshot on gesture start, not every intermediate change
+      let shouldSnapshot = false;
+      for (const c of changes as { type: string; dragging?: boolean; resizing?: boolean }[]) {
+        if (c.type === "remove" || c.type === "add") {
+          shouldSnapshot = true;
+        } else if (c.type === "position" && c.dragging === true && !isDraggingRef.current) {
+          // Drag just started
+          isDraggingRef.current = true;
+          shouldSnapshot = true;
+        } else if (c.type === "position" && c.dragging === false) {
+          isDraggingRef.current = false;
+        } else if (c.type === "dimensions" && !isResizingRef.current) {
+          // Resize just started
+          isResizingRef.current = true;
+          shouldSnapshot = true;
+        }
+      }
+      // Reset resize flag when no dimensions changes in this batch
+      if (!changes.some((c: { type: string }) => c.type === "dimensions")) {
+        isResizingRef.current = false;
+      }
+      if (shouldSnapshot) pushSnapshot();
       onNodesChange(changes);
       requestAnimationFrame(() => scheduleSave());
     },
@@ -554,7 +570,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
       closeCtxMenu();
       requestAnimationFrame(() => scheduleSave());
     },
-    [ctxMenu, setNodes, closeCtxMenu, scheduleSave],
+    [ctxMenu, setNodes, closeCtxMenu, scheduleSave, pushSnapshot],
   );
 
   // Close context menu on click elsewhere
@@ -598,7 +614,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
       setToolbarFilter("");
       requestAnimationFrame(() => scheduleSave());
     },
-    [reactFlowInstance, setNodes, scheduleSave],
+    [reactFlowInstance, setNodes, scheduleSave, pushSnapshot],
   );
 
   // Create a new note via dialog and add it as a file node
@@ -623,7 +639,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
       });
       useUIStore.getState().openCreateNoteDialog();
     },
-    [reactFlowInstance, setNodes, scheduleSave],
+    [reactFlowInstance, setNodes, scheduleSave, pushSnapshot],
   );
 
   const toolbarNotes = useMemo(() => {
