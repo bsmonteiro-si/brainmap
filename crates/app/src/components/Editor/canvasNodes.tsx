@@ -4,10 +4,18 @@ import {
   BaseEdge, EdgeLabelRenderer, getBezierPath, useReactFlow,
 } from "@xyflow/react";
 import type { NodeProps, EdgeProps } from "@xyflow/react";
-import { Trash2, Palette, PenLine } from "lucide-react";
+import { Trash2, Palette, Paintbrush, PenLine } from "lucide-react";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
+import { useTabStore } from "../../stores/tabStore";
+import { useCanvasPanelMode } from "./CanvasEditor";
+import { useUIStore } from "../../stores/uiStore";
 import { getNodeColor } from "../GraphView/graphStyles";
+
+/** Convert an opacity percentage (0–100) to a 2-digit hex alpha suffix. */
+function opacityToHex(pct: number): string {
+  return Math.round((pct / 100) * 255).toString(16).padStart(2, "0");
+}
 
 // JSON Canvas preset colors
 const CANVAS_COLORS = [
@@ -41,6 +49,7 @@ function FourHandles() {
 function CanvasNodeToolbar({ id, selected }: { id: string; selected: boolean }) {
   const { setNodes, setEdges } = useReactFlow();
   const [showColors, setShowColors] = useState(false);
+  const [showBgColors, setShowBgColors] = useState(false);
 
   const handleDelete = () => {
     setNodes((nds) => nds.filter((n) => n.id !== id));
@@ -67,6 +76,26 @@ function CanvasNodeToolbar({ id, selected }: { id: string; selected: boolean }) 
     setShowColors(false);
   };
 
+  const handleBgColor = (bgColor: string) => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, bgColor } } : n,
+      ),
+    );
+    setShowBgColors(false);
+  };
+
+  const handleClearBgColor = () => {
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (n.id !== id) return n;
+        const { bgColor: _, ...rest } = n.data as Record<string, unknown>;
+        return { ...n, data: rest };
+      }),
+    );
+    setShowBgColors(false);
+  };
+
   return (
     <NodeToolbar isVisible={selected} position={Position.Top} offset={8}>
       <div className="canvas-node-toolbar">
@@ -80,8 +109,8 @@ function CanvasNodeToolbar({ id, selected }: { id: string; selected: boolean }) 
         <div className="canvas-node-toolbar-color-wrapper">
           <button
             className="canvas-node-toolbar-btn"
-            title="Color"
-            onClick={() => setShowColors(!showColors)}
+            title="Border color"
+            onClick={() => { setShowColors(!showColors); setShowBgColors(false); }}
           >
             <Palette size={16} />
           </button>
@@ -100,6 +129,35 @@ function CanvasNodeToolbar({ id, selected }: { id: string; selected: boolean }) 
                 className="canvas-color-swatch canvas-color-swatch--clear"
                 title="Clear color"
                 onClick={handleClearColor}
+              >
+                ×
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="canvas-node-toolbar-color-wrapper">
+          <button
+            className="canvas-node-toolbar-btn"
+            title="Background color"
+            onClick={() => { setShowBgColors(!showBgColors); setShowColors(false); }}
+          >
+            <Paintbrush size={16} />
+          </button>
+          {showBgColors && (
+            <div className="canvas-color-picker">
+              {CANVAS_COLORS.map((c) => (
+                <button
+                  key={c.id}
+                  className="canvas-color-swatch"
+                  style={{ backgroundColor: c.color }}
+                  title={c.label}
+                  onClick={() => handleBgColor(c.color)}
+                />
+              ))}
+              <button
+                className="canvas-color-swatch canvas-color-swatch--clear"
+                title="Clear background"
+                onClick={handleClearBgColor}
               >
                 ×
               </button>
@@ -128,14 +186,25 @@ function Resizer({ selected, minWidth = 120, minHeight = 40 }: { selected: boole
 // ── File Node ─────────────────────────────────────────────────────────────────
 
 function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
-  const d = data as { file?: string; subpath?: string; color?: string };
+  const d = data as { file?: string; subpath?: string; color?: string; bgColor?: string };
   const filePath = d.file ?? "";
   const node = useGraphStore((s) => s.nodes.get(filePath));
+  const panelMode = useCanvasPanelMode();
+  const bgAlpha = opacityToHex(useUIStore((s) => s.canvasCardBgOpacity));
 
-  const handleClick = (e: React.MouseEvent) => {
+  const openFile = (e: React.MouseEvent) => {
     e.stopPropagation();
+    const lp = filePath.toLowerCase();
     if (node) {
+      useGraphStore.getState().selectNode(filePath);
       useEditorStore.getState().openNote(filePath);
+    } else if (lp.endsWith(".pdf")) {
+      const fileName = filePath.split("/").pop() ?? filePath;
+      useTabStore.getState().openTab(filePath, "pdf", fileName, null);
+      useEditorStore.getState().clearForCustomTab();
+    } else {
+      useGraphStore.getState().selectNode(null);
+      useEditorStore.getState().openPlainFile(filePath);
     }
   };
 
@@ -147,8 +216,9 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
   return (
     <div
       className="canvas-file-node"
-      style={{ borderLeftColor: borderColor }}
-      onDoubleClick={handleClick}
+      style={{ borderLeftColor: borderColor, ...(d.bgColor ? { backgroundColor: d.bgColor + bgAlpha } : {}) }}
+      onClick={panelMode ? openFile : undefined}
+      onDoubleClick={panelMode ? undefined : openFile}
     >
       <Resizer selected={selected} minWidth={150} minHeight={50} />
       <CanvasNodeToolbar id={id} selected={selected} />
@@ -182,12 +252,13 @@ export const CanvasFileNode = memo(CanvasFileNodeInner);
 // ── Text Node ─────────────────────────────────────────────────────────────────
 
 function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
-  const d = data as { text?: string; color?: string };
+  const d = data as { text?: string; color?: string; bgColor?: string };
   const text = d.text ?? "";
   const borderColor = d.color ?? undefined;
+  const bgAlpha = opacityToHex(useUIStore((s) => s.canvasCardBgOpacity));
 
   return (
-    <div className="canvas-text-node" style={borderColor ? { borderColor } : undefined}>
+    <div className="canvas-text-node" style={{ ...(borderColor ? { borderColor } : {}), ...(d.bgColor ? { backgroundColor: d.bgColor + bgAlpha } : {}) }}>
       <Resizer selected={selected} />
       <CanvasNodeToolbar id={id} selected={selected} />
       <div className="canvas-text-node-body">{text}</div>
@@ -201,8 +272,9 @@ export const CanvasTextNode = memo(CanvasTextNodeInner);
 // ── Link Node ─────────────────────────────────────────────────────────────────
 
 function CanvasLinkNodeInner({ id, data, selected }: NodeProps) {
-  const d = data as { url?: string; color?: string };
+  const d = data as { url?: string; color?: string; bgColor?: string };
   const url = d.url ?? "";
+  const bgAlpha = opacityToHex(useUIStore((s) => s.canvasCardBgOpacity));
   let displayUrl: string;
   try {
     displayUrl = new URL(url).hostname;
@@ -211,7 +283,7 @@ function CanvasLinkNodeInner({ id, data, selected }: NodeProps) {
   }
 
   return (
-    <div className="canvas-link-node" style={d.color ? { borderColor: d.color } : undefined}>
+    <div className="canvas-link-node" style={{ ...(d.color ? { borderColor: d.color } : {}), ...(d.bgColor ? { backgroundColor: d.bgColor + bgAlpha } : {}) }}>
       <Resizer selected={selected} />
       <CanvasNodeToolbar id={id} selected={selected} />
       <span className="canvas-link-node-url" title={url}>{displayUrl}</span>
@@ -320,8 +392,17 @@ function CanvasEdgeInner({
 
   const handleColor = (e: React.MouseEvent, color: string) => {
     e.stopPropagation();
+    const markerId = `brainmap-arrow-${color}`;
     setEdges((eds) =>
-      eds.map((ed) => ed.id === id ? { ...ed, style: { ...ed.style, stroke: color } } : ed),
+      eds.map((ed) => {
+        if (ed.id !== id) return ed;
+        return {
+          ...ed,
+          style: { ...ed.style, stroke: color },
+          ...(ed.markerEnd ? { markerEnd: markerId } : {}),
+          ...(ed.markerStart ? { markerStart: markerId } : {}),
+        };
+      }),
     );
     setShowColors(false);
   };
@@ -332,7 +413,12 @@ function CanvasEdgeInner({
       eds.map((ed) => {
         if (ed.id !== id) return ed;
         const { stroke: _, ...rest } = (ed.style ?? {}) as Record<string, unknown>;
-        return { ...ed, style: Object.keys(rest).length > 0 ? rest : undefined };
+        return {
+          ...ed,
+          style: Object.keys(rest).length > 0 ? rest : undefined,
+          ...(ed.markerEnd ? { markerEnd: "brainmap-arrow" } : {}),
+          ...(ed.markerStart ? { markerStart: "brainmap-arrow" } : {}),
+        };
       }),
     );
     setShowColors(false);

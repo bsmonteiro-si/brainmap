@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, Component } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Component, createContext, useContext } from "react";
 import type { ReactNode, ErrorInfo, MouseEvent as ReactMouseEvent } from "react";
 import {
   ReactFlow,
@@ -9,7 +9,6 @@ import {
   useNodesState,
   useEdgesState,
   useReactFlow,
-  MarkerType,
   ReactFlowProvider,
 } from "@xyflow/react";
 import type { OnConnect, ColorMode } from "@xyflow/react";
@@ -24,6 +23,12 @@ import type { JsonCanvas } from "./canvasTranslation";
 import { StickyNote, FileText, Layers } from "lucide-react";
 import { useGraphStore } from "../../stores/graphStore";
 import { CanvasFileNode, CanvasTextNode, CanvasLinkNode, CanvasGroupNode, CanvasEdge } from "./canvasNodes";
+
+// ── Panel mode context ────────────────────────────────────────────────────────
+// When true, file node clicks open notes in the editor panel (right side)
+// instead of navigating away from the canvas.
+export const CanvasPanelModeContext = createContext(false);
+export function useCanvasPanelMode() { return useContext(CanvasPanelModeContext); }
 
 // ── Error boundary ────────────────────────────────────────────────────────────
 
@@ -89,7 +94,7 @@ const pendingSaves = new Map<string, { nodes: unknown[]; edges: unknown[] }>();
 
 // ── Inner component ───────────────────────────────────────────────────────────
 
-function CanvasEditorInner({ path }: { path: string }) {
+export function CanvasEditorInner({ path }: { path: string }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(true);
@@ -98,6 +103,7 @@ function CanvasEditorInner({ path }: { path: string }) {
   const canvasTheme = useUIStore((s) => s.canvasTheme);
   const canvasShowDots = useUIStore((s) => s.canvasShowDots);
   const canvasDotOpacity = useUIStore((s) => s.canvasDotOpacity);
+  const canvasArrowSize = useUIStore((s) => s.canvasArrowSize);
   const colorMode: ColorMode = canvasTheme;
   const containerClass = `canvas-container${canvasTheme === "light" ? " canvas-light" : ""}`;
 
@@ -128,8 +134,17 @@ function CanvasEditorInner({ path }: { path: string }) {
         try {
           const parsed: JsonCanvas = JSON.parse(file.body);
           const { nodes: rfNodes, edges: rfEdges } = canvasToFlow(parsed);
+          const strEdges = rfEdges.map((e) => {
+            const stroke = (e.style as Record<string, unknown> | undefined)?.stroke;
+            const mid = typeof stroke === "string" ? `brainmap-arrow-${stroke}` : "brainmap-arrow";
+            return {
+              ...e,
+              markerEnd: e.markerEnd ? mid : undefined,
+              markerStart: e.markerStart ? mid : undefined,
+            };
+          });
           setNodes(rfNodes);
-          setEdges(rfEdges);
+          setEdges(strEdges);
           try {
             lastSavedRef.current = JSON.stringify(flowToCanvas(rfNodes, rfEdges));
           } catch {
@@ -256,7 +271,7 @@ function CanvasEditorInner({ path }: { path: string }) {
     (connection) => {
       setEdges((eds) =>
         addEdge(
-          { ...connection, markerEnd: { type: MarkerType.ArrowClosed }, data: { isNew: true } },
+          { ...connection, markerEnd: "brainmap-arrow", data: { isNew: true } },
           eds,
         ),
       );
@@ -488,8 +503,28 @@ function CanvasEditorInner({ path }: { path: string }) {
         deleteKeyCode={["Backspace", "Delete"]}
         fitView
         fitViewOptions={{ padding: 0.2 }}
-        defaultEdgeOptions={{ markerEnd: { type: MarkerType.ArrowClosed } }}
+        defaultEdgeOptions={{ markerEnd: "brainmap-arrow" }}
       >
+        {/* Custom arrow markers — one per edge color + default */}
+        <svg style={{ position: "absolute", width: 0, height: 0 }}>
+          <defs>
+            <marker id="brainmap-arrow" viewBox="0 0 10 10" refX="10" refY="5"
+              markerWidth={canvasArrowSize} markerHeight={canvasArrowSize} orient="auto-start-reverse">
+              <polygon points="0,0 10,5 0,10" fill="#b1b1b7" />
+            </marker>
+            {Array.from(new Set(
+              edges.flatMap((e) => {
+                const s = (e.style as Record<string, unknown> | undefined)?.stroke;
+                return typeof s === "string" ? [s] : [];
+              }),
+            )).map((color) => (
+              <marker key={color} id={`brainmap-arrow-${color}`} viewBox="0 0 10 10" refX="10" refY="5"
+                markerWidth={canvasArrowSize} markerHeight={canvasArrowSize} orient="auto-start-reverse">
+                <polygon points="0,0 10,5 0,10" fill={color} />
+              </marker>
+            ))}
+          </defs>
+        </svg>
         <Controls />
         {canvasShowDots && (
           <Background

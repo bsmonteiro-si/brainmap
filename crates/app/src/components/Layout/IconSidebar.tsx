@@ -1,4 +1,4 @@
-import { Files, GitFork, Home, Search, Settings } from "lucide-react";
+import { Files, GitFork, Home, LayoutDashboard, Search, Settings } from "lucide-react";
 import { useUIStore } from "../../stores/uiStore";
 import type { LeftTab } from "../../stores/uiStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
@@ -8,6 +8,7 @@ const SIDEBAR_ITEMS: { tab: LeftTab; icon: typeof Files; label: string }[] = [
   { tab: "files", icon: Files, label: "Files" },
   { tab: "graph", icon: GitFork, label: "Graph" },
   { tab: "search", icon: Search, label: "Search" },
+  { tab: "canvas", icon: LayoutDashboard, label: "Canvas" },
 ];
 
 export function IconSidebar() {

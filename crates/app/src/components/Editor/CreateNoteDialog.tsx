@@ -22,7 +22,7 @@ export function CreateNoteDialog() {
   const initialTitle = useUIStore((s) => s.createNoteInitialTitle);
   const createNoteMode = useUIStore((s) => s.createNoteMode);
   const fileKind = useUIStore((s) => s.createFileKind);
-  const setFileKind = useCallback((kind: "note" | "file") => {
+  const setFileKind = useCallback((kind: "note" | "file" | "canvas" | "excalidraw") => {
     useUIStore.setState({ createFileKind: kind });
   }, []);
   const linkSource = useUIStore((s) => s.createAndLinkSource);
@@ -33,8 +33,11 @@ export function CreateNoteDialog() {
   const isCreateAndLink = createNoteMode === "create-and-link" && linkSource !== null;
   const isSaveAs = saveAsBody != null && saveAsTabId != null;
   const isNoteMode = fileKind === "note";
-  // Special modes always force note mode
-  const showModeToggle = !isCreateAndLink && !isSaveAs;
+  const isCanvasMode = fileKind === "canvas";
+  const isExcalidrawMode = fileKind === "excalidraw";
+  const isSpecialFileMode = isCanvasMode || isExcalidrawMode;
+  // Special modes always force note mode; canvas/excalidraw hide the toggle
+  const showModeToggle = !isCreateAndLink && !isSaveAs && !isSpecialFileMode;
 
   const [path, setPath] = useState(initialPath ?? "");
   // Auto-populate title from initialTitle (create-and-link) or from path
@@ -81,7 +84,7 @@ export function CreateNoteDialog() {
     : null;
   const fileBasename = path.split("/").pop() ?? path;
   const fileHasExtension = fileBasename.includes(".") && !fileBasename.endsWith(".");
-  const filePathError = !isNoteMode && pathDirty && path.length > 0
+  const filePathError = !isNoteMode && !isSpecialFileMode && pathDirty && path.length > 0
     ? path.endsWith(".md")
       ? "Use Note mode for .md files"
       : !fileHasExtension
@@ -95,7 +98,9 @@ export function CreateNoteDialog() {
 
   const isValid = isNoteMode
     ? path.trim().length > 0 && title.trim().length > 0
-    : path.trim().length > 0 && fileHasExtension && !path.endsWith(".md");
+    : isSpecialFileMode
+      ? path.trim().length > 0
+      : path.trim().length > 0 && fileHasExtension && !path.endsWith(".md");
 
   const handleSubmit = useCallback(async () => {
     if (!isValid || isSubmitting) return;
@@ -152,6 +157,25 @@ export function CreateNoteDialog() {
         } else {
           await useEditorStore.getState().openNote(createdPath);
         }
+      } else if (isCanvasMode) {
+        // Canvas creation
+        const ext = ".canvas";
+        const finalPath = path.endsWith(ext) ? path : path + ext;
+        const emptyCanvas = JSON.stringify({ nodes: [], edges: [] });
+        await api.writePlainFile(finalPath, emptyCanvas);
+        useUIStore.getState().openCanvasInPanel(finalPath);
+      } else if (isExcalidrawMode) {
+        // Excalidraw creation
+        const ext = ".excalidraw";
+        const finalPath = path.endsWith(ext) ? path : path + ext;
+        const emptyDrawing = JSON.stringify({
+          type: "excalidraw", version: 2, source: "brainmap",
+          elements: [], appState: {}, files: {},
+        });
+        await api.writePlainFile(finalPath, emptyDrawing);
+        await useEditorStore.getState().clearForCustomTab();
+        const fileName = finalPath.split("/").pop() ?? finalPath;
+        useTabStore.getState().openTab(finalPath, "excalidraw", fileName, null);
       } else {
         // Plain file creation path — no graph update, no undo (plain files are not graph-managed)
         const createdPath = await api.createPlainFile(path, body || undefined);
@@ -175,7 +199,7 @@ export function CreateNoteDialog() {
       setError(e instanceof Error ? e.message : String(e));
       setIsSubmitting(false);
     }
-  }, [isValid, isSubmitting, path, title, noteType, tags, body, close, isCreateAndLink, linkSource, isSaveAs, saveAsTabId, isNoteMode]);
+  }, [isValid, isSubmitting, path, title, noteType, tags, body, close, isCreateAndLink, linkSource, isSaveAs, saveAsTabId, isNoteMode, isCanvasMode, isExcalidrawMode]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -331,9 +355,13 @@ export function CreateNoteDialog() {
     ? "Save As"
     : isCreateAndLink
       ? "Create & Link"
-      : isNoteMode
-        ? "Create Note"
-        : "Create File";
+      : isCanvasMode
+        ? "Create Canvas"
+        : isExcalidrawMode
+          ? "Create Drawing"
+          : isNoteMode
+            ? "Create Note"
+            : "Create File";
 
   return (
     <div style={overlayStyle} onClick={handleOverlayClick}>
@@ -368,12 +396,18 @@ export function CreateNoteDialog() {
             style={pathError ? inputErrorStyle : inputStyle}
             value={path}
             onChange={(e) => handlePathChange(e.target.value)}
-            placeholder={isNoteMode ? "Concepts/My-Note" : "config.json"}
+            placeholder={isCanvasMode ? "My Canvas" : isExcalidrawMode ? "My Drawing" : isNoteMode ? "Concepts/My-Note" : "config.json"}
             disabled={isSubmitting}
           />
           {pathError && <span style={inlineErrorStyle}>{pathError}</span>}
           {isNoteMode && !isSaveAs && (
             <span style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 1 }}>.md extension added automatically</span>
+          )}
+          {isCanvasMode && (
+            <span style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 1 }}>.canvas extension added automatically</span>
+          )}
+          {isExcalidrawMode && (
+            <span style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 1 }}>.excalidraw extension added automatically</span>
           )}
         </div>
 

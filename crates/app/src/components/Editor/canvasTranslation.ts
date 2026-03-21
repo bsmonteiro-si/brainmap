@@ -11,6 +11,7 @@ interface JsonCanvasNodeBase {
   width: number;
   height: number;
   color?: string;
+  bgColor?: string;
 }
 
 interface JsonCanvasTextNode extends JsonCanvasNodeBase {
@@ -83,6 +84,7 @@ export function canvasToFlow(canvas: JsonCanvas): { nodes: Node[]; edges: Edge[]
 
     const data: Record<string, unknown> = {};
     if (cn.color) data.color = cn.color;
+    if (cn.bgColor) data.bgColor = cn.bgColor;
 
     switch (cn.type) {
       case "text":
@@ -168,6 +170,7 @@ export function flowToCanvas(nodes: Node[], edges: Edge[]): JsonCanvas {
     };
 
     if (data.color) base.color = String(data.color);
+    if (data.bgColor) base.bgColor = String(data.bgColor);
 
     switch (canvasType) {
       case "text":

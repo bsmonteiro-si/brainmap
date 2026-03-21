@@ -9,6 +9,7 @@ import { SearchPanel } from "../Search/SearchPanel";
 import { StatusBar } from "../StatusBar/StatusBar";
 import { FileTreePanel } from "./FileTreePanel";
 import { IconSidebar } from "./IconSidebar";
+import { CanvasPanel } from "../Canvas/CanvasPanel";
 import { TabBar } from "../Editor/TabBar";
 
 const PANEL_IDS = {
@@ -94,6 +95,11 @@ export function AppLayout() {
                 style={{ flex: 1, overflow: "hidden", display: activeLeftTab === "search" ? "flex" : "none", flexDirection: "column" }}
               >
                 <SearchPanel />
+              </div>
+              <div
+                style={{ flex: 1, overflow: "hidden", display: activeLeftTab === "canvas" ? "flex" : "none", flexDirection: "column" }}
+              >
+                <CanvasPanel />
               </div>
             </div>
           </Panel>

@@ -295,58 +295,33 @@ function ContextMenu({
     useUIStore.getState().openCreateFolderDialog(prefix);
   };
 
-  const handleNewDrawingHere = async () => {
+  const handleNewDrawingHere = () => {
     onClose();
     const prefix = state.node ? folderPrefixFor(state.node) : "";
+    // Generate default name for the placeholder
     const workspaceFiles = useGraphStore.getState().workspaceFiles;
-    // Auto-generate unique filename
-    let name = "Untitled.excalidraw";
+    let name = "Untitled";
     let counter = 2;
-    while (workspaceFiles.includes(prefix + name)) {
-      name = `Untitled-${counter}.excalidraw`;
+    while (workspaceFiles.includes(prefix + name + ".excalidraw")) {
+      name = `Untitled-${counter}`;
       counter++;
     }
-    const fullPath = prefix + name;
-    const emptyDrawing = JSON.stringify({
-      type: "excalidraw",
-      version: 2,
-      source: "brainmap",
-      elements: [],
-      appState: {},
-      files: {},
-    });
-    try {
-      const api = await getAPI();
-      await api.writePlainFile(fullPath, emptyDrawing);
-      await useEditorStore.getState().clearForCustomTab();
-      const fileName = fullPath.split("/").pop() ?? fullPath;
-      useTabStore.getState().openTab(fullPath, "excalidraw", fileName, null);
-    } catch (e) {
-      log.error("files", "failed to create drawing", { error: String(e) });
-    }
+    useUIStore.getState().openCreateNoteDialog(prefix + name);
+    useUIStore.setState({ createFileKind: "excalidraw" });
   };
 
-  const handleNewCanvasHere = async () => {
+  const handleNewCanvasHere = () => {
     onClose();
     const prefix = state.node ? folderPrefixFor(state.node) : "";
     const workspaceFiles = useGraphStore.getState().workspaceFiles;
-    let name = "Untitled.canvas";
+    let name = "Untitled";
     let counter = 2;
-    while (workspaceFiles.includes(prefix + name)) {
-      name = `Untitled-${counter}.canvas`;
+    while (workspaceFiles.includes(prefix + name + ".canvas")) {
+      name = `Untitled-${counter}`;
       counter++;
     }
-    const fullPath = prefix + name;
-    const emptyCanvas = JSON.stringify({ nodes: [], edges: [] });
-    try {
-      const api = await getAPI();
-      await api.writePlainFile(fullPath, emptyCanvas);
-      await useEditorStore.getState().clearForCustomTab();
-      const fileName = fullPath.split("/").pop() ?? fullPath;
-      useTabStore.getState().openTab(fullPath, "canvas", fileName, null);
-    } catch (e) {
-      log.error("files", "failed to create canvas", { error: String(e) });
-    }
+    useUIStore.getState().openCreateNoteDialog(prefix + name);
+    useUIStore.setState({ createFileKind: "canvas" });
   };
 
   const handleDelete = () => {
@@ -824,9 +799,7 @@ function FileTreeNode({
       return;
     }
     if (node.fullPath.toLowerCase().endsWith(".canvas")) {
-      const fileName = node.fullPath.split("/").pop() ?? node.fullPath;
-      useTabStore.getState().openTab(node.fullPath, "canvas", fileName, null);
-      useEditorStore.getState().clearForCustomTab();
+      useUIStore.getState().openCanvasInPanel(node.fullPath);
       return;
     }
     if (isBrainMapNote) {
