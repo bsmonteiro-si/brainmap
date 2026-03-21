@@ -5077,6 +5077,10 @@ body {
   width: 100%;
   height: 100%;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .canvas-text-node-body {
@@ -5084,6 +5088,8 @@ body {
   color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-word;
+  text-align: center;
+  width: 100%;
 }
 
 .canvas-text-node-edit {
@@ -5101,12 +5107,13 @@ body {
   resize: none;
   white-space: pre-wrap;
   word-break: break-word;
+  text-align: center;
 }
 
 /* ── Shape variants for text cards ──────────────────────────────────────────── */
 
 .canvas-text-node[data-shape="rounded"] {
-  border-radius: 9999px;
+  border-radius: var(--rounded-radius, 24px);
   padding: 10px 24px;
 }
 
@@ -5124,7 +5131,7 @@ body {
   background: #fef3c7;
   border-radius: 2px;
   box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.15);
-  transform: rotate(-1.5deg);
+  transform: rotate(calc(-1 * var(--sticky-rotation, 1.5deg)));
   position: relative;
 }
 
@@ -5158,13 +5165,13 @@ body {
 .canvas-text-node[data-shape="callout"]::after {
   content: "";
   position: absolute;
-  bottom: -18px;
+  bottom: calc(-1 * var(--callout-tail, 18px));
   left: 14px;
   width: 0;
   height: 0;
-  border-left: 18px solid transparent;
-  border-right: 18px solid transparent;
-  border-top: 18px solid var(--border-color);
+  border-left: var(--callout-tail, 18px) solid transparent;
+  border-right: var(--callout-tail, 18px) solid transparent;
+  border-top: var(--callout-tail, 18px) solid var(--border-color);
   pointer-events: none;
 }
 
@@ -5172,13 +5179,13 @@ body {
 .canvas-text-node[data-shape="callout"]::before {
   content: "";
   position: absolute;
-  bottom: -16px;
+  bottom: calc(-1 * var(--callout-tail-inner, 17px) + 1px);
   left: 15px;
   width: 0;
   height: 0;
-  border-left: 17px solid transparent;
-  border-right: 17px solid transparent;
-  border-top: 17px solid var(--bg-primary);
+  border-left: var(--callout-tail-inner, 17px) solid transparent;
+  border-right: var(--callout-tail-inner, 17px) solid transparent;
+  border-top: var(--callout-tail-inner, 17px) solid var(--bg-primary);
   pointer-events: none;
   z-index: 1;
 }
@@ -5411,6 +5418,80 @@ body {
 .canvas-shape-picker-btn--active:hover {
   background: var(--accent);
   color: #fff;
+}
+
+/* ── Text format picker ────────────────────────────────────────────────────── */
+
+.canvas-text-format-picker {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 4px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  min-width: 160px;
+}
+
+.canvas-text-format-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.canvas-text-format-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.canvas-text-format-row {
+  display: flex;
+  gap: 2px;
+}
+
+.canvas-text-format-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.canvas-text-format-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.canvas-text-format-btn--active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.canvas-text-format-btn--active:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.canvas-container.canvas-light .canvas-text-format-picker {
+  background: #fff;
+  border-color: #ddd;
 }
 
 /* ── Light mode overrides for shape variants ───────────────────────────────── */

@@ -106,8 +106,17 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const canvasShowDots = useUIStore((s) => s.canvasShowDots);
   const canvasDotOpacity = useUIStore((s) => s.canvasDotOpacity);
   const canvasArrowSize = useUIStore((s) => s.canvasArrowSize);
+  const canvasCalloutTailSize = useUIStore((s) => s.canvasCalloutTailSize);
+  const canvasStickyRotation = useUIStore((s) => s.canvasStickyRotation);
+  const canvasRoundedRadius = useUIStore((s) => s.canvasRoundedRadius);
   const colorMode: ColorMode = canvasTheme;
   const containerClass = `canvas-container${canvasTheme === "light" ? " canvas-light" : ""}`;
+  const shapeVars = {
+    "--callout-tail": `${canvasCalloutTailSize}px`,
+    "--callout-tail-inner": `${canvasCalloutTailSize - 1}px`,
+    "--sticky-rotation": `${canvasStickyRotation}deg`,
+    "--rounded-radius": `${canvasRoundedRadius}px`,
+  } as React.CSSProperties;
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedRef = useRef<string>("");
@@ -522,7 +531,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   }
 
   return (
-    <div className={containerClass}>
+    <div className={containerClass} style={shapeVars}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

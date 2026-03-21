@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { LayoutDashboard, Plus, ChevronDown } from "lucide-react";
 import { useUIStore } from "../../stores/uiStore";
@@ -12,12 +12,27 @@ export function CanvasPanel() {
   const canvasPanelFontSize = useUIStore((s) => s.canvasPanelFontSize);
   const workspaceFiles = useGraphStore((s) => s.workspaceFiles);
   const [showPicker, setShowPicker] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
 
   // List all .canvas files in workspace
   const canvasFiles = useMemo(
     () => workspaceFiles.filter((f) => f.toLowerCase().endsWith(".canvas")).sort(),
     [workspaceFiles],
   );
+
+  const closePicker = useCallback(() => setShowPicker(false), []);
+
+  // Close picker on click outside header area
+  useEffect(() => {
+    if (!showPicker) return;
+    const handler = (e: MouseEvent) => {
+      if (headerRef.current && !headerRef.current.contains(e.target as Node)) {
+        closePicker();
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showPicker, closePicker]);
 
   const handleCreate = () => {
     // Generate default name
@@ -36,7 +51,7 @@ export function CanvasPanel() {
 
   return (
     <div className="canvas-panel">
-      <div className="canvas-panel-header" style={{ fontFamily: canvasPanelFontFamily, fontSize: canvasPanelFontSize }}>
+      <div ref={headerRef} className="canvas-panel-header" style={{ fontFamily: canvasPanelFontFamily, fontSize: canvasPanelFontSize }}>
         <div className="canvas-panel-icon">
           <LayoutDashboard size={14} />
         </div>
@@ -58,36 +73,36 @@ export function CanvasPanel() {
         >
           <Plus size={14} />
         </button>
-      </div>
-      {showPicker && (
-        <div className="canvas-panel-picker" style={{ fontFamily: canvasPanelFontFamily, fontSize: canvasPanelFontSize }}>
-          {canvasFiles.length === 0 ? (
-            <div className="canvas-panel-picker-empty">No canvas files found</div>
-          ) : (
-            canvasFiles.map((f) => {
-              const fileName = f.split("/").pop()?.replace(/\.canvas$/i, "") ?? f;
-              const dir = f.includes("/") ? f.slice(0, f.lastIndexOf("/")) : null;
-              return (
-                <div
-                  key={f}
-                  className={`canvas-panel-picker-item${f === activeCanvasPath ? " active" : ""}`}
-                  onClick={() => {
-                    openCanvasInPanel(f);
-                    setShowPicker(false);
-                  }}
-                >
-                  <LayoutDashboard size={13} className="canvas-panel-picker-icon" />
-                  <div className="canvas-panel-picker-info">
-                    <span className="canvas-panel-picker-name">{fileName}</span>
-                    {dir && <span className="canvas-panel-picker-dir">{dir}</span>}
+        {showPicker && (
+          <div className="canvas-panel-picker" style={{ fontFamily: canvasPanelFontFamily, fontSize: canvasPanelFontSize }}>
+            {canvasFiles.length === 0 ? (
+              <div className="canvas-panel-picker-empty">No canvas files found</div>
+            ) : (
+              canvasFiles.map((f) => {
+                const fileName = f.split("/").pop()?.replace(/\.canvas$/i, "") ?? f;
+                const dir = f.includes("/") ? f.slice(0, f.lastIndexOf("/")) : null;
+                return (
+                  <div
+                    key={f}
+                    className={`canvas-panel-picker-item${f === activeCanvasPath ? " active" : ""}`}
+                    onClick={() => {
+                      openCanvasInPanel(f);
+                      setShowPicker(false);
+                    }}
+                  >
+                    <LayoutDashboard size={13} className="canvas-panel-picker-icon" />
+                    <div className="canvas-panel-picker-info">
+                      <span className="canvas-panel-picker-name">{fileName}</span>
+                      {dir && <span className="canvas-panel-picker-dir">{dir}</span>}
+                    </div>
                   </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      )}
-      <div className="canvas-panel-body">
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+      <div className="canvas-panel-body" onMouseDownCapture={showPicker ? closePicker : undefined}>
         {activeCanvasPath ? (
           <CanvasPanelModeContext.Provider value={true}>
             <ReactFlowProvider key={activeCanvasPath}>

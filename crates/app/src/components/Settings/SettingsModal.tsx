@@ -72,6 +72,9 @@ export function SettingsModal() {
   const canvasDotOpacity = useUIStore((s) => s.canvasDotOpacity);
   const canvasArrowSize = useUIStore((s) => s.canvasArrowSize);
   const canvasCardBgOpacity = useUIStore((s) => s.canvasCardBgOpacity);
+  const canvasCalloutTailSize = useUIStore((s) => s.canvasCalloutTailSize);
+  const canvasStickyRotation = useUIStore((s) => s.canvasStickyRotation);
+  const canvasRoundedRadius = useUIStore((s) => s.canvasRoundedRadius);
   const canvasPanelFontFamily = useUIStore((s) => s.canvasPanelFontFamily);
   const canvasPanelFontSize = useUIStore((s) => s.canvasPanelFontSize);
   const setFilesTheme = useUIStore((s) => s.setFilesTheme);
@@ -82,6 +85,9 @@ export function SettingsModal() {
   const setCanvasDotOpacity = useUIStore((s) => s.setCanvasDotOpacity);
   const setCanvasArrowSize = useUIStore((s) => s.setCanvasArrowSize);
   const setCanvasCardBgOpacity = useUIStore((s) => s.setCanvasCardBgOpacity);
+  const setCanvasCalloutTailSize = useUIStore((s) => s.setCanvasCalloutTailSize);
+  const setCanvasStickyRotation = useUIStore((s) => s.setCanvasStickyRotation);
+  const setCanvasRoundedRadius = useUIStore((s) => s.setCanvasRoundedRadius);
   const setCanvasPanelFontFamily = useUIStore((s) => s.setCanvasPanelFontFamily);
   const setCanvasPanelFontSize = useUIStore((s) => s.setCanvasPanelFontSize);
   const codeTheme = useUIStore((s) => s.codeTheme);
@@ -799,6 +805,58 @@ export function SettingsModal() {
                 onChange={(e) => setCanvasCardBgOpacity(Number(e.target.value))}
               />
               <span className="settings-size-value">{canvasCardBgOpacity}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">Shapes</div>
+        <div className="settings-row">
+          <span className="settings-label">Callout tail</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={8}
+                max={30}
+                step={2}
+                value={canvasCalloutTailSize}
+                onChange={(e) => setCanvasCalloutTailSize(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasCalloutTailSize}px</span>
+            </div>
+          </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Sticky rotation</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={0}
+                max={5}
+                step={0.5}
+                value={canvasStickyRotation}
+                onChange={(e) => setCanvasStickyRotation(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasStickyRotation}°</span>
+            </div>
+          </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Rounded radius</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={6}
+                max={50}
+                step={2}
+                value={canvasRoundedRadius}
+                onChange={(e) => setCanvasRoundedRadius(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasRoundedRadius}px</span>
             </div>
           </div>
         </div>

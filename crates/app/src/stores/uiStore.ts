@@ -201,6 +201,9 @@ interface PersistedPrefs {
   canvasDotOpacity?: number;
   canvasArrowSize?: number;
   canvasCardBgOpacity?: number;
+  canvasCalloutTailSize?: number;
+  canvasStickyRotation?: number;
+  canvasRoundedRadius?: number;
   canvasPanelFontFamily?: string;
   canvasPanelFontSize?: number;
   codeTheme?: string;
@@ -330,6 +333,9 @@ interface UIState {
   canvasDotOpacity: number;
   canvasArrowSize: number;
   canvasCardBgOpacity: number;
+  canvasCalloutTailSize: number;
+  canvasStickyRotation: number;
+  canvasRoundedRadius: number;
   canvasPanelFontFamily: string;
   canvasPanelFontSize: number;
   codeTheme: string;
@@ -353,6 +359,9 @@ interface UIState {
   setCanvasDotOpacity: (opacity: number) => void;
   setCanvasArrowSize: (size: number) => void;
   setCanvasCardBgOpacity: (opacity: number) => void;
+  setCanvasCalloutTailSize: (v: number) => void;
+  setCanvasStickyRotation: (v: number) => void;
+  setCanvasRoundedRadius: (v: number) => void;
   setCanvasPanelFontFamily: (v: string) => void;
   setCanvasPanelFontSize: (v: number) => void;
   setCodeTheme: (theme: string) => void;
@@ -542,6 +551,9 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasDotOpacity: storedPrefs.canvasDotOpacity ?? 50,
   canvasArrowSize: storedPrefs.canvasArrowSize ?? 25,
   canvasCardBgOpacity: storedPrefs.canvasCardBgOpacity ?? 15,
+  canvasCalloutTailSize: storedPrefs.canvasCalloutTailSize ?? 18,
+  canvasStickyRotation: storedPrefs.canvasStickyRotation ?? 1.5,
+  canvasRoundedRadius: storedPrefs.canvasRoundedRadius ?? 24,
   canvasPanelFontFamily: storedPrefs.canvasPanelFontFamily ?? DEFAULT_UI_FONT,
   canvasPanelFontSize: storedPrefs.canvasPanelFontSize ?? 12,
   codeTheme: storedPrefs.codeTheme ?? "GitHub Dark",
@@ -713,6 +725,18 @@ export const useUIStore = create<UIState>((set, get) => ({
   setCanvasCardBgOpacity: (canvasCardBgOpacity: number) => {
     set({ canvasCardBgOpacity });
     savePrefs({ canvasCardBgOpacity });
+  },
+  setCanvasCalloutTailSize: (canvasCalloutTailSize: number) => {
+    set({ canvasCalloutTailSize });
+    savePrefs({ canvasCalloutTailSize });
+  },
+  setCanvasStickyRotation: (canvasStickyRotation: number) => {
+    set({ canvasStickyRotation });
+    savePrefs({ canvasStickyRotation });
+  },
+  setCanvasRoundedRadius: (canvasRoundedRadius: number) => {
+    set({ canvasRoundedRadius });
+    savePrefs({ canvasRoundedRadius });
   },
   setCanvasPanelFontFamily: (canvasPanelFontFamily: string) => {
     set({ canvasPanelFontFamily });

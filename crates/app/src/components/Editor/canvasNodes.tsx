@@ -171,7 +171,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
           <button
             className="canvas-node-toolbar-btn"
             title="Border color"
-            onClick={() => { setShowColors(!showColors); setShowBgColors(false); }}
+            onClick={() => { const next = !showColors; closeAllDropdowns(); setShowColors(next); }}
           >
             <Palette size={16} />
           </button>
@@ -183,7 +183,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
           <button
             className="canvas-node-toolbar-btn"
             title="Background color"
-            onClick={() => { setShowBgColors(!showBgColors); setShowColors(false); }}
+            onClick={() => { const next = !showBgColors; closeAllDropdowns(); setShowBgColors(next); }}
           >
             <Paintbrush size={16} />
           </button>
@@ -196,7 +196,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
             <button
               className="canvas-node-toolbar-btn"
               title="Shape"
-              onClick={() => { setShowShapes(!showShapes); setShowColors(false); setShowBgColors(false); }}
+              onClick={() => { const next = !showShapes; closeAllDropdowns(); setShowShapes(next); }}
             >
               <Shapes size={16} />
             </button>
@@ -269,7 +269,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
                     {TEXT_ALIGNMENTS.map((a) => (
                       <button
                         key={a.id}
-                        className={`canvas-text-format-btn${(textAlign ?? "left") === a.id ? " canvas-text-format-btn--active" : ""}`}
+                        className={`canvas-text-format-btn${(textAlign ?? "center") === a.id ? " canvas-text-format-btn--active" : ""}`}
                         title={a.label}
                         onClick={() => { setNodeData({ textAlign: a.id }); }}
                       >
@@ -368,10 +368,16 @@ export const CanvasFileNode = memo(CanvasFileNodeInner);
 // ── Text Node ─────────────────────────────────────────────────────────────────
 
 function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
-  const d = data as { text?: string; color?: string; bgColor?: string; shape?: string };
+  const d = data as { text?: string; color?: string; bgColor?: string; shape?: string; fontSize?: number; fontFamily?: string; textAlign?: string };
   const text = d.text ?? "";
   const borderColor = d.color ?? undefined;
   const shapeDef = getShapeDefinition(d.shape);
+
+  const textStyles: React.CSSProperties = {
+    ...(d.fontSize ? { fontSize: d.fontSize } : {}),
+    ...(d.fontFamily ? { fontFamily: d.fontFamily } : {}),
+    ...(d.textAlign ? { textAlign: d.textAlign as React.CSSProperties["textAlign"] } : {}),
+  };
 
   const { setNodes } = useReactFlow();
   const [editing, setEditing] = useState(false);
@@ -409,11 +415,12 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
       onDoubleClick={() => { setEditValue(text); setEditing(true); }}
     >
       <Resizer selected={selected} />
-      <CanvasNodeToolbar id={id} selected={selected} shape={d.shape ?? "rectangle"} />
+      <CanvasNodeToolbar id={id} selected={selected} shape={d.shape ?? "rectangle"} fontSize={d.fontSize} fontFamily={d.fontFamily} textAlign={d.textAlign} />
       {editing ? (
         <textarea
           ref={textareaRef}
           className="canvas-text-node-edit"
+          style={textStyles}
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -423,7 +430,7 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
           spellCheck={false}
         />
       ) : (
-        <div className="canvas-text-node-body">{text || "\u00A0"}</div>
+        <div className="canvas-text-node-body" style={textStyles}>{text || "\u00A0"}</div>
       )}
       <FourHandles />
     </div>
