@@ -440,6 +440,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const [showNoteSelect, setShowNoteSelect] = useState(false);
   const [showCtxShapes, setShowCtxShapes] = useState(false);
   const [noteFilter, setNoteFilter] = useState("");
+  const [ctxPickerTab, setCtxPickerTab] = useState<"notes" | "files">("notes");
 
   // Element context menu (right-click on a node or edge)
   const [elemCtxMenu, setElemCtxMenu] = useState<{ x: number; y: number; nodeId?: string; edgeId?: string } | null>(null);
@@ -460,6 +461,15 @@ export function CanvasEditorInner({ path }: { path: string }) {
     (event: ReactMouseEvent, edge: { id: string }) => {
       event.preventDefault();
       setElemCtxMenu({ x: event.clientX * uiZoom, y: event.clientY * uiZoom, edgeId: edge.id });
+      setCtxMenu(null);
+    },
+    [uiZoom],
+  );
+
+  const handleSelectionContextMenu = useCallback(
+    (event: ReactMouseEvent) => {
+      event.preventDefault();
+      setElemCtxMenu({ x: event.clientX * uiZoom, y: event.clientY * uiZoom });
       setCtxMenu(null);
     },
     [uiZoom],
@@ -732,6 +742,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   // ── Toolbar: add node at viewport center ────────────────────────────────
   const [toolbarPicker, setToolbarPicker] = useState(false);
   const [toolbarFilter, setToolbarFilter] = useState("");
+  const [toolbarPickerTab, setToolbarPickerTab] = useState<"notes" | "files">("notes");
   const [toolbarShapePicker, setToolbarShapePicker] = useState(false);
 
   const addNodeAtCenter = useCallback(
@@ -794,22 +805,25 @@ export function CanvasEditorInner({ path }: { path: string }) {
     if (!toolbarPicker) return [];
     const lf = toolbarFilter.toLowerCase();
     const results: { path: string; title: string; noteType: string }[] = [];
-    const seen = new Set<string>();
-    allNodes.forEach((n) => {
-      if (n.note_type === "folder") return;
-      seen.add(n.path);
-      if (lf && !n.title.toLowerCase().includes(lf) && !n.path.toLowerCase().includes(lf)) return;
-      results.push({ path: n.path, title: n.title, noteType: n.note_type });
-    });
-    for (const fp of workspaceFiles) {
-      if (seen.has(fp)) continue;
-      const name = fp.split("/").pop() ?? fp;
-      if (lf && !name.toLowerCase().includes(lf) && !fp.toLowerCase().includes(lf)) continue;
-      const ext = name.includes(".") ? name.split(".").pop()! : "file";
-      results.push({ path: fp, title: name, noteType: ext });
+    if (toolbarPickerTab === "notes") {
+      allNodes.forEach((n) => {
+        if (n.note_type === "folder") return;
+        if (lf && !n.title.toLowerCase().includes(lf) && !n.path.toLowerCase().includes(lf)) return;
+        results.push({ path: n.path, title: n.title, noteType: n.note_type });
+      });
+    } else {
+      const graphPaths = new Set<string>();
+      allNodes.forEach((n) => graphPaths.add(n.path));
+      for (const fp of workspaceFiles) {
+        if (graphPaths.has(fp)) continue;
+        const name = fp.split("/").pop() ?? fp;
+        if (lf && !name.toLowerCase().includes(lf) && !fp.toLowerCase().includes(lf)) continue;
+        const ext = name.includes(".") ? name.split(".").pop()! : "file";
+        results.push({ path: fp, title: name, noteType: ext });
+      }
     }
     return results.slice(0, 30);
-  }, [toolbarPicker, toolbarFilter, allNodes, workspaceFiles]);
+  }, [toolbarPicker, toolbarFilter, toolbarPickerTab, allNodes, workspaceFiles]);
 
   // Stable nodeTypes reference (must not change between renders)
   const nodeTypes = useMemo(() => NODE_TYPES, []);
@@ -820,22 +834,25 @@ export function CanvasEditorInner({ path }: { path: string }) {
     if (!showNoteSelect) return [];
     const lf = noteFilter.toLowerCase();
     const results: { path: string; title: string; noteType: string }[] = [];
-    const seen = new Set<string>();
-    allNodes.forEach((n) => {
-      if (n.note_type === "folder") return;
-      seen.add(n.path);
-      if (lf && !n.title.toLowerCase().includes(lf) && !n.path.toLowerCase().includes(lf)) return;
-      results.push({ path: n.path, title: n.title, noteType: n.note_type });
-    });
-    for (const fp of workspaceFiles) {
-      if (seen.has(fp)) continue;
-      const name = fp.split("/").pop() ?? fp;
-      if (lf && !name.toLowerCase().includes(lf) && !fp.toLowerCase().includes(lf)) continue;
-      const ext = name.includes(".") ? name.split(".").pop()! : "file";
-      results.push({ path: fp, title: name, noteType: ext });
+    if (ctxPickerTab === "notes") {
+      allNodes.forEach((n) => {
+        if (n.note_type === "folder") return;
+        if (lf && !n.title.toLowerCase().includes(lf) && !n.path.toLowerCase().includes(lf)) return;
+        results.push({ path: n.path, title: n.title, noteType: n.note_type });
+      });
+    } else {
+      const graphPaths = new Set<string>();
+      allNodes.forEach((n) => graphPaths.add(n.path));
+      for (const fp of workspaceFiles) {
+        if (graphPaths.has(fp)) continue;
+        const name = fp.split("/").pop() ?? fp;
+        if (lf && !name.toLowerCase().includes(lf) && !fp.toLowerCase().includes(lf)) continue;
+        const ext = name.includes(".") ? name.split(".").pop()! : "file";
+        results.push({ path: fp, title: name, noteType: ext });
+      }
     }
     return results.slice(0, 30);
-  }, [showNoteSelect, noteFilter, allNodes, workspaceFiles]);
+  }, [showNoteSelect, noteFilter, ctxPickerTab, allNodes, workspaceFiles]);
 
   if (loading) {
     return (
@@ -871,12 +888,14 @@ export function CanvasEditorInner({ path }: { path: string }) {
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        minZoom={0.1}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
         onPaneContextMenu={handlePaneContextMenu}
         onNodeContextMenu={handleNodeContextMenu}
         onEdgeContextMenu={handleEdgeContextMenu}
+        onSelectionContextMenu={handleSelectionContextMenu}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         colorMode={colorMode}
@@ -1013,10 +1032,24 @@ export function CanvasEditorInner({ path }: { path: string }) {
       )}
       {toolbarPicker && (
         <div className="canvas-toolbar-picker" onClick={(e) => e.stopPropagation()}>
+          <div className="canvas-picker-tabs">
+            <button
+              className={`canvas-picker-tab${toolbarPickerTab === "notes" ? " canvas-picker-tab--active" : ""}`}
+              onClick={() => { setToolbarPickerTab("notes"); setToolbarFilter(""); }}
+            >
+              Notes
+            </button>
+            <button
+              className={`canvas-picker-tab${toolbarPickerTab === "files" ? " canvas-picker-tab--active" : ""}`}
+              onClick={() => { setToolbarPickerTab("files"); setToolbarFilter(""); }}
+            >
+              Files
+            </button>
+          </div>
           <input
             className="canvas-note-picker-input"
             type="text"
-            placeholder="Search notes..."
+            placeholder={toolbarPickerTab === "notes" ? "Search notes..." : "Search files..."}
             value={toolbarFilter}
             onChange={(e) => setToolbarFilter(e.target.value)}
             autoFocus
@@ -1102,10 +1135,24 @@ export function CanvasEditorInner({ path }: { path: string }) {
             </div>
           ) : (
             <div className="canvas-note-picker" onClick={(e) => e.stopPropagation()}>
+              <div className="canvas-picker-tabs">
+                <button
+                  className={`canvas-picker-tab${ctxPickerTab === "notes" ? " canvas-picker-tab--active" : ""}`}
+                  onClick={() => { setCtxPickerTab("notes"); setNoteFilter(""); }}
+                >
+                  Notes
+                </button>
+                <button
+                  className={`canvas-picker-tab${ctxPickerTab === "files" ? " canvas-picker-tab--active" : ""}`}
+                  onClick={() => { setCtxPickerTab("files"); setNoteFilter(""); }}
+                >
+                  Files
+                </button>
+              </div>
               <input
                 className="canvas-note-picker-input"
                 type="text"
-                placeholder="Search notes..."
+                placeholder={ctxPickerTab === "notes" ? "Search notes..." : "Search files..."}
                 value={noteFilter}
                 onChange={(e) => setNoteFilter(e.target.value)}
                 autoFocus
