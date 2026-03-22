@@ -1050,20 +1050,6 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const [linkInputMode, setLinkInputMode] = useState<"toolbar" | "context" | null>(null);
   const [linkInputValue, setLinkInputValue] = useState("");
 
-  const submitLink = useCallback((mode: "toolbar" | "context") => {
-    const url = linkInputValue.trim();
-    if (!url) { setLinkInputMode(null); setLinkInputValue(""); return; }
-    let title: string | undefined;
-    try { title = new URL(url).hostname; } catch { /* invalid */ }
-    if (mode === "context") {
-      addNodeAtMenu("canvasLink", { url, title }, canvasDefaultCardWidth, 60);
-    } else {
-      addNodeAtCenter("canvasLink", { url, title }, canvasDefaultCardWidth, 60);
-    }
-    setLinkInputMode(null);
-    setLinkInputValue("");
-  }, [linkInputValue, addNodeAtMenu, addNodeAtCenter, canvasDefaultCardWidth]);
-
   const addNodeAtCenter = useCallback(
     (type: string, data: Record<string, unknown>, width = canvasDefaultCardWidth, height = canvasDefaultCardHeight) => {
       pushSnapshot();
@@ -1094,6 +1080,20 @@ export function CanvasEditorInner({ path }: { path: string }) {
     },
     [reactFlowInstance, setNodes, scheduleSave, pushSnapshot, canvasDefaultCardWidth, canvasDefaultCardHeight],
   );
+
+  const submitLink = useCallback((mode: "toolbar" | "context") => {
+    const url = linkInputValue.trim();
+    if (!url) { setLinkInputMode(null); setLinkInputValue(""); return; }
+    let title: string | undefined;
+    try { title = new URL(url).hostname; } catch { /* invalid */ }
+    if (mode === "context") {
+      addNodeAtMenu("canvasLink", { url, title }, canvasDefaultCardWidth, 60);
+    } else {
+      addNodeAtCenter("canvasLink", { url, title }, canvasDefaultCardWidth, 60);
+    }
+    setLinkInputMode(null);
+    setLinkInputValue("");
+  }, [linkInputValue, addNodeAtMenu, addNodeAtCenter, canvasDefaultCardWidth]);
 
   // Create a new note via dialog and add it as a file node
   const createNoteForCanvas = useCallback(
