@@ -365,6 +365,7 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
   const d = data as { file?: string; subpath?: string; color?: string; bgColor?: string };
   const filePath = d.file ?? "";
   const node = useGraphStore((s) => s.nodes.get(filePath));
+  const fileExists = useGraphStore((s) => s.workspaceFiles.includes(filePath));
   const panelMode = useCanvasPanelMode();
 
 
@@ -415,7 +416,7 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
           {tags.length > 3 && <span className="canvas-file-node-tag">+{tags.length - 3}</span>}
         </div>
       )}
-      {!node && <div className="canvas-file-node-missing">missing reference</div>}
+      {!node && !fileExists && <div className="canvas-file-node-missing">missing reference</div>}
       <FourHandles />
     </div>
   );
