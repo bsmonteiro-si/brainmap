@@ -124,6 +124,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const canvasGroupFontSize = useUIStore((s) => s.canvasGroupFontSize);
   const canvasSelectionColor = useUIStore((s) => s.canvasSelectionColor);
   const canvasSelectionWidth = useUIStore((s) => s.canvasSelectionWidth);
+  const uiZoom = useUIStore((s) => s.uiZoom);
   const colorMode: ColorMode = canvasTheme;
   const containerClass = `canvas-container${canvasTheme === "light" ? " canvas-light" : ""}`;
   const shapeVars = {
@@ -145,6 +146,16 @@ export function CanvasEditorInner({ path }: { path: string }) {
     "--canvas-selection-color": canvasSelectionColor,
     "--canvas-selection-width": `${canvasSelectionWidth}px`,
   } as React.CSSProperties;
+
+  // Counter-zoom: neutralise the global document.documentElement.style.zoom so
+  // React Flow's coordinate math (getBoundingClientRect vs mouse events) stays
+  // consistent.  Scale width/height up so the container still fills its parent.
+  const counterZoomStyle: React.CSSProperties = useMemo(
+    () => uiZoom !== 1
+      ? { zoom: 1 / uiZoom, width: `${uiZoom * 100}%`, height: `${uiZoom * 100}%` }
+      : {},
+    [uiZoom],
+  );
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedRef = useRef<string>("");
@@ -433,22 +444,25 @@ export function CanvasEditorInner({ path }: { path: string }) {
   // Element context menu (right-click on a node or edge)
   const [elemCtxMenu, setElemCtxMenu] = useState<{ x: number; y: number; nodeId?: string; edgeId?: string } | null>(null);
 
+  // Context menu coords: menus use position:fixed inside the counter-zoomed
+  // container, so the browser divides left/top by the zoom factor — multiply
+  // by uiZoom to compensate.  Must stay in sync with counterZoomStyle.
   const handleNodeContextMenu = useCallback(
     (event: ReactMouseEvent, node: { id: string }) => {
       event.preventDefault();
-      setElemCtxMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
+      setElemCtxMenu({ x: event.clientX * uiZoom, y: event.clientY * uiZoom, nodeId: node.id });
       setCtxMenu(null);
     },
-    [],
+    [uiZoom],
   );
 
   const handleEdgeContextMenu = useCallback(
     (event: ReactMouseEvent, edge: { id: string }) => {
       event.preventDefault();
-      setElemCtxMenu({ x: event.clientX, y: event.clientY, edgeId: edge.id });
+      setElemCtxMenu({ x: event.clientX * uiZoom, y: event.clientY * uiZoom, edgeId: edge.id });
       setCtxMenu(null);
     },
-    [],
+    [uiZoom],
   );
 
   const closeElemCtxMenu = useCallback(() => setElemCtxMenu(null), []);
@@ -579,7 +593,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const n of selected) {
       const w = parseFloat(String(n.style?.width ?? "")) || n.measured?.width || 250;
-      const h = parseFloat(String(n.style?.height ?? "")) || n.measured?.height || 100;
+      const h = parseFloat(String(n.style?.height ?? n.style?.minHeight ?? "")) || n.measured?.height || 100;
       // If node has a parent, its position is relative — convert to absolute
       const absX = n.parentId
         ? n.position.x + (nodesRef.current.find((p) => p.id === n.parentId)?.position.x ?? 0)
@@ -663,12 +677,12 @@ export function CanvasEditorInner({ path }: { path: string }) {
     (event: ReactMouseEvent) => {
       event.preventDefault();
       const flowPos = reactFlowInstance.screenToFlowPosition({ x: event.clientX, y: event.clientY });
-      setCtxMenu({ x: event.clientX, y: event.clientY, flowX: flowPos.x, flowY: flowPos.y });
+      setCtxMenu({ x: event.clientX * uiZoom, y: event.clientY * uiZoom, flowX: flowPos.x, flowY: flowPos.y });
       setElemCtxMenu(null);
       setShowNoteSelect(false);
       setNoteFilter("");
     },
-    [reactFlowInstance],
+    [reactFlowInstance, uiZoom],
   );
 
   const closeCtxMenu = useCallback(() => {
@@ -683,6 +697,9 @@ export function CanvasEditorInner({ path }: { path: string }) {
       if (!ctxMenu) return;
       pushSnapshot();
       const id = `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const useFixedHeight =
+        type === "canvasGroup" ||
+        (type === "canvasText" && (data.shape === "circle" || data.shape === "diamond"));
       setNodes((nds) => [
         ...nds,
         {
@@ -690,7 +707,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
           type,
           position: { x: ctxMenu.flowX, y: ctxMenu.flowY },
           data,
-          style: { width, height },
+          style: useFixedHeight ? { width, height } : { width, minHeight: height },
           ...(type === "canvasGroup" ? { zIndex: -1 } : {}),
         },
       ]);
@@ -710,6 +727,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
 
   // ── Note list for pickers ────────────────────────────────────────────────
   const allNodes = useGraphStore((s) => s.nodes);
+  const workspaceFiles = useGraphStore((s) => s.workspaceFiles);
 
   // ── Toolbar: add node at viewport center ────────────────────────────────
   const [toolbarPicker, setToolbarPicker] = useState(false);
@@ -726,6 +744,9 @@ export function CanvasEditorInner({ path }: { path: string }) {
       const centerX = (-viewport.x + cw / 2) / viewport.zoom;
       const centerY = (-viewport.y + ch / 2) / viewport.zoom;
       const id = `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const useFixedHeight =
+        type === "canvasGroup" ||
+        (type === "canvasText" && (data.shape === "circle" || data.shape === "diamond"));
       setNodes((nds) => [
         ...nds,
         {
@@ -733,7 +754,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
           type,
           position: { x: centerX - width / 2, y: centerY - height / 2 },
           data,
-          style: { width, height },
+          style: useFixedHeight ? { width, height } : { width, minHeight: height },
           ...(type === "canvasGroup" ? { zIndex: -1 } : {}),
         },
       ]);
@@ -759,7 +780,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
           const id = `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
           setNodes((nds) => [
             ...nds,
-            { id, type: "canvasFile", position: { x, y }, data: { file: createdPath }, style: { width: 250, height: 100 } },
+            { id, type: "canvasFile", position: { x, y }, data: { file: createdPath }, style: { width: 250, minHeight: 100 } },
           ]);
           requestAnimationFrame(() => scheduleSave());
         },
@@ -773,13 +794,22 @@ export function CanvasEditorInner({ path }: { path: string }) {
     if (!toolbarPicker) return [];
     const lf = toolbarFilter.toLowerCase();
     const results: { path: string; title: string; noteType: string }[] = [];
+    const seen = new Set<string>();
     allNodes.forEach((n) => {
       if (n.note_type === "folder") return;
+      seen.add(n.path);
       if (lf && !n.title.toLowerCase().includes(lf) && !n.path.toLowerCase().includes(lf)) return;
       results.push({ path: n.path, title: n.title, noteType: n.note_type });
     });
-    return results.slice(0, 20);
-  }, [toolbarPicker, toolbarFilter, allNodes]);
+    for (const fp of workspaceFiles) {
+      if (seen.has(fp)) continue;
+      const name = fp.split("/").pop() ?? fp;
+      if (lf && !name.toLowerCase().includes(lf) && !fp.toLowerCase().includes(lf)) continue;
+      const ext = name.includes(".") ? name.split(".").pop()! : "file";
+      results.push({ path: fp, title: name, noteType: ext });
+    }
+    return results.slice(0, 30);
+  }, [toolbarPicker, toolbarFilter, allNodes, workspaceFiles]);
 
   // Stable nodeTypes reference (must not change between renders)
   const nodeTypes = useMemo(() => NODE_TYPES, []);
@@ -790,13 +820,22 @@ export function CanvasEditorInner({ path }: { path: string }) {
     if (!showNoteSelect) return [];
     const lf = noteFilter.toLowerCase();
     const results: { path: string; title: string; noteType: string }[] = [];
+    const seen = new Set<string>();
     allNodes.forEach((n) => {
       if (n.note_type === "folder") return;
+      seen.add(n.path);
       if (lf && !n.title.toLowerCase().includes(lf) && !n.path.toLowerCase().includes(lf)) return;
       results.push({ path: n.path, title: n.title, noteType: n.note_type });
     });
-    return results.slice(0, 20);
-  }, [showNoteSelect, noteFilter, allNodes]);
+    for (const fp of workspaceFiles) {
+      if (seen.has(fp)) continue;
+      const name = fp.split("/").pop() ?? fp;
+      if (lf && !name.toLowerCase().includes(lf) && !fp.toLowerCase().includes(lf)) continue;
+      const ext = name.includes(".") ? name.split(".").pop()! : "file";
+      results.push({ path: fp, title: name, noteType: ext });
+    }
+    return results.slice(0, 30);
+  }, [showNoteSelect, noteFilter, allNodes, workspaceFiles]);
 
   if (loading) {
     return (
@@ -828,7 +867,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   }
 
   return (
-    <div className={containerClass} style={shapeVars}>
+    <div className={containerClass} style={{ ...shapeVars, ...counterZoomStyle }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

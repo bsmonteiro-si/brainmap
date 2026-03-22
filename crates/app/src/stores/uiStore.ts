@@ -504,7 +504,7 @@ function loadStoredSizes(): PanelSizes {
 
     // Already in per-tab format (values are objects, not numbers)
     if (typeof raw.files === "object" || typeof raw.graph === "object" || typeof raw.search === "object") {
-      result = { files: raw.files, graph: raw.graph, search: raw.search };
+      result = { files: raw.files, graph: raw.graph, search: raw.search, canvas: raw.canvas };
     } else {
       // Migrate old flat keys (content/editor or graph/right) → files sub-object
       const content = raw.content ?? raw.graph;

@@ -25,7 +25,7 @@ describe("canvasToFlow", () => {
     expect(nodes[0].type).toBe("canvasText");
     expect(nodes[0].position).toEqual({ x: 10, y: 20 });
     expect(nodes[0].data).toEqual({ text: "Hello" });
-    expect(nodes[0].style).toEqual({ width: 200, height: 100 });
+    expect(nodes[0].style).toEqual({ width: 200, minHeight: 100 });
   });
 
   it("converts file node", () => {
@@ -275,5 +275,168 @@ describe("round-trip", () => {
     const result = flowToCanvas(nodes, []);
     const n = result.nodes![0];
     expect("shape" in n).toBe(false);
+  });
+
+  it("preserves parentId through round-trip", () => {
+    const original: JsonCanvas = {
+      nodes: [
+        { id: "g1", type: "group", x: 0, y: 0, width: 500, height: 400 },
+        { id: "t1", type: "text", text: "Child", x: 10, y: 10, width: 200, height: 100, parentId: "g1" },
+      ],
+    };
+    const { nodes } = canvasToFlow(original);
+    expect(nodes.find((n) => n.id === "t1")?.parentId).toBe("g1");
+    const result = flowToCanvas(nodes, []);
+    expect(result.nodes!.find((n) => n.id === "t1")?.parentId).toBe("g1");
+  });
+});
+
+describe("auto-height (minHeight)", () => {
+  it("canvasToFlow sets minHeight for text rectangle nodes", () => {
+    const canvas: JsonCanvas = {
+      nodes: [{ id: "t1", type: "text", text: "Hello", x: 0, y: 0, width: 200, height: 100 }],
+    };
+    const { nodes } = canvasToFlow(canvas);
+    expect(nodes[0].style).toEqual({ width: 200, minHeight: 100 });
+  });
+
+  it("canvasToFlow sets minHeight for sticky nodes", () => {
+    const canvas: JsonCanvas = {
+      nodes: [{ id: "t1", type: "text", text: "Note", shape: "sticky", x: 0, y: 0, width: 200, height: 200 }],
+    };
+    const { nodes } = canvasToFlow(canvas);
+    expect(nodes[0].style).toEqual({ width: 200, minHeight: 200 });
+  });
+
+  it("canvasToFlow sets fixed height for circle nodes", () => {
+    const canvas: JsonCanvas = {
+      nodes: [{ id: "t1", type: "text", text: "Circle", shape: "circle", x: 0, y: 0, width: 160, height: 160 }],
+    };
+    const { nodes } = canvasToFlow(canvas);
+    expect(nodes[0].style).toEqual({ width: 160, height: 160 });
+  });
+
+  it("canvasToFlow sets fixed height for diamond nodes", () => {
+    const canvas: JsonCanvas = {
+      nodes: [{ id: "t1", type: "text", text: "Diamond", shape: "diamond", x: 0, y: 0, width: 160, height: 160 }],
+    };
+    const { nodes } = canvasToFlow(canvas);
+    expect(nodes[0].style).toEqual({ width: 160, height: 160 });
+  });
+
+  it("canvasToFlow sets fixed height for group nodes", () => {
+    const canvas: JsonCanvas = {
+      nodes: [{ id: "g1", type: "group", x: 0, y: 0, width: 400, height: 300 }],
+    };
+    const { nodes } = canvasToFlow(canvas);
+    expect(nodes[0].style).toEqual({ width: 400, height: 300 });
+  });
+
+  it("canvasToFlow sets minHeight for file nodes", () => {
+    const canvas: JsonCanvas = {
+      nodes: [{ id: "f1", type: "file", file: "test.md", x: 0, y: 0, width: 250, height: 80 }],
+    };
+    const { nodes } = canvasToFlow(canvas);
+    expect(nodes[0].style).toEqual({ width: 250, minHeight: 80 });
+  });
+
+  it("canvasToFlow sets minHeight for link nodes", () => {
+    const canvas: JsonCanvas = {
+      nodes: [{ id: "l1", type: "link", url: "https://example.com", x: 0, y: 0, width: 200, height: 60 }],
+    };
+    const { nodes } = canvasToFlow(canvas);
+    expect(nodes[0].style).toEqual({ width: 200, minHeight: 60 });
+  });
+
+  it("flowToCanvas reads minHeight when style.height is absent", () => {
+    const canvas = flowToCanvas(
+      [{ id: "t1", type: "canvasText", position: { x: 0, y: 0 }, data: { text: "Hi" }, style: { width: 200, minHeight: 100 } }],
+      [],
+    );
+    expect(canvas.nodes![0].height).toBe(100);
+  });
+
+  it("flowToCanvas uses measured.height when larger than minHeight", () => {
+    const canvas = flowToCanvas(
+      [{
+        id: "t1",
+        type: "canvasText",
+        position: { x: 0, y: 0 },
+        data: { text: "Long text" },
+        style: { width: 200, minHeight: 100 },
+        measured: { width: 200, height: 250 },
+      }],
+      [],
+    );
+    expect(canvas.nodes![0].height).toBe(250);
+  });
+
+  it("flowToCanvas uses minHeight when measured.height is smaller", () => {
+    const canvas = flowToCanvas(
+      [{
+        id: "t1",
+        type: "canvasText",
+        position: { x: 0, y: 0 },
+        data: { text: "Short" },
+        style: { width: 200, minHeight: 150 },
+        measured: { width: 200, height: 80 },
+      }],
+      [],
+    );
+    expect(canvas.nodes![0].height).toBe(150);
+  });
+
+  it("round-trip preserves height for auto-expanding text node", () => {
+    const original: JsonCanvas = {
+      nodes: [{ id: "t1", type: "text", text: "Hello", x: 10, y: 20, width: 200, height: 100 }],
+    };
+    const { nodes } = canvasToFlow(original);
+    const result = flowToCanvas(nodes, []);
+    expect(result.nodes![0].height).toBe(100);
+  });
+
+  it("round-trip preserves height for circle node", () => {
+    const original: JsonCanvas = {
+      nodes: [{ id: "c1", type: "text", text: "O", shape: "circle", x: 0, y: 0, width: 160, height: 160 }],
+    };
+    const { nodes } = canvasToFlow(original);
+    const result = flowToCanvas(nodes, []);
+    expect(result.nodes![0].height).toBe(160);
+  });
+});
+
+describe("flowToCanvas node.width/height priority", () => {
+  it("prefers node.width/height over style dimensions", () => {
+    const canvas = flowToCanvas(
+      [{
+        id: "r1",
+        type: "canvasText",
+        position: { x: 0, y: 0 },
+        data: { text: "Resized" },
+        width: 400,
+        height: 300,
+        style: { width: 200, height: 100 },
+      }],
+      [],
+    );
+    const n = canvas.nodes![0];
+    expect(n.width).toBe(400);
+    expect(n.height).toBe(300);
+  });
+
+  it("falls back to style when node.width/height absent", () => {
+    const canvas = flowToCanvas(
+      [{
+        id: "r2",
+        type: "canvasText",
+        position: { x: 0, y: 0 },
+        data: { text: "Original" },
+        style: { width: 200, height: 100 },
+      }],
+      [],
+    );
+    const n = canvas.nodes![0];
+    expect(n.width).toBe(200);
+    expect(n.height).toBe(100);
   });
 });

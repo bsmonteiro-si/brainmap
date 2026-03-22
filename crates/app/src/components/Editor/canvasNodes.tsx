@@ -1,9 +1,9 @@
-import { memo, useState, useRef, useEffect } from "react";
+import { memo, useState, useRef, useEffect, useCallback } from "react";
 import {
   Handle, Position, NodeResizer, NodeToolbar,
-  BaseEdge, EdgeLabelRenderer, getBezierPath, useReactFlow,
+  BaseEdge, EdgeLabelRenderer, getBezierPath, useReactFlow, useStore,
 } from "@xyflow/react";
-import type { NodeProps, EdgeProps } from "@xyflow/react";
+import type { NodeProps, EdgeProps, ReactFlowState } from "@xyflow/react";
 import { Trash2, Palette, Paintbrush, PenLine, Shapes, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, AlignStartVertical, AlignCenterVertical, AlignEndVertical } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES, getShapeDefinition } from "./canvasShapes";
@@ -104,11 +104,15 @@ function FourHandles() {
 
 // ── Node toolbar (delete + color) ─────────────────────────────────────────────
 
+const selectSelectedCount = (s: ReactFlowState) =>
+  Array.from(s.nodeLookup.values()).filter((n) => n.selected).length;
+
 function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlign, textVAlign }: {
   id: string; selected: boolean; shape?: string;
   fontSize?: number; fontFamily?: string; textAlign?: string; textVAlign?: string;
 }) {
   const { setNodes, setEdges } = useReactFlow();
+  const selectedCount = useStore(selectSelectedCount);
   const [showColors, setShowColors] = useState(false);
   const [showBgColors, setShowBgColors] = useState(false);
   const [showShapes, setShowShapes] = useState(false);
@@ -165,7 +169,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
   };
 
   return (
-    <NodeToolbar isVisible={selected} position={Position.Top} offset={8}>
+    <NodeToolbar isVisible={selected && selectedCount <= 1} position={Position.Top} offset={8}>
       <div className="canvas-node-toolbar">
         <button
           className="canvas-node-toolbar-btn"
@@ -218,7 +222,21 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
                       className={`canvas-shape-picker-btn${active ? " canvas-shape-picker-btn--active" : ""}`}
                       title={s.label}
                       onClick={() => {
-                        setNodeData({ shape: s.id });
+                        const isFixed = s.id === "circle" || s.id === "diamond";
+                        setNodes((nds) => nds.map((n) => {
+                          if (n.id !== id) return n;
+                          const st = (n.style ?? {}) as Record<string, unknown>;
+                          const newData = { ...n.data, shape: s.id };
+                          if (isFixed && typeof st.minHeight === "number") {
+                            const { minHeight: mh, ...rest } = st;
+                            return { ...n, data: newData, style: { ...rest, height: mh } };
+                          }
+                          if (!isFixed && typeof st.height === "number") {
+                            const { height: h, ...rest } = st;
+                            return { ...n, data: newData, style: { ...rest, minHeight: h } };
+                          }
+                          return { ...n, data: newData };
+                        }));
                         setShowShapes(false);
                       }}
                     >
@@ -311,7 +329,24 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
 
 // ── Resizer (always rendered, visible on hover via CSS) ───────────────────────
 
-function Resizer({ selected, minWidth = 120, minHeight = 40 }: { selected: boolean; minWidth?: number; minHeight?: number }) {
+function Resizer({ id, selected, minWidth = 120, minHeight = 40, autoHeight = false }: {
+  id: string; selected: boolean; minWidth?: number; minHeight?: number; autoHeight?: boolean;
+}) {
+  const { setNodes } = useReactFlow();
+
+  // When autoHeight is enabled, NodeResizer sets style.height during resize.
+  // Convert it back to minHeight so the node can still auto-expand for content.
+  const handleResizeEnd = useCallback(() => {
+    if (!autoHeight) return;
+    setNodes((nds) => nds.map((n) => {
+      if (n.id !== id) return n;
+      const style = (n.style ?? {}) as Record<string, unknown>;
+      if (typeof style.height !== "number") return n;
+      const { height, ...rest } = style;
+      return { ...n, style: { ...rest, minHeight: height } };
+    }));
+  }, [id, autoHeight, setNodes]);
+
   return (
     <NodeResizer
       isVisible={selected}
@@ -319,6 +354,7 @@ function Resizer({ selected, minWidth = 120, minHeight = 40 }: { selected: boole
       minHeight={minHeight}
       lineClassName="canvas-resize-line"
       handleClassName="canvas-resize-handle"
+      onResizeEnd={autoHeight ? handleResizeEnd : undefined}
     />
   );
 }
@@ -358,7 +394,7 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
       style={{ borderLeftColor: borderColor, ...(d.bgColor ? { backgroundColor: d.bgColor } : {}) }}
       onDoubleClick={openFile}
     >
-      <Resizer selected={selected} minWidth={150} minHeight={50} />
+      <Resizer id={id} selected={selected} minWidth={150} minHeight={50} autoHeight />
       <CanvasNodeToolbar id={id} selected={selected} />
       <div className="canvas-file-node-header">
         <span className="canvas-file-node-title">{title}</span>
@@ -443,6 +479,7 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
   };
 
   const isSticky = (d.shape || "rectangle") === "sticky";
+  const isFixedShape = (d.shape || "rectangle") === "circle" || (d.shape || "rectangle") === "diamond";
   const stickyPin = useUIStore((s) => s.canvasStickyPin);
   const stickyTape = useUIStore((s) => s.canvasStickyTape);
   const stickyLines = useUIStore((s) => s.canvasStickyLines);
@@ -459,13 +496,13 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
       style={{ ...(borderColor ? { borderColor } : {}), ...(d.bgColor ? { backgroundColor: d.bgColor } : {}) }}
       onDoubleClick={() => { setEditValue(text); setEditing(true); }}
     >
-      <Resizer selected={selected} />
+      <Resizer id={id} selected={selected} autoHeight={!isFixedShape} />
       <CanvasNodeToolbar id={id} selected={selected} shape={d.shape ?? "rectangle"} fontSize={d.fontSize} fontFamily={d.fontFamily} textAlign={d.textAlign} textVAlign={d.textVAlign} />
       {editing ? (
         <div className="canvas-text-node-body" style={bodyStyle}>
           <textarea
             ref={textareaRef}
-            className="canvas-text-node-edit"
+            className="canvas-text-node-edit nodrag"
             style={textStyles}
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
@@ -501,7 +538,7 @@ function CanvasLinkNodeInner({ id, data, selected }: NodeProps) {
 
   return (
     <div className="canvas-link-node" style={{ ...(d.color ? { borderColor: d.color } : {}), ...(d.bgColor ? { backgroundColor: d.bgColor } : {}) }}>
-      <Resizer selected={selected} />
+      <Resizer id={id} selected={selected} autoHeight />
       <CanvasNodeToolbar id={id} selected={selected} />
       <span className="canvas-link-node-url" title={url}>{displayUrl}</span>
       <FourHandles />
@@ -560,13 +597,13 @@ function CanvasGroupNodeInner({ id, data, selected }: NodeProps) {
 
   return (
     <div className="canvas-group-node" style={{ backgroundColor: bgColor }}>
-      <Resizer selected={selected} minWidth={200} minHeight={150} />
+      <Resizer id={id} selected={selected} minWidth={200} minHeight={150} />
       <CanvasNodeToolbar id={id} selected={selected} />
       <div className="canvas-group-node-label" style={d.color ? { color: d.color } : undefined} onDoubleClick={startEditing}>
         {editing ? (
           <input
             ref={inputRef}
-            className="canvas-group-node-label-edit"
+            className="canvas-group-node-label-edit nodrag"
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -719,7 +756,7 @@ function CanvasEdgeInner({
           >
             <input
               ref={inputRef}
-              className="canvas-edge-label-input"
+              className="canvas-edge-label-input nodrag"
               type="text"
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}

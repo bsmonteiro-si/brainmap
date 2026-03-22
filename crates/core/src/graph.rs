@@ -379,10 +379,11 @@ impl Graph {
             }
         }
 
-        // 6. Every edge with rel == "contains" has a source node with note_type == "folder"
+        // 6. Every implicit "contains" edge has a source node with note_type == "folder"
+        //    (User-authored "contains" links from frontmatter are allowed from any node type)
         for edges in self.outgoing.values() {
             for edge in edges {
-                if edge.rel == "contains" {
+                if edge.rel == "contains" && edge.kind == EdgeKind::Implicit {
                     let source_node = self.nodes.get(&edge.source);
                     assert!(
                         source_node.is_some(),

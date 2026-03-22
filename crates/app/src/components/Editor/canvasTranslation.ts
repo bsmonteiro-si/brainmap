@@ -132,9 +132,23 @@ export function canvasToFlow(canvas: JsonCanvas): { nodes: Node[]; edges: Edge[]
     };
   });
 
-  // React Flow requires parent nodes to precede children in the array
-  const parentIds = new Set(nodes.filter((n) => n.parentId).map((n) => n.parentId!));
-  if (parentIds.size > 0) {
+  // Convert absolute JSON positions to parent-relative for parented nodes
+  // and ensure parent nodes precede children in the array (React Flow requirement)
+  const hasParented = nodes.some((n) => n.parentId);
+  if (hasParented) {
+    const nodeById = new Map(nodes.map((n) => [n.id, n]));
+    for (const n of nodes) {
+      if (n.parentId) {
+        const parent = nodeById.get(n.parentId);
+        if (parent) {
+          n.position = {
+            x: n.position.x - parent.position.x,
+            y: n.position.y - parent.position.y,
+          };
+        }
+      }
+    }
+    const parentIds = new Set(nodes.filter((n) => n.parentId).map((n) => n.parentId!));
     const parents = nodes.filter((n) => parentIds.has(n.id));
     const rest = nodes.filter((n) => !parentIds.has(n.id));
     nodes.length = 0;
@@ -172,17 +186,31 @@ export function canvasToFlow(canvas: JsonCanvas): { nodes: Node[]; edges: Edge[]
 // ── React Flow → JSON Canvas ──────────────────────────────────────────────────
 
 export function flowToCanvas(nodes: Node[], edges: Edge[]): JsonCanvas {
+  // Build parent position lookup for converting relative→absolute positions
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+
   const canvasNodes: JsonCanvasNode[] = nodes.map((n) => {
     const canvasType = (RF_TO_CANVAS_TYPE[n.type ?? ""] ?? "text") as JsonCanvasNode["type"];
     const data = n.data as Record<string, unknown>;
     const style = (n.style ?? {}) as Record<string, unknown>;
     const measured = (n.measured ?? {}) as Record<string, number>;
 
+    // Convert relative positions to absolute for JSON Canvas interop
+    let absX = n.position.x;
+    let absY = n.position.y;
+    if (n.parentId) {
+      const parent = nodeById.get(n.parentId);
+      if (parent) {
+        absX += parent.position.x;
+        absY += parent.position.y;
+      }
+    }
+
     const base: JsonCanvasNodeBase = {
       id: n.id,
       type: canvasType,
-      x: Math.round(n.position.x),
-      y: Math.round(n.position.y),
+      x: Math.round(absX),
+      y: Math.round(absY),
       width: Math.round(
         (typeof n.width === "number" ? n.width : null) ??
         (typeof style.width === "number" ? style.width : null) ??
@@ -190,10 +218,13 @@ export function flowToCanvas(nodes: Node[], edges: Edge[]): JsonCanvas {
         250,
       ),
       height: Math.round(
-        (typeof n.height === "number" ? n.height : null) ??
-        (typeof style.height === "number" ? style.height : null) ??
-        measured.height ??
-        100,
+        Math.max(
+          measured.height ?? 0,
+          (typeof n.height === "number" ? n.height : null) ??
+          (typeof style.height === "number" ? style.height : null) ??
+          (typeof style.minHeight === "number" ? style.minHeight : null) ??
+          100,
+        ),
       ),
     };
 

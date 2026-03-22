@@ -5029,9 +5029,8 @@ body {
   border-radius: 6px;
   padding: 10px 12px;
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   box-sizing: border-box;
-  cursor: default;
 }
 
 .canvas-file-node-header {
@@ -5089,7 +5088,7 @@ body {
   border-radius: 6px;
   padding: 10px 12px;
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -5288,13 +5287,20 @@ body {
   filter: drop-shadow(0 0 1px var(--border-color));
 }
 
+/* Circle and diamond keep fixed height (aspect-ratio shapes) */
+.canvas-text-node[data-shape="circle"],
+.canvas-text-node[data-shape="diamond"] {
+  height: 100%;
+  min-height: unset;
+}
+
 .canvas-link-node {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 8px 12px;
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   box-sizing: border-box;
 }
 
