@@ -11,6 +11,7 @@ import {
   useReactFlow,
   ReactFlowProvider,
   SelectionMode,
+  useNodesInitialized,
 } from "@xyflow/react";
 import type { OnConnect, ColorMode, Viewport } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -195,6 +196,11 @@ export function CanvasEditorInner({ path }: { path: string }) {
 
   const selectedCount = useMemo(() => nodes.filter((n) => n.selected).length, [nodes]);
 
+  // Pending viewport to restore after React Flow initializes
+  const pendingViewportRef = useRef<Viewport | "fitView" | null>(null);
+  const nodesInitialized = useNodesInitialized();
+  const hasRestoredViewportRef = useRef(false);
+
   // ── Undo/Redo stacks ─────────────────────────────────────────────────────
   const MAX_CANVAS_UNDO = 30;
   const undoStackRef = useRef<{ nodes: string; edges: string }[]>([]);
@@ -236,18 +242,9 @@ export function CanvasEditorInner({ path }: { path: string }) {
           } catch {
             lastSavedRef.current = "";
           }
-          // Restore saved viewport after nodes render, or fit to content
+          // Queue viewport restore — applied once nodes are initialized
           const savedVp = savedViewports.get(path);
-          requestAnimationFrame(() => {
-            if (cancelled) return;
-            try {
-              if (savedVp) {
-                reactFlowInstance.setViewport(savedVp);
-              } else {
-                reactFlowInstance.fitView({ padding: 0.2 });
-              }
-            } catch { /* instance may be unmounted */ }
-          });
+          pendingViewportRef.current = savedVp ?? "fitView";
         } catch {
           setError("Could not parse canvas file. The file may be corrupted or not valid JSON Canvas.");
         }
@@ -260,8 +257,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
       });
 
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- reactFlowInstance is stable
-  }, [path, setNodes, setEdges, reactFlowInstance]);
+  }, [path, setNodes, setEdges]);
 
   // Save function
   const doSave = useCallback(async () => {
@@ -416,6 +412,28 @@ export function CanvasEditorInner({ path }: { path: string }) {
     return () => window.removeEventListener("keydown", handler, true);
   }, [canvasUndo, canvasRedo]);
 
+  // Restore viewport once nodes are measured (or immediately for empty canvas)
+  useEffect(() => {
+    if (hasRestoredViewportRef.current) return;
+    const vp = pendingViewportRef.current;
+    if (!vp) return; // async load hasn't completed yet
+
+    if (nodes.length > 0 && !nodesInitialized) return; // wait for measurement
+
+    hasRestoredViewportRef.current = true;
+    pendingViewportRef.current = null;
+
+    requestAnimationFrame(() => {
+      try {
+        if (vp === "fitView") {
+          reactFlowInstance.fitView({ padding: 0.2 });
+        } else {
+          reactFlowInstance.setViewport(vp);
+        }
+      } catch { /* unmounted */ }
+    });
+  }, [nodesInitialized, nodes.length, reactFlowInstance]);
+
   // Wire change handlers to trigger save + undo snapshots
   const handleNodesChange: typeof onNodesChange = useCallback(
     (changes) => {
@@ -476,6 +494,9 @@ export function CanvasEditorInner({ path }: { path: string }) {
   // Save viewport on unmount so zoom/pan is preserved across tab switches
   useEffect(() => {
     return () => {
+      // Only persist if we actually restored/interacted — otherwise a transient
+      // mount/unmount cycle would overwrite the real viewport with {0,0,1}.
+      if (!hasRestoredViewportRef.current) return;
       try { persistViewport(path, reactFlowInstance.getViewport()); } catch { /* unmounted */ }
     };
   }, [path, reactFlowInstance]);
@@ -940,6 +961,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
         onPaneClick={() => { setToolbarPicker(false); setToolbarShapePicker(false); }}
         onPaneContextMenu={handlePaneContextMenu}
         onNodeContextMenu={handleNodeContextMenu}
+
         onEdgeContextMenu={handleEdgeContextMenu}
         onSelectionContextMenu={handleSelectionContextMenu}
         onSelectionStart={() => setSelecting(true)}

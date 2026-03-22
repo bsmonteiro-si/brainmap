@@ -34,6 +34,14 @@ Frontmatter: `title`, `type`, `tags`, `status`, `created`, `modified`, `source`,
 
 `BRAINMAP_LOG` env (tracing EnvFilter). Defaults: CLI=warn, MCP=info, Tauri=`info,frontend=debug`. Logs: `~/.brainmap/logs/` (backend + frontend). Frontend logs are forwarded to backend via `write_log` Tauri command (tracing target `frontend`, original component in `origin` field). All frontend log levels including `debug` are persisted to the log file. Frontend: `import { log } from "../utils/logger"`. **Check logs first** when debugging — frontend issues are in the same log file. See `docs/logging.md`.
 
+### Frontend Logger API
+
+Signature: `log.level(target, msg, fields?)` where level is `error`/`warn`/`info`/`debug`. Example: `log.debug("canvas::viewport", "restore complete", { x: vp.x, y: vp.y, zoom: vp.zoom })`. Never use `console.log`/`console.debug` — they don't reach the log file.
+
+### Debugging Workflow
+
+When adding debug logs for troubleshooting: use `log.debug(target, msg, fields?)`. Read results yourself via `grep pattern ~/.brainmap/logs/brainmap.log.YYYY-MM-DD` — never ask the user to check logs. You are always responsible for fetching and analyzing log output.
+
 ## Reference Docs
 
 **Before implementing**, check `docs/extension-guides/` for step-by-step recipes: `add-callout-type`, `add-inline-command`, `add-cli-command`, `add-cm-preview-widget`, `add-edge-type`, `add-file-type-editor`, `add-mcp-tool`, `add-note-type`, `add-panel-tab`, `add-tauri-command`, `add-zustand-store`. Follow the guide if one matches your task. **Before making architectural decisions**, check `docs/decisions/` for prior ADRs. Error recovery: `docs/error-recovery.md`. Changelog: `docs/CHANGELOG.md`.
