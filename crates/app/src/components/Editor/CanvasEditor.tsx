@@ -23,7 +23,7 @@ import { useUIStore } from "../../stores/uiStore";
 import { log } from "../../utils/logger";
 import { canvasToFlow, flowToCanvas } from "./canvasTranslation";
 import type { JsonCanvas } from "./canvasTranslation";
-import { StickyNote, FileText, FilePlus, Layers, ChevronDown, ChevronRight, MousePointer2, Hand, Group, Trash2, Copy, Ungroup, PanelRightOpen, Search, GripVertical, Folder, FolderOpen } from "lucide-react";
+import { StickyNote, FileText, FilePlus, Layers, ChevronDown, ChevronRight, MousePointer2, Hand, Group, Trash2, Copy, Ungroup, PanelRightOpen, Search, GripVertical, Folder, FolderOpen, HelpCircle } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES } from "./canvasShapes";
 import { useGraphStore } from "../../stores/graphStore";
@@ -176,6 +176,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const [error, setError] = useState<string | null>(null);
   const [interactionMode, setInteractionMode] = useState<"pan" | "select">("pan");
   const [selecting, setSelecting] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const canvasTheme = useUIStore((s) => s.canvasTheme);
   const canvasDotOpacity = useUIStore((s) => s.canvasDotOpacity);
@@ -557,6 +559,12 @@ export function CanvasEditorInner({ path }: { path: string }) {
     };
   }, [path, reactFlowInstance]);
 
+  // Track zoom level for the toolbar indicator
+  useEffect(() => {
+    // Sync initial zoom after viewport restore
+    try { setZoomLevel(reactFlowInstance.getViewport().zoom); } catch { /* not ready */ }
+  }, [nodesInitialized, reactFlowInstance]);
+
   // ── Context menu for adding nodes ────────────────────────────────────────
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; flowX: number; flowY: number } | null>(null);
   const [showNoteSelect, setShowNoteSelect] = useState(false);
@@ -710,6 +718,23 @@ export function CanvasEditorInner({ path }: { path: string }) {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "v") setInteractionMode("select");
       else if (e.key === "h") setInteractionMode("pan");
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  // Cmd+/ or ? to toggle keyboard shortcuts overlay
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("textarea, input, [contenteditable]")) return;
+      if ((e.metaKey || e.ctrlKey) && e.key === "/") {
+        e.preventDefault();
+        setShowShortcuts((s) => !s);
+      } else if (e.key === "?" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        setShowShortcuts((s) => !s);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -1191,6 +1216,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
         snapGrid={[canvasSnapGridSize, canvasSnapGridSize]}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
+        onViewportChange={(vp) => setZoomLevel(vp.zoom)}
       >
         {/* Custom arrow markers — one per edge color + default */}
         <svg style={{ position: "absolute", width: 0, height: 0 }}>
@@ -1331,6 +1357,25 @@ export function CanvasEditorInner({ path }: { path: string }) {
             onClick={() => setFileBrowserOpen(!fileBrowserOpen)}
           >
             <PanelRightOpen size={22} />
+          </button>
+          <div className="canvas-toolbar-separator" />
+          <button
+            className="canvas-toolbar-zoom"
+            title="Click to reset zoom to 100%"
+            onClick={() => {
+              const vp = reactFlowInstance.getViewport();
+              reactFlowInstance.setViewport({ ...vp, zoom: 1 });
+              setZoomLevel(1);
+            }}
+          >
+            {Math.round(zoomLevel * 100)}%
+          </button>
+          <button
+            className={`canvas-toolbar-btn canvas-toolbar-btn--small${showShortcuts ? " canvas-toolbar-btn--active" : ""}`}
+            title="Keyboard shortcuts (?)"
+            onClick={() => setShowShortcuts(!showShortcuts)}
+          >
+            <HelpCircle size={18} />
           </button>
         </Panel>
       </ReactFlow>
@@ -1533,6 +1578,27 @@ export function CanvasEditorInner({ path }: { path: string }) {
           </div>
         );
       })()}
+      {showShortcuts && (
+        <div className="canvas-shortcuts-overlay" onClick={() => setShowShortcuts(false)}>
+          <div className="canvas-shortcuts-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="canvas-shortcuts-title">Keyboard Shortcuts</div>
+            <div className="canvas-shortcuts-grid">
+              <kbd>H</kbd><span>Pan mode</span>
+              <kbd>V</kbd><span>Select mode</span>
+              <kbd>Space</kbd><span>Hold for temporary pan</span>
+              <kbd>⌘Z</kbd><span>Undo</span>
+              <kbd>⌘Y</kbd><span>Redo</span>
+              <kbd>⌘D</kbd><span>Duplicate selected</span>
+              <kbd>⌘C</kbd><span>Copy selected</span>
+              <kbd>⌘V</kbd><span>Paste</span>
+              <kbd>⌘S</kbd><span>Save</span>
+              <kbd>⌫</kbd><span>Delete selected</span>
+              <kbd>⌘/</kbd><span>Toggle this panel</span>
+            </div>
+            <button className="canvas-shortcuts-close" onClick={() => setShowShortcuts(false)}>Close</button>
+          </div>
+        </div>
+      )}
       {fileBrowserOpen && (
         <div
           className="canvas-file-browser"

@@ -4878,6 +4878,88 @@ body {
     0 calc(var(--canvas-node-shadow) * 0.5px) calc(var(--canvas-node-shadow) * 2px) rgba(0, 0, 0, 0.2);
 }
 
+/* ── Zoom Indicator ────────────────────────────────────────────── */
+.canvas-toolbar-zoom {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  min-width: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.canvas-toolbar-zoom:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.canvas-toolbar-btn--small {
+  padding: 4px !important;
+}
+
+/* ── Shortcuts Overlay ─────────────────────────────────────────── */
+.canvas-shortcuts-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+.canvas-shortcuts-panel {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 20px 28px;
+  min-width: 280px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+.canvas-shortcuts-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  color: var(--text-primary);
+}
+.canvas-shortcuts-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  align-items: center;
+}
+.canvas-shortcuts-grid kbd {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  min-width: 28px;
+  text-align: center;
+  color: var(--text-primary);
+}
+.canvas-shortcuts-grid span {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.canvas-shortcuts-close {
+  margin-top: 16px;
+  width: 100%;
+  padding: 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+}
+.canvas-shortcuts-close:hover {
+  background: var(--bg-hover);
+}
+
 /* ── File Browser Drawer ───────────────────────────────────────── */
 .canvas-file-browser {
   position: absolute;

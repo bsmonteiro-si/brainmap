@@ -216,6 +216,11 @@ Located at `Panel position="bottom-center"`:
 5. **Add group** (Layers icon)
 6. Separator
 7. **Create new note** (FilePlus icon) — opens CreateNoteDialog
+8. Separator
+9. **File browser** (PanelRightOpen icon) — toggles right-side file browser drawer
+10. Separator
+11. **Zoom indicator** — shows current zoom %, click to reset to 100%
+12. **Help** (HelpCircle icon) — toggles keyboard shortcuts overlay
 
 ## Selection Toolbar
 
@@ -234,6 +239,7 @@ Appears above selected nodes when `selectedCount >= 2` and not during selection 
 | Cmd+Y / Cmd+Shift+Z | Redo | Capture phase; not in textarea/input |
 | Cmd+D | Duplicate selected | Global |
 | Cmd+S | Save (via custom event) | Handled by App.tsx |
+| Cmd+/ or ? | Toggle keyboard shortcuts overlay | Not in textarea/input/contenteditable |
 | Backspace / Delete | Delete selected | React Flow built-in `deleteKeyCode` |
 
 ## Counter-Zoom Pattern
