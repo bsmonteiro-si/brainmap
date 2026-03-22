@@ -505,7 +505,6 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
   const isFixedShape = (d.shape || "rectangle") === "circle" || (d.shape || "rectangle") === "diamond";
   const stickyPin = useUIStore((s) => s.canvasStickyPin);
   const stickyTape = useUIStore((s) => s.canvasStickyTape);
-  const stickyLines = useUIStore((s) => s.canvasStickyLines);
 
   return (
     <div
@@ -514,7 +513,6 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
       {...(isSticky ? {
         "data-sticky-pin": stickyPin ? "true" : undefined,
         "data-sticky-tape": stickyTape ? "true" : undefined,
-        "data-sticky-lines": stickyLines ? "true" : undefined,
       } : {})}
       style={{ ...(borderColor ? { borderColor } : {}), ...(d.bgColor ? { backgroundColor: d.bgColor } : {}) }}
       onDoubleClick={() => { setEditValue(text); setEditing(true); }}

@@ -1110,38 +1110,53 @@ export function SettingsModal() {
             Show tape
           </label>
         </div>
-        <div className="settings-row" style={{ alignItems: "center" }}>
+        <div className="settings-row">
           <span className="settings-label">Paper lines</span>
-          <label className="settings-checkbox-label">
-            <input
-              type="checkbox"
-              checked={canvasStickyLines}
-              onChange={(e) => setCanvasStickyLines(e.target.checked)}
-            />
-            Show ruled lines
-          </label>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={0}
+                max={20}
+                step={1}
+                value={canvasStickyLines}
+                onChange={(e) => setCanvasStickyLines(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasStickyLines === 0 ? "Off" : canvasStickyLines}</span>
+            </div>
+          </div>
         </div>
-        <div className="settings-row" style={{ alignItems: "center" }}>
+        <div className="settings-row">
           <span className="settings-label">Bottom curl</span>
-          <label className="settings-checkbox-label">
-            <input
-              type="checkbox"
-              checked={canvasStickyCurl}
-              onChange={(e) => setCanvasStickyCurl(e.target.checked)}
-            />
-            Curled bottom edge
-          </label>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={0}
+                max={15}
+                step={1}
+                value={canvasStickyCurl}
+                onChange={(e) => setCanvasStickyCurl(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasStickyCurl === 0 ? "Off" : `${canvasStickyCurl}px`}</span>
+            </div>
+          </div>
         </div>
-        <div className="settings-row" style={{ alignItems: "center" }}>
+        <div className="settings-row">
           <span className="settings-label">Top stripe</span>
-          <label className="settings-checkbox-label">
-            <input
-              type="checkbox"
-              checked={canvasStickyStripe}
-              onChange={(e) => setCanvasStickyStripe(e.target.checked)}
-            />
-            Adhesive stripe
-          </label>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={0}
+                max={16}
+                step={1}
+                value={canvasStickyStripe}
+                onChange={(e) => setCanvasStickyStripe(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasStickyStripe === 0 ? "Off" : `${canvasStickyStripe}px`}</span>
+            </div>
+          </div>
         </div>
         <div className="settings-row">
           <span className="settings-label">Rounded radius</span>
