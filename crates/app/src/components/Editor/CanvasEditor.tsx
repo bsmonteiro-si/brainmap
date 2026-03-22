@@ -235,6 +235,18 @@ export function CanvasEditorInner({ path }: { path: string }) {
           } catch {
             lastSavedRef.current = "";
           }
+          // Restore saved viewport after nodes render, or fit to content
+          const savedVp = savedViewports.get(path);
+          requestAnimationFrame(() => {
+            if (cancelled) return;
+            try {
+              if (savedVp) {
+                reactFlowInstance.setViewport(savedVp);
+              } else {
+                reactFlowInstance.fitView({ padding: 0.2 });
+              }
+            } catch { /* instance may be unmounted */ }
+          });
         } catch {
           setError("Could not parse canvas file. The file may be corrupted or not valid JSON Canvas.");
         }
@@ -940,10 +952,6 @@ export function CanvasEditorInner({ path }: { path: string }) {
         selectionMode={SelectionMode.Partial}
         deleteKeyCode={["Backspace", "Delete"]}
         elevateNodesOnSelect={false}
-        {...(savedViewports.has(path)
-          ? { defaultViewport: savedViewports.get(path) }
-          : { fitView: true, fitViewOptions: { padding: 0.2 } }
-        )}
         defaultEdgeOptions={{ markerEnd: "brainmap-arrow" }}
       >
         {/* Custom arrow markers — one per edge color + default */}

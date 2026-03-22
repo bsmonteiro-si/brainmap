@@ -5053,7 +5053,7 @@ body {
   border-radius: 6px;
   padding: 10px 12px;
   width: 100%;
-  min-height: 100%;
+  flex: 1;
   box-sizing: border-box;
 }
 
@@ -5112,7 +5112,7 @@ body {
   border-radius: 6px;
   padding: 10px 12px;
   width: 100%;
-  min-height: 100%;
+  flex: 1;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -5324,7 +5324,7 @@ body {
   border-radius: 6px;
   padding: 8px 12px;
   width: 100%;
-  min-height: 100%;
+  flex: 1;
   box-sizing: border-box;
 }
 
