@@ -5055,25 +5055,28 @@ body {
   width: 100%;
   flex: 1;
   box-sizing: border-box;
+  position: relative;
 }
 
 .canvas-file-node-header {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: flex-start;
 }
 
 .canvas-file-node-title {
   font-weight: 600;
   font-size: 13px;
   color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
   flex: 1;
+  min-width: 0;
 }
 
 .canvas-file-node-badge {
+  position: absolute;
+  top: -10px;
+  left: 10px;
   font-size: 9px;
   padding: 1px 5px;
   border-radius: 3px;
@@ -5081,7 +5084,6 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .canvas-file-node-tags {

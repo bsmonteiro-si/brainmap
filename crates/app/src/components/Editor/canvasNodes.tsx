@@ -344,7 +344,8 @@ function Resizer({ id, selected, minWidth = 120, minHeight = 40, autoHeight = fa
       const style = (n.style ?? {}) as Record<string, unknown>;
       if (typeof style.minHeight !== "number") return n;
       const { minHeight: mh, ...rest } = style;
-      return { ...n, style: { ...rest, height: mh } };
+      const actualH = n.measured?.height ?? mh;
+      return { ...n, style: { ...rest, height: actualH } };
     }));
   }, [id, autoHeight, setNodes]);
 
@@ -410,16 +411,16 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
     >
       <Resizer id={id} selected={selected} minWidth={150} minHeight={50} autoHeight />
       <CanvasNodeToolbar id={id} selected={selected} />
+      {noteType && (
+        <span
+          className="canvas-file-node-badge"
+          style={{ backgroundColor: getNodeColor(noteType) }}
+        >
+          {noteType}
+        </span>
+      )}
       <div className="canvas-file-node-header">
         <span className="canvas-file-node-title">{title}</span>
-        {noteType && (
-          <span
-            className="canvas-file-node-badge"
-            style={{ backgroundColor: getNodeColor(noteType) }}
-          >
-            {noteType}
-          </span>
-        )}
       </div>
       {tags.length > 0 && (
         <div className="canvas-file-node-tags">
