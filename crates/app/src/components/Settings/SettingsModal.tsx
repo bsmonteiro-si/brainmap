@@ -70,7 +70,6 @@ export function SettingsModal() {
   const editorTheme = useUIStore((s) => s.editorTheme);
   const excalidrawTheme = useUIStore((s) => s.excalidrawTheme);
   const canvasTheme = useUIStore((s) => s.canvasTheme);
-  const canvasShowDots = useUIStore((s) => s.canvasShowDots);
   const canvasDotOpacity = useUIStore((s) => s.canvasDotOpacity);
   const canvasArrowSize = useUIStore((s) => s.canvasArrowSize);
   const canvasEdgeWidth = useUIStore((s) => s.canvasEdgeWidth);
@@ -94,7 +93,6 @@ export function SettingsModal() {
   const setEditorTheme = useUIStore((s) => s.setEditorTheme);
   const setExcalidrawTheme = useUIStore((s) => s.setExcalidrawTheme);
   const setCanvasTheme = useUIStore((s) => s.setCanvasTheme);
-  const setCanvasShowDots = useUIStore((s) => s.setCanvasShowDots);
   const setCanvasDotOpacity = useUIStore((s) => s.setCanvasDotOpacity);
   const setCanvasArrowSize = useUIStore((s) => s.setCanvasArrowSize);
   const setCanvasEdgeWidth = useUIStore((s) => s.setCanvasEdgeWidth);
@@ -122,6 +120,16 @@ export function SettingsModal() {
   const setCanvasSelectionWidth = useUIStore((s) => s.setCanvasSelectionWidth);
   const setCanvasPanelFontFamily = useUIStore((s) => s.setCanvasPanelFontFamily);
   const setCanvasPanelFontSize = useUIStore((s) => s.setCanvasPanelFontSize);
+  const canvasShowMinimap = useUIStore((s) => s.canvasShowMinimap);
+  const setCanvasShowMinimap = useUIStore((s) => s.setCanvasShowMinimap);
+  const canvasSnapToGrid = useUIStore((s) => s.canvasSnapToGrid);
+  const setCanvasSnapToGrid = useUIStore((s) => s.setCanvasSnapToGrid);
+  const canvasSnapGridSize = useUIStore((s) => s.canvasSnapGridSize);
+  const setCanvasSnapGridSize = useUIStore((s) => s.setCanvasSnapGridSize);
+  const canvasBackgroundVariant = useUIStore((s) => s.canvasBackgroundVariant);
+  const setCanvasBackgroundVariant = useUIStore((s) => s.setCanvasBackgroundVariant);
+  const canvasNodeShadow = useUIStore((s) => s.canvasNodeShadow);
+  const setCanvasNodeShadow = useUIStore((s) => s.setCanvasNodeShadow);
   const codeTheme = useUIStore((s) => s.codeTheme);
   const setCodeTheme = useUIStore((s) => s.setCodeTheme);
   const effectiveEditorTheme = useUIStore((s) => s.effectiveEditorTheme);
@@ -809,21 +817,24 @@ export function SettingsModal() {
       </div>
 
       <div className="settings-section">
-        <div className="settings-section-title">Grid</div>
-        <div className="settings-row" style={{ alignItems: "center" }}>
-          <span className="settings-label">Grid dots</span>
-          <label className="settings-checkbox-label">
-            <input
-              type="checkbox"
-              checked={canvasShowDots}
-              onChange={(e) => setCanvasShowDots(e.target.checked)}
-            />
-            Show grid dots
-          </label>
+        <div className="settings-section-title">Grid & Background</div>
+        <div className="settings-row">
+          <span className="settings-label">Background</span>
+          <div className="settings-control">
+            <select
+              value={canvasBackgroundVariant}
+              onChange={(e) => setCanvasBackgroundVariant(e.target.value)}
+            >
+              <option value="dots">Dots</option>
+              <option value="lines">Lines</option>
+              <option value="cross">Cross</option>
+              <option value="none">None</option>
+            </select>
+          </div>
         </div>
-        {canvasShowDots && (
+        {canvasBackgroundVariant !== "none" && (
           <div className="settings-row">
-            <span className="settings-label">Dot intensity</span>
+            <span className="settings-label">Pattern intensity</span>
             <div className="settings-control">
               <div className="settings-size-row">
                 <input
@@ -839,6 +850,66 @@ export function SettingsModal() {
             </div>
           </div>
         )}
+        <div className="settings-row" style={{ alignItems: "center" }}>
+          <span className="settings-label">Snap to grid</span>
+          <label className="settings-checkbox-label">
+            <input
+              type="checkbox"
+              checked={canvasSnapToGrid}
+              onChange={(e) => setCanvasSnapToGrid(e.target.checked)}
+            />
+            Snap nodes to grid
+          </label>
+        </div>
+        {canvasSnapToGrid && (
+          <div className="settings-row">
+            <span className="settings-label">Grid size</span>
+            <div className="settings-control">
+              <div className="settings-size-row">
+                <input
+                  type="range"
+                  min={10}
+                  max={50}
+                  step={5}
+                  value={canvasSnapGridSize}
+                  onChange={(e) => setCanvasSnapGridSize(Number(e.target.value))}
+                />
+                <span className="settings-size-value">{canvasSnapGridSize}px</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">Display</div>
+        <div className="settings-row" style={{ alignItems: "center" }}>
+          <span className="settings-label">Minimap</span>
+          <label className="settings-checkbox-label">
+            <input
+              type="checkbox"
+              checked={canvasShowMinimap}
+              onChange={(e) => setCanvasShowMinimap(e.target.checked)}
+            />
+            Show minimap
+          </label>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Node shadow</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={0}
+                max={20}
+                step={1}
+                value={canvasNodeShadow}
+                onChange={(e) => setCanvasNodeShadow(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasNodeShadow === 0 ? "Off" : `${canvasNodeShadow}px`}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="settings-section">

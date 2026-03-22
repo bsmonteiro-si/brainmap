@@ -4,6 +4,7 @@ import {
   ReactFlow,
   Controls,
   Background,
+  MiniMap,
   Panel,
   addEdge,
   useNodesState,
@@ -13,7 +14,7 @@ import {
   SelectionMode,
   useNodesInitialized,
 } from "@xyflow/react";
-import type { OnConnect, ColorMode, Viewport } from "@xyflow/react";
+import type { OnConnect, ColorMode, Viewport, BackgroundVariant } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import { getAPI } from "../../api/bridge";
@@ -130,7 +131,6 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const [selecting, setSelecting] = useState(false);
 
   const canvasTheme = useUIStore((s) => s.canvasTheme);
-  const canvasShowDots = useUIStore((s) => s.canvasShowDots);
   const canvasDotOpacity = useUIStore((s) => s.canvasDotOpacity);
   const canvasArrowSize = useUIStore((s) => s.canvasArrowSize);
   const canvasEdgeWidth = useUIStore((s) => s.canvasEdgeWidth);
@@ -151,9 +151,14 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const canvasSelectionWidth = useUIStore((s) => s.canvasSelectionWidth);
   const canvasDefaultCardWidth = useUIStore((s) => s.canvasDefaultCardWidth);
   const canvasDefaultCardHeight = useUIStore((s) => s.canvasDefaultCardHeight);
+  const canvasShowMinimap = useUIStore((s) => s.canvasShowMinimap);
+  const canvasSnapToGrid = useUIStore((s) => s.canvasSnapToGrid);
+  const canvasSnapGridSize = useUIStore((s) => s.canvasSnapGridSize);
+  const canvasBackgroundVariant = useUIStore((s) => s.canvasBackgroundVariant);
+  const canvasNodeShadow = useUIStore((s) => s.canvasNodeShadow);
   const uiZoom = useUIStore((s) => s.uiZoom);
   const colorMode: ColorMode = canvasTheme;
-  const containerClass = `canvas-container${canvasTheme === "light" ? " canvas-light" : ""}`;
+  const containerClass = `canvas-container${canvasTheme === "light" ? " canvas-light" : ""}${canvasNodeShadow > 0 ? " canvas-node-shadows" : ""}`;
   const shapeVars = {
     "--callout-tail": `${canvasCalloutTailSize}px`,
     "--callout-tail-inner": `${canvasCalloutTailSize - 1}px`,
@@ -172,6 +177,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
     "--edge-width": `${canvasEdgeWidth}px`,
     "--canvas-selection-color": canvasSelectionColor,
     "--canvas-selection-width": `${canvasSelectionWidth}px`,
+    "--canvas-node-shadow": `${canvasNodeShadow}`,
   } as React.CSSProperties;
 
   // Counter-zoom: neutralise the global document.documentElement.style.zoom so
@@ -975,6 +981,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
         deleteKeyCode={["Backspace", "Delete"]}
         elevateNodesOnSelect={false}
         defaultEdgeOptions={{ markerEnd: "brainmap-arrow" }}
+        snapToGrid={canvasSnapToGrid}
+        snapGrid={[canvasSnapGridSize, canvasSnapGridSize]}
       >
         {/* Custom arrow markers — one per edge color + default */}
         <svg style={{ position: "absolute", width: 0, height: 0 }}>
@@ -1030,15 +1038,28 @@ export function CanvasEditorInner({ path }: { path: string }) {
             </div>
           );
         })()}
-        {canvasShowDots && (
+        {canvasBackgroundVariant !== "none" && (
           <Background
-            variant={"dots" as const}
-            gap={20}
-            size={1.5}
+            variant={canvasBackgroundVariant as BackgroundVariant}
+            gap={canvasSnapToGrid ? canvasSnapGridSize : 20}
+            size={canvasBackgroundVariant === "dots" ? 1.5 : undefined}
+            lineWidth={canvasBackgroundVariant !== "dots" ? 0.5 : undefined}
             color={canvasTheme === "light"
               ? `rgba(0, 0, 0, ${canvasDotOpacity / 100})`
               : `rgba(255, 255, 255, ${canvasDotOpacity / 100})`
             }
+          />
+        )}
+        {canvasShowMinimap && (
+          <MiniMap
+            pannable
+            zoomable
+            nodeColor={(node) => {
+              if (node.type === "canvasGroup") return canvasTheme === "light" ? "#e0e0e0" : "#3a3a3a";
+              if (node.type === "canvasFile") return "#4a9eff";
+              if (node.type === "canvasLink") return "#f39c12";
+              return canvasTheme === "light" ? "#999" : "#666";
+            }}
           />
         )}
         <Panel position="bottom-center" className="canvas-toolbar">

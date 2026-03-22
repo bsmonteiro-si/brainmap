@@ -1,3 +1,5 @@
+> **Note:** This file was written pre-implementation (planning phase). For the actual as-built architecture, see `docs/canvas-architecture.md`.
+
 # Canvas Integration Research
 
 ## Overview

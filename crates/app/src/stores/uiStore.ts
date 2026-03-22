@@ -221,6 +221,11 @@ interface PersistedPrefs {
   canvasSelectionWidth?: number;
   canvasPanelFontFamily?: string;
   canvasPanelFontSize?: number;
+  canvasShowMinimap?: boolean;
+  canvasSnapToGrid?: boolean;
+  canvasSnapGridSize?: number;
+  canvasBackgroundVariant?: string;
+  canvasNodeShadow?: number;
   codeTheme?: string;
   homeNotes?: Record<string, string>; // workspaceRoot → notePath
   tooltipFontSize?: number;
@@ -370,6 +375,11 @@ interface UIState {
   canvasSelectionWidth: number;
   canvasPanelFontFamily: string;
   canvasPanelFontSize: number;
+  canvasShowMinimap: boolean;
+  canvasSnapToGrid: boolean;
+  canvasSnapGridSize: number;
+  canvasBackgroundVariant: string;
+  canvasNodeShadow: number;
   codeTheme: string;
   homeNotePath: string | null;
   customFileOrder: Record<string, string[]>;
@@ -411,6 +421,11 @@ interface UIState {
   setCanvasSelectionWidth: (v: number) => void;
   setCanvasPanelFontFamily: (v: string) => void;
   setCanvasPanelFontSize: (v: number) => void;
+  setCanvasShowMinimap: (v: boolean) => void;
+  setCanvasSnapToGrid: (v: boolean) => void;
+  setCanvasSnapGridSize: (v: number) => void;
+  setCanvasBackgroundVariant: (v: string) => void;
+  setCanvasNodeShadow: (v: number) => void;
   setCodeTheme: (theme: string) => void;
   toggleGraphMode: () => void;
   openCommandPalette: () => void;
@@ -619,6 +634,11 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasSelectionWidth: storedPrefs.canvasSelectionWidth ?? 4,
   canvasPanelFontFamily: storedPrefs.canvasPanelFontFamily ?? DEFAULT_UI_FONT,
   canvasPanelFontSize: storedPrefs.canvasPanelFontSize ?? 12,
+  canvasShowMinimap: storedPrefs.canvasShowMinimap ?? true,
+  canvasSnapToGrid: storedPrefs.canvasSnapToGrid ?? false,
+  canvasSnapGridSize: storedPrefs.canvasSnapGridSize ?? 20,
+  canvasBackgroundVariant: storedPrefs.canvasBackgroundVariant ?? "dots",
+  canvasNodeShadow: storedPrefs.canvasNodeShadow ?? 8,
   codeTheme: storedPrefs.codeTheme ?? "GitHub Dark",
   graphMode: "navigate",
   commandPaletteOpen: false,
@@ -870,6 +890,26 @@ export const useUIStore = create<UIState>((set, get) => ({
   setCanvasPanelFontSize: (canvasPanelFontSize: number) => {
     set({ canvasPanelFontSize });
     savePrefs({ canvasPanelFontSize });
+  },
+  setCanvasShowMinimap: (canvasShowMinimap: boolean) => {
+    set({ canvasShowMinimap });
+    savePrefs({ canvasShowMinimap });
+  },
+  setCanvasSnapToGrid: (canvasSnapToGrid: boolean) => {
+    set({ canvasSnapToGrid });
+    savePrefs({ canvasSnapToGrid });
+  },
+  setCanvasSnapGridSize: (canvasSnapGridSize: number) => {
+    set({ canvasSnapGridSize });
+    savePrefs({ canvasSnapGridSize });
+  },
+  setCanvasBackgroundVariant: (canvasBackgroundVariant: string) => {
+    set({ canvasBackgroundVariant });
+    savePrefs({ canvasBackgroundVariant });
+  },
+  setCanvasNodeShadow: (canvasNodeShadow: number) => {
+    set({ canvasNodeShadow });
+    savePrefs({ canvasNodeShadow });
   },
 
   toggleGraphMode: () => {

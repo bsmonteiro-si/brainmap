@@ -16,7 +16,7 @@ Run `./scripts/check.sh` before committing. Activate hook: `git config core.hook
 
 ## Architecture
 
-`.md` with YAML frontmatter = source of truth -> in-memory graph + SQLite FTS5. Consumers: CLI, Tauri app, MCP server. All writes through `workspace.rs`. Per-slot locking for multi-segment; Zustand snapshot/restore for segment switching. Folders are virtual graph nodes from directory structure. Non-markdown file types (`.excalidraw`, `.canvas`, `.pdf`) use dedicated editor components via the custom tab kind pattern (see `docs/extension-guides/add-file-type-editor.md`).
+`.md` with YAML frontmatter = source of truth -> in-memory graph + SQLite FTS5. Consumers: CLI, Tauri app, MCP server. All writes through `workspace.rs`. Per-slot locking for multi-segment; Zustand snapshot/restore for segment switching. Folders are virtual graph nodes from directory structure. Non-markdown file types (`.excalidraw`, `.canvas`, `.pdf`) use dedicated editor components via the custom tab kind pattern (see `docs/extension-guides/add-file-type-editor.md`). Canvas architecture: `docs/canvas-architecture.md` (component hierarchy, data flow, state management, extension points).
 
 ## Data Model
 
@@ -29,6 +29,7 @@ Frontmatter: `title`, `type`, `tags`, `status`, `created`, `modified`, `source`,
 - MCP: manual dispatch, `Arc<Mutex<Workspace>>`
 - Envelope: `{"success": bool, "data": ..., "error": {"code": ..., "message": ...}}`
 - CodeMirror spacing: NEVER add `margin` or `padding` to `.cm-line` elements — it breaks mouse hit-testing. Use block widget decorations (`Decoration.widget({ widget, block: true })`) with a matching `estimatedHeight` getter instead; CM6 includes these in its height map.
+- Canvas docs: When modifying Canvas code (`CanvasEditor.tsx`, `canvasNodes.tsx`, `canvasTranslation.ts`, `canvasShapes.ts`, `CanvasPanel.tsx`, canvas CSS, or canvas-related uiStore settings), check `docs/canvas-architecture.md` for contradictions with your changes. Update the doc if you add/remove/rename components, change data flow, modify state management patterns, add keyboard shortcuts, or change integration points. The extension guide `add-canvas-node-type.md` must also be updated if the node type creation process changes.
 
 ## Logging
 
@@ -44,7 +45,7 @@ When adding debug logs for troubleshooting: use `log.debug(target, msg, fields?)
 
 ## Reference Docs
 
-**Before implementing**, check `docs/extension-guides/` for step-by-step recipes: `add-callout-type`, `add-inline-command`, `add-cli-command`, `add-cm-preview-widget`, `add-edge-type`, `add-file-type-editor`, `add-mcp-tool`, `add-note-type`, `add-panel-tab`, `add-tauri-command`, `add-zustand-store`. Follow the guide if one matches your task. **Before making architectural decisions**, check `docs/decisions/` for prior ADRs. Error recovery: `docs/error-recovery.md`. Changelog: `docs/CHANGELOG.md`.
+**Before implementing**, check `docs/extension-guides/` for step-by-step recipes: `add-callout-type`, `add-canvas-node-type`, `add-inline-command`, `add-cli-command`, `add-cm-preview-widget`, `add-edge-type`, `add-file-type-editor`, `add-mcp-tool`, `add-note-type`, `add-panel-tab`, `add-tauri-command`, `add-zustand-store`. Follow the guide if one matches your task. **Before making architectural decisions**, check `docs/decisions/` for prior ADRs. Error recovery: `docs/error-recovery.md`. Changelog: `docs/CHANGELOG.md`.
 
 ## Review Agents
 

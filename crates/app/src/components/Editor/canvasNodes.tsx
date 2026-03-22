@@ -392,6 +392,14 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
       const fileName = filePath.split("/").pop() ?? filePath;
       useTabStore.getState().openTab(filePath, "pdf", fileName, null);
       useEditorStore.getState().clearForCustomTab();
+    } else if (lp.endsWith(".canvas")) {
+      const fileName = filePath.split("/").pop() ?? filePath;
+      useTabStore.getState().openTab(filePath, "canvas", fileName, null);
+      useEditorStore.getState().clearForCustomTab();
+    } else if (lp.endsWith(".excalidraw")) {
+      const fileName = filePath.split("/").pop() ?? filePath;
+      useTabStore.getState().openTab(filePath, "excalidraw", fileName, null);
+      useEditorStore.getState().clearForCustomTab();
     } else {
       useGraphStore.getState().selectNode(null);
       useEditorStore.getState().openPlainFile(filePath);

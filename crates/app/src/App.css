@@ -4839,8 +4839,43 @@ body {
   color: #1a1a1a;
 }
 
+.canvas-container .react-flow__minimap {
+  background: rgba(30, 30, 30, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+}
 .canvas-container.canvas-light .react-flow__minimap {
-  background: #f5f5f5;
+  background: rgba(245, 245, 245, 0.9);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* ── Node Shadows ──────────────────────────────────────────────── */
+.canvas-node-shadows .canvas-file-node,
+.canvas-node-shadows .canvas-text-node,
+.canvas-node-shadows .canvas-link-node {
+  box-shadow:
+    0 calc(var(--canvas-node-shadow) * 0.25px) calc(var(--canvas-node-shadow) * 1px) rgba(0, 0, 0, 0.6),
+    0 calc(var(--canvas-node-shadow) * 0.5px) calc(var(--canvas-node-shadow) * 2px) rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.15s ease;
+}
+.canvas-node-shadows .canvas-file-node:hover,
+.canvas-node-shadows .canvas-text-node:hover,
+.canvas-node-shadows .canvas-link-node:hover {
+  box-shadow:
+    0 calc(var(--canvas-node-shadow) * 0.5px) calc(var(--canvas-node-shadow) * 2px) rgba(0, 0, 0, 0.7),
+    0 calc(var(--canvas-node-shadow) * 1px) calc(var(--canvas-node-shadow) * 3px) rgba(0, 0, 0, 0.4);
+}
+.canvas-node-shadows.canvas-light .canvas-file-node,
+.canvas-node-shadows.canvas-light .canvas-text-node,
+.canvas-node-shadows.canvas-light .canvas-link-node {
+  box-shadow:
+    0 calc(var(--canvas-node-shadow) * 0.25px) calc(var(--canvas-node-shadow) * 1px) rgba(0, 0, 0, 0.12);
+}
+.canvas-node-shadows.canvas-light .canvas-file-node:hover,
+.canvas-node-shadows.canvas-light .canvas-text-node:hover,
+.canvas-node-shadows.canvas-light .canvas-link-node:hover {
+  box-shadow:
+    0 calc(var(--canvas-node-shadow) * 0.5px) calc(var(--canvas-node-shadow) * 2px) rgba(0, 0, 0, 0.2);
 }
 
 /* Connection handles — large, always visible on hover for easy edge drawing */
