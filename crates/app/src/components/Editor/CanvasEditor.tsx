@@ -123,6 +123,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(true);
+  const reactFlowInstance = useReactFlow();
   const [error, setError] = useState<string | null>(null);
   const [interactionMode, setInteractionMode] = useState<"pan" | "select">("pan");
   const [selecting, setSelecting] = useState(false);
@@ -259,7 +260,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
       });
 
     return () => { cancelled = true; };
-  }, [path, setNodes, setEdges]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reactFlowInstance is stable
+  }, [path, setNodes, setEdges, reactFlowInstance]);
 
   // Save function
   const doSave = useCallback(async () => {
@@ -470,8 +472,6 @@ export function CanvasEditorInner({ path }: { path: string }) {
     },
     [setEdges, scheduleSave, pushSnapshot],
   );
-
-  const reactFlowInstance = useReactFlow();
 
   // Save viewport on unmount so zoom/pan is preserved across tab switches
   useEffect(() => {
