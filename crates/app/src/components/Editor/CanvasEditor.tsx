@@ -12,7 +12,7 @@ import {
   ReactFlowProvider,
   SelectionMode,
 } from "@xyflow/react";
-import type { OnConnect, ColorMode } from "@xyflow/react";
+import type { OnConnect, ColorMode, Viewport } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import { getAPI } from "../../api/bridge";
@@ -21,7 +21,7 @@ import { useUIStore } from "../../stores/uiStore";
 import { log } from "../../utils/logger";
 import { canvasToFlow, flowToCanvas } from "./canvasTranslation";
 import type { JsonCanvas } from "./canvasTranslation";
-import { StickyNote, FileText, FilePlus, Layers, ChevronDown, MousePointer2, Hand, Group } from "lucide-react";
+import { StickyNote, FileText, FilePlus, Layers, ChevronDown, MousePointer2, Hand, Group, Trash2, Copy, Ungroup } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES } from "./canvasShapes";
 import { useGraphStore } from "../../stores/graphStore";
@@ -94,6 +94,8 @@ const EDGE_TYPES = {
 
 // Module-level pending saves (same pattern as Excalidraw)
 const pendingSaves = new Map<string, { nodes: unknown[]; edges: unknown[] }>();
+// Per-canvas viewport cache so zoom/pan is preserved across tab switches
+const savedViewports = new Map<string, Viewport>();
 
 // ── Inner component ───────────────────────────────────────────────────────────
 
@@ -103,6 +105,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [interactionMode, setInteractionMode] = useState<"pan" | "select">("pan");
+  const [selecting, setSelecting] = useState(false);
 
   const canvasTheme = useUIStore((s) => s.canvasTheme);
   const canvasShowDots = useUIStore((s) => s.canvasShowDots);
@@ -434,8 +437,16 @@ export function CanvasEditorInner({ path }: { path: string }) {
     [setEdges, scheduleSave, pushSnapshot],
   );
 
-  // ── Context menu for adding nodes ────────────────────────────────────────
   const reactFlowInstance = useReactFlow();
+
+  // Save viewport on unmount so zoom/pan is preserved across tab switches
+  useEffect(() => {
+    return () => {
+      try { savedViewports.set(path, reactFlowInstance.getViewport()); } catch { /* unmounted */ }
+    };
+  }, [path, reactFlowInstance]);
+
+  // ── Context menu for adding nodes ────────────────────────────────────────
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; flowX: number; flowY: number } | null>(null);
   const [showNoteSelect, setShowNoteSelect] = useState(false);
   const [showCtxShapes, setShowCtxShapes] = useState(false);
@@ -717,7 +728,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
           type,
           position: { x: ctxMenu.flowX, y: ctxMenu.flowY },
           data,
-          style: useFixedHeight ? { width, height } : { width, minHeight: height },
+          style: useFixedHeight ? { width, height } : { width },
           ...(type === "canvasGroup" ? { zIndex: -1 } : {}),
         },
       ]);
@@ -765,7 +776,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
           type,
           position: { x: centerX - width / 2, y: centerY - height / 2 },
           data,
-          style: useFixedHeight ? { width, height } : { width, minHeight: height },
+          style: useFixedHeight ? { width, height } : { width },
           ...(type === "canvasGroup" ? { zIndex: -1 } : {}),
         },
       ]);
@@ -791,7 +802,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
           const id = `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
           setNodes((nds) => [
             ...nds,
-            { id, type: "canvasFile", position: { x, y }, data: { file: createdPath }, style: { width: 250, minHeight: 100 } },
+            { id, type: "canvasFile", position: { x, y }, data: { file: createdPath }, style: { width: 250 } },
           ]);
           requestAnimationFrame(() => scheduleSave());
         },
@@ -896,6 +907,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
         onNodeContextMenu={handleNodeContextMenu}
         onEdgeContextMenu={handleEdgeContextMenu}
         onSelectionContextMenu={handleSelectionContextMenu}
+        onSelectionStart={() => setSelecting(true)}
+        onSelectionEnd={() => setSelecting(false)}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         colorMode={colorMode}
@@ -904,8 +917,10 @@ export function CanvasEditorInner({ path }: { path: string }) {
         selectionMode={SelectionMode.Partial}
         deleteKeyCode={["Backspace", "Delete"]}
         elevateNodesOnSelect={false}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
+        {...(savedViewports.has(path)
+          ? { defaultViewport: savedViewports.get(path) }
+          : { fitView: true, fitViewOptions: { padding: 0.2 } }
+        )}
         defaultEdgeOptions={{ markerEnd: "brainmap-arrow" }}
       >
         {/* Custom arrow markers — one per edge color + default */}
@@ -929,6 +944,39 @@ export function CanvasEditorInner({ path }: { path: string }) {
           </defs>
         </svg>
         <Controls />
+        {selectedCount >= 2 && !selecting && (() => {
+          const sel = nodes.filter((n) => n.selected);
+          let minX = Infinity, minY = Infinity, maxX = -Infinity;
+          for (const n of sel) {
+            const w = parseFloat(String(n.style?.width ?? "")) || n.measured?.width || 250;
+            const parent = n.parentId ? nodes.find((p) => p.id === n.parentId) : undefined;
+            const absX = n.position.x + (parent?.position.x ?? 0);
+            const absY = n.position.y + (parent?.position.y ?? 0);
+            minX = Math.min(minX, absX);
+            minY = Math.min(minY, absY);
+            maxX = Math.max(maxX, absX + w);
+          }
+          const vp = reactFlowInstance.getViewport();
+          const cx = ((minX + maxX) / 2) * vp.zoom + vp.x;
+          const ty = minY * vp.zoom + vp.y - 80;
+          return (
+            <div
+              className="canvas-selection-toolbar"
+              style={{ position: "absolute", left: cx, top: ty, transform: "translateX(-50%)", zIndex: 10 }}
+            >
+              <button className="canvas-node-toolbar-btn" title="Group Selection" onClick={groupSelected}>
+                <Group size={16} />
+              </button>
+              <button className="canvas-node-toolbar-btn" title="Duplicate" onClick={duplicateSelected}>
+                <Copy size={16} />
+              </button>
+              <button className="canvas-node-toolbar-btn" title="Delete" onClick={deleteSelected}>
+                <Trash2 size={16} />
+              </button>
+              <span className="canvas-selection-toolbar-count">{selectedCount} selected</span>
+            </div>
+          );
+        })()}
         {canvasShowDots && (
           <Background
             variant={"dots" as const}
@@ -994,19 +1042,6 @@ export function CanvasEditorInner({ path }: { path: string }) {
           >
             <FilePlus size={22} />
           </button>
-          {selectedCount >= 2 && (
-            <>
-              <div className="canvas-toolbar-separator" />
-              <button
-                className="canvas-toolbar-btn"
-                title="Group selected elements"
-                onClick={groupSelected}
-              >
-                <Group size={22} />
-              </button>
-              <span className="canvas-toolbar-selection-count">{selectedCount} selected</span>
-            </>
-          )}
         </Panel>
       </ReactFlow>
       {toolbarShapePicker && (

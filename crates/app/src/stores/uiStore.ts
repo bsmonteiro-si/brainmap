@@ -202,6 +202,8 @@ interface PersistedPrefs {
   canvasArrowSize?: number;
   canvasEdgeWidth?: number;
   canvasCardBgOpacity?: number;
+  canvasDefaultCardWidth?: number;
+  canvasDefaultCardHeight?: number;
   canvasCalloutTailSize?: number;
   canvasStickyRotation?: number;
   canvasStickyColor?: string;
@@ -349,6 +351,8 @@ interface UIState {
   canvasArrowSize: number;
   canvasEdgeWidth: number;
   canvasCardBgOpacity: number;
+  canvasDefaultCardWidth: number;
+  canvasDefaultCardHeight: number;
   canvasCalloutTailSize: number;
   canvasStickyRotation: number;
   canvasStickyColor: string;
@@ -388,6 +392,8 @@ interface UIState {
   setCanvasArrowSize: (size: number) => void;
   setCanvasEdgeWidth: (v: number) => void;
   setCanvasCardBgOpacity: (opacity: number) => void;
+  setCanvasDefaultCardWidth: (v: number) => void;
+  setCanvasDefaultCardHeight: (v: number) => void;
   setCanvasCalloutTailSize: (v: number) => void;
   setCanvasStickyRotation: (v: number) => void;
   setCanvasStickyColor: (v: string) => void;
@@ -594,6 +600,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasArrowSize: storedPrefs.canvasArrowSize ?? 25,
   canvasEdgeWidth: storedPrefs.canvasEdgeWidth ?? 1,
   canvasCardBgOpacity: storedPrefs.canvasCardBgOpacity ?? 15,
+  canvasDefaultCardWidth: storedPrefs.canvasDefaultCardWidth ?? 300,
+  canvasDefaultCardHeight: storedPrefs.canvasDefaultCardHeight ?? 150,
   canvasCalloutTailSize: storedPrefs.canvasCalloutTailSize ?? 18,
   canvasStickyRotation: storedPrefs.canvasStickyRotation ?? 1.5,
   canvasStickyColor: storedPrefs.canvasStickyColor ?? "#fef3c7",
@@ -786,6 +794,14 @@ export const useUIStore = create<UIState>((set, get) => ({
   setCanvasCardBgOpacity: (canvasCardBgOpacity: number) => {
     set({ canvasCardBgOpacity });
     savePrefs({ canvasCardBgOpacity });
+  },
+  setCanvasDefaultCardWidth: (canvasDefaultCardWidth: number) => {
+    set({ canvasDefaultCardWidth });
+    savePrefs({ canvasDefaultCardWidth });
+  },
+  setCanvasDefaultCardHeight: (canvasDefaultCardHeight: number) => {
+    set({ canvasDefaultCardHeight });
+    savePrefs({ canvasDefaultCardHeight });
   },
   setCanvasCalloutTailSize: (canvasCalloutTailSize: number) => {
     set({ canvasCalloutTailSize });
