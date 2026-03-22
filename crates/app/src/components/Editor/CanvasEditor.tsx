@@ -94,8 +94,28 @@ const EDGE_TYPES = {
 
 // Module-level pending saves (same pattern as Excalidraw)
 const pendingSaves = new Map<string, { nodes: unknown[]; edges: unknown[] }>();
-// Per-canvas viewport cache so zoom/pan is preserved across tab switches
-const savedViewports = new Map<string, Viewport>();
+
+// Per-canvas viewport cache — persisted to localStorage so zoom/pan survives close/reopen
+const VIEWPORT_STORAGE_KEY = "brainmap:canvasViewports";
+
+function loadSavedViewports(): Map<string, Viewport> {
+  try {
+    const raw = localStorage.getItem(VIEWPORT_STORAGE_KEY);
+    if (!raw) return new Map();
+    return new Map(Object.entries(JSON.parse(raw)));
+  } catch { return new Map(); }
+}
+
+function persistViewport(path: string, vp: Viewport) {
+  savedViewports.set(path, vp);
+  try {
+    const obj: Record<string, Viewport> = {};
+    savedViewports.forEach((v, k) => { obj[k] = v; });
+    localStorage.setItem(VIEWPORT_STORAGE_KEY, JSON.stringify(obj));
+  } catch { /* quota exceeded */ }
+}
+
+const savedViewports = loadSavedViewports();
 
 // ── Inner component ───────────────────────────────────────────────────────────
 
@@ -127,6 +147,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const canvasGroupFontSize = useUIStore((s) => s.canvasGroupFontSize);
   const canvasSelectionColor = useUIStore((s) => s.canvasSelectionColor);
   const canvasSelectionWidth = useUIStore((s) => s.canvasSelectionWidth);
+  const canvasDefaultCardWidth = useUIStore((s) => s.canvasDefaultCardWidth);
+  const canvasDefaultCardHeight = useUIStore((s) => s.canvasDefaultCardHeight);
   const uiZoom = useUIStore((s) => s.uiZoom);
   const colorMode: ColorMode = canvasTheme;
   const containerClass = `canvas-container${canvasTheme === "light" ? " canvas-light" : ""}`;
@@ -442,7 +464,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   // Save viewport on unmount so zoom/pan is preserved across tab switches
   useEffect(() => {
     return () => {
-      try { savedViewports.set(path, reactFlowInstance.getViewport()); } catch { /* unmounted */ }
+      try { persistViewport(path, reactFlowInstance.getViewport()); } catch { /* unmounted */ }
     };
   }, [path, reactFlowInstance]);
 
@@ -714,7 +736,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   }, []);
 
   const addNodeAtMenu = useCallback(
-    (type: string, data: Record<string, unknown>, width = 250, height = 100) => {
+    (type: string, data: Record<string, unknown>, width = canvasDefaultCardWidth, height = canvasDefaultCardHeight) => {
       if (!ctxMenu) return;
       pushSnapshot();
       const id = `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -728,14 +750,14 @@ export function CanvasEditorInner({ path }: { path: string }) {
           type,
           position: { x: ctxMenu.flowX, y: ctxMenu.flowY },
           data,
-          style: useFixedHeight ? { width, height } : { width },
+          style: useFixedHeight ? { width, height } : { width, minHeight: height },
           ...(type === "canvasGroup" ? { zIndex: -1 } : {}),
         },
       ]);
       closeCtxMenu();
       requestAnimationFrame(() => scheduleSave());
     },
-    [ctxMenu, setNodes, closeCtxMenu, scheduleSave, pushSnapshot],
+    [ctxMenu, setNodes, closeCtxMenu, scheduleSave, pushSnapshot, canvasDefaultCardWidth, canvasDefaultCardHeight],
   );
 
   // Close context menu on click elsewhere
@@ -757,7 +779,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const [toolbarShapePicker, setToolbarShapePicker] = useState(false);
 
   const addNodeAtCenter = useCallback(
-    (type: string, data: Record<string, unknown>, width = 250, height = 100) => {
+    (type: string, data: Record<string, unknown>, width = canvasDefaultCardWidth, height = canvasDefaultCardHeight) => {
       pushSnapshot();
       const viewport = reactFlowInstance.getViewport();
       const container = document.querySelector(".canvas-container");
@@ -776,7 +798,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
           type,
           position: { x: centerX - width / 2, y: centerY - height / 2 },
           data,
-          style: useFixedHeight ? { width, height } : { width },
+          style: useFixedHeight ? { width, height } : { width, minHeight: height },
           ...(type === "canvasGroup" ? { zIndex: -1 } : {}),
         },
       ]);
@@ -784,7 +806,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
       setToolbarFilter("");
       requestAnimationFrame(() => scheduleSave());
     },
-    [reactFlowInstance, setNodes, scheduleSave, pushSnapshot],
+    [reactFlowInstance, setNodes, scheduleSave, pushSnapshot, canvasDefaultCardWidth, canvasDefaultCardHeight],
   );
 
   // Create a new note via dialog and add it as a file node
@@ -802,7 +824,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
           const id = `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
           setNodes((nds) => [
             ...nds,
-            { id, type: "canvasFile", position: { x, y }, data: { file: createdPath }, style: { width: 250 } },
+            { id, type: "canvasFile", position: { x, y }, data: { file: createdPath }, style: { width: canvasDefaultCardWidth, minHeight: canvasDefaultCardHeight } },
           ]);
           requestAnimationFrame(() => scheduleSave());
         },
@@ -903,6 +925,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
+        onPaneClick={() => { setToolbarPicker(false); setToolbarShapePicker(false); }}
         onPaneContextMenu={handlePaneContextMenu}
         onNodeContextMenu={handleNodeContextMenu}
         onEdgeContextMenu={handleEdgeContextMenu}

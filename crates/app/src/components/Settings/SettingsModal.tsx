@@ -75,6 +75,8 @@ export function SettingsModal() {
   const canvasArrowSize = useUIStore((s) => s.canvasArrowSize);
   const canvasEdgeWidth = useUIStore((s) => s.canvasEdgeWidth);
   const canvasCardBgOpacity = useUIStore((s) => s.canvasCardBgOpacity);
+  const canvasDefaultCardWidth = useUIStore((s) => s.canvasDefaultCardWidth);
+  const canvasDefaultCardHeight = useUIStore((s) => s.canvasDefaultCardHeight);
   const canvasCalloutTailSize = useUIStore((s) => s.canvasCalloutTailSize);
   const canvasStickyRotation = useUIStore((s) => s.canvasStickyRotation);
   const canvasStickyColor = useUIStore((s) => s.canvasStickyColor);
@@ -97,6 +99,8 @@ export function SettingsModal() {
   const setCanvasArrowSize = useUIStore((s) => s.setCanvasArrowSize);
   const setCanvasEdgeWidth = useUIStore((s) => s.setCanvasEdgeWidth);
   const setCanvasCardBgOpacity = useUIStore((s) => s.setCanvasCardBgOpacity);
+  const setCanvasDefaultCardWidth = useUIStore((s) => s.setCanvasDefaultCardWidth);
+  const setCanvasDefaultCardHeight = useUIStore((s) => s.setCanvasDefaultCardHeight);
   const setCanvasCalloutTailSize = useUIStore((s) => s.setCanvasCalloutTailSize);
   const setCanvasStickyRotation = useUIStore((s) => s.setCanvasStickyRotation);
   const setCanvasStickyColor = useUIStore((s) => s.setCanvasStickyColor);
@@ -888,6 +892,38 @@ export function SettingsModal() {
                 onChange={(e) => setCanvasCardBgOpacity(Number(e.target.value))}
               />
               <span className="settings-size-value">{canvasCardBgOpacity}%</span>
+            </div>
+          </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Default width</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={100}
+                max={500}
+                step={10}
+                value={canvasDefaultCardWidth}
+                onChange={(e) => setCanvasDefaultCardWidth(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasDefaultCardWidth}px</span>
+            </div>
+          </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Default height</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={50}
+                max={400}
+                step={10}
+                value={canvasDefaultCardHeight}
+                onChange={(e) => setCanvasDefaultCardHeight(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasDefaultCardHeight}px</span>
             </div>
           </div>
         </div>
