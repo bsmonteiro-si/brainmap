@@ -4878,6 +4878,11 @@ body {
     0 calc(var(--canvas-node-shadow) * 0.5px) calc(var(--canvas-node-shadow) * 2px) rgba(0, 0, 0, 0.2);
 }
 
+/* ── Link Input Picker ─────────────────────────────────────────── */
+.canvas-link-input-picker {
+  min-width: 300px;
+}
+
 /* ── Edge Type Picker ──────────────────────────────────────────── */
 .canvas-edge-type-picker {
   display: flex;

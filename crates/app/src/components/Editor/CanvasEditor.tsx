@@ -23,7 +23,7 @@ import { useUIStore } from "../../stores/uiStore";
 import { log } from "../../utils/logger";
 import { canvasToFlow, flowToCanvas } from "./canvasTranslation";
 import type { JsonCanvas } from "./canvasTranslation";
-import { StickyNote, FileText, FilePlus, Layers, ChevronDown, ChevronRight, MousePointer2, Hand, Group, Trash2, Copy, Ungroup, PanelRightOpen, Search, GripVertical, Folder, FolderOpen, HelpCircle } from "lucide-react";
+import { StickyNote, FileText, FilePlus, Layers, ChevronDown, ChevronRight, MousePointer2, Hand, Group, Trash2, Copy, Ungroup, PanelRightOpen, Search, GripVertical, Folder, FolderOpen, HelpCircle, Link2 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES } from "./canvasShapes";
 import { useGraphStore } from "../../stores/graphStore";
@@ -1047,6 +1047,22 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const [toolbarFilter, setToolbarFilter] = useState("");
   const [toolbarPickerTab, setToolbarPickerTab] = useState<"notes" | "files">("notes");
   const [toolbarShapePicker, setToolbarShapePicker] = useState(false);
+  const [linkInputMode, setLinkInputMode] = useState<"toolbar" | "context" | null>(null);
+  const [linkInputValue, setLinkInputValue] = useState("");
+
+  const submitLink = useCallback((mode: "toolbar" | "context") => {
+    const url = linkInputValue.trim();
+    if (!url) { setLinkInputMode(null); setLinkInputValue(""); return; }
+    let title: string | undefined;
+    try { title = new URL(url).hostname; } catch { /* invalid */ }
+    if (mode === "context") {
+      addNodeAtMenu("canvasLink", { url, title }, canvasDefaultCardWidth, 60);
+    } else {
+      addNodeAtCenter("canvasLink", { url, title }, canvasDefaultCardWidth, 60);
+    }
+    setLinkInputMode(null);
+    setLinkInputValue("");
+  }, [linkInputValue, addNodeAtMenu, addNodeAtCenter, canvasDefaultCardWidth]);
 
   const addNodeAtCenter = useCallback(
     (type: string, data: Record<string, unknown>, width = canvasDefaultCardWidth, height = canvasDefaultCardHeight) => {
@@ -1195,7 +1211,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
-        onPaneClick={() => { setToolbarPicker(false); setToolbarShapePicker(false); setFileBrowserOpen(false); }}
+        onPaneClick={() => { setToolbarPicker(false); setToolbarShapePicker(false); setFileBrowserOpen(false); setLinkInputMode(null); }}
         onPaneContextMenu={handlePaneContextMenu}
         onNodeContextMenu={handleNodeContextMenu}
 
@@ -1336,6 +1352,18 @@ export function CanvasEditorInner({ path }: { path: string }) {
             <FileText size={22} />
           </button>
           <button
+            className={`canvas-toolbar-btn${linkInputMode === "toolbar" ? " canvas-toolbar-btn--active" : ""}`}
+            title="Add link"
+            onClick={() => {
+              setLinkInputMode(linkInputMode === "toolbar" ? null : "toolbar");
+              setLinkInputValue("");
+              setToolbarPicker(false);
+              setToolbarShapePicker(false);
+            }}
+          >
+            <Link2 size={22} />
+          </button>
+          <button
             className="canvas-toolbar-btn"
             title="Add group"
             onClick={() => addNodeAtCenter("canvasGroup", { label: "Group" }, 400, 300)}
@@ -1467,6 +1495,15 @@ export function CanvasEditorInner({ path }: { path: string }) {
               >
                 Add Note Reference
               </div>
+              <div
+                className="context-menu-item"
+                onClick={() => {
+                  setLinkInputMode("context");
+                  setLinkInputValue("");
+                }}
+              >
+                Add Link
+              </div>
               <div className="context-menu-separator" />
               <div
                 className="context-menu-item"
@@ -1578,6 +1615,22 @@ export function CanvasEditorInner({ path }: { path: string }) {
           </div>
         );
       })()}
+      {linkInputMode && (
+        <div className="canvas-toolbar-picker canvas-link-input-picker" onClick={(e) => e.stopPropagation()}>
+          <input
+            className="canvas-note-picker-input"
+            type="text"
+            placeholder="Paste URL and press Enter..."
+            value={linkInputValue}
+            onChange={(e) => setLinkInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); submitLink(linkInputMode); }
+              else if (e.key === "Escape") { setLinkInputMode(null); setLinkInputValue(""); }
+            }}
+            autoFocus
+          />
+        </div>
+      )}
       {showShortcuts && (
         <div className="canvas-shortcuts-overlay" onClick={() => setShowShortcuts(false)}>
           <div className="canvas-shortcuts-panel" onClick={(e) => e.stopPropagation()}>
