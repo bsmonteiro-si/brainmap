@@ -1,0 +1,165 @@
+{
+  "nodes": [
+    {
+      "id": "group-evidence",
+      "type": "group",
+      "label": "Key Evidence",
+      "x": 0,
+      "y": 0,
+      "width": 620,
+      "height": 260,
+      "color": "#3498db"
+    },
+    {
+      "id": "evidence-1",
+      "type": "file",
+      "file": "Evidence/smoking-lung-cancer.md",
+      "x": 30,
+      "y": 50,
+      "width": 260,
+      "height": 80,
+      "parentId": "group-evidence"
+    },
+    {
+      "id": "evidence-2",
+      "type": "file",
+      "file": "Arguments/causal-reasoning-formalizable.md",
+      "x": 320,
+      "y": 50,
+      "width": 260,
+      "height": 80,
+      "parentId": "group-evidence"
+    },
+    {
+      "id": "concept-rct",
+      "type": "file",
+      "file": "Concepts/randomized-controlled-trial.md",
+      "x": 30,
+      "y": 160,
+      "width": 260,
+      "height": 80,
+      "parentId": "group-evidence",
+      "bgColor": "#1a3a5c"
+    },
+    {
+      "id": "sticky-note",
+      "type": "text",
+      "text": "Remember to add the Bradford Hill criteria here!",
+      "shape": "sticky",
+      "x": 700,
+      "y": 10,
+      "width": 200,
+      "height": 200
+    },
+    {
+      "id": "callout-key",
+      "type": "text",
+      "text": "The causal revolution started with the formalization of what epidemiologists already knew intuitively.",
+      "shape": "callout",
+      "x": 700,
+      "y": 260,
+      "width": 280,
+      "height": 120,
+      "color": "#27ae60"
+    },
+    {
+      "id": "diamond-decision",
+      "type": "text",
+      "text": "Causation or\ncorrelation?",
+      "shape": "diamond",
+      "x": 240,
+      "y": 340,
+      "width": 160,
+      "height": 160,
+      "color": "#f39c12"
+    },
+    {
+      "id": "fisher-card",
+      "type": "file",
+      "file": "People/ronald-fisher.md",
+      "x": 0,
+      "y": 560,
+      "width": 260,
+      "height": 80,
+      "color": "#e74c3c"
+    },
+    {
+      "id": "pearl-card",
+      "type": "file",
+      "file": "People/judea-pearl.md",
+      "x": 380,
+      "y": 560,
+      "width": 260,
+      "height": 80,
+      "color": "#27ae60"
+    },
+    {
+      "id": "wiki-link",
+      "type": "link",
+      "url": "https://en.wikipedia.org/wiki/Causal_inference",
+      "title": "Causal Inference - Wikipedia",
+      "x": 700,
+      "y": 440,
+      "width": 280,
+      "height": 60
+    },
+    {
+      "id": "rounded-summary",
+      "type": "text",
+      "text": "This canvas demonstrates: groups, sticky notes, callouts, diamonds, link nodes, colored edges, and multiple shapes.",
+      "shape": "rounded",
+      "x": 0,
+      "y": 700,
+      "width": 640,
+      "height": 60,
+      "bgColor": "#1e293b",
+      "fontSize": 11
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "fromNode": "evidence-1",
+      "toNode": "diamond-decision",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "raises question"
+    },
+    {
+      "id": "e2",
+      "fromNode": "diamond-decision",
+      "toNode": "fisher-card",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "correlation",
+      "color": "#e74c3c",
+      "edgeType": "step"
+    },
+    {
+      "id": "e3",
+      "fromNode": "diamond-decision",
+      "toNode": "pearl-card",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "label": "causation",
+      "color": "#27ae60",
+      "edgeType": "step"
+    },
+    {
+      "id": "e4",
+      "fromNode": "evidence-2",
+      "toNode": "callout-key",
+      "fromSide": "right",
+      "toSide": "left",
+      "edgeType": "straight"
+    },
+    {
+      "id": "e5",
+      "fromNode": "pearl-card",
+      "toNode": "wiki-link",
+      "fromSide": "right",
+      "toSide": "left",
+      "label": "reference"
+    }
+  ]
+}

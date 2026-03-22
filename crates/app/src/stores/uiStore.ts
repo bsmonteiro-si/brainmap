@@ -227,6 +227,7 @@ interface PersistedPrefs {
   canvasBackgroundVariant?: string;
   canvasNodeShadow?: number;
   canvasFileBrowserWidth?: number;
+  canvasDefaultEdgeType?: string;
   codeTheme?: string;
   homeNotes?: Record<string, string>; // workspaceRoot → notePath
   tooltipFontSize?: number;
@@ -382,6 +383,7 @@ interface UIState {
   canvasBackgroundVariant: string;
   canvasNodeShadow: number;
   canvasFileBrowserWidth: number;
+  canvasDefaultEdgeType: string;
   codeTheme: string;
   homeNotePath: string | null;
   customFileOrder: Record<string, string[]>;
@@ -429,6 +431,7 @@ interface UIState {
   setCanvasBackgroundVariant: (v: string) => void;
   setCanvasNodeShadow: (v: number) => void;
   setCanvasFileBrowserWidth: (v: number) => void;
+  setCanvasDefaultEdgeType: (v: string) => void;
   setCodeTheme: (theme: string) => void;
   toggleGraphMode: () => void;
   openCommandPalette: () => void;
@@ -643,6 +646,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasBackgroundVariant: storedPrefs.canvasBackgroundVariant ?? "dots",
   canvasNodeShadow: storedPrefs.canvasNodeShadow ?? 8,
   canvasFileBrowserWidth: storedPrefs.canvasFileBrowserWidth ?? 260,
+  canvasDefaultEdgeType: storedPrefs.canvasDefaultEdgeType ?? "bezier",
   codeTheme: storedPrefs.codeTheme ?? "GitHub Dark",
   graphMode: "navigate",
   commandPaletteOpen: false,
@@ -918,6 +922,10 @@ export const useUIStore = create<UIState>((set, get) => ({
   setCanvasFileBrowserWidth: (canvasFileBrowserWidth: number) => {
     set({ canvasFileBrowserWidth });
     savePrefs({ canvasFileBrowserWidth });
+  },
+  setCanvasDefaultEdgeType: (canvasDefaultEdgeType: string) => {
+    set({ canvasDefaultEdgeType });
+    savePrefs({ canvasDefaultEdgeType });
   },
 
   toggleGraphMode: () => {

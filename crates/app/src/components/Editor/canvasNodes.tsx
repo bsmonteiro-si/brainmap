@@ -1,10 +1,10 @@
 import { memo, useState, useRef, useEffect, useCallback } from "react";
 import {
   Handle, Position, NodeResizer, NodeToolbar,
-  BaseEdge, EdgeLabelRenderer, getBezierPath, useReactFlow, useStore,
+  BaseEdge, EdgeLabelRenderer, getBezierPath, getStraightPath, getSmoothStepPath, useReactFlow, useStore,
 } from "@xyflow/react";
 import type { NodeProps, EdgeProps, ReactFlowState } from "@xyflow/react";
-import { Trash2, Palette, Paintbrush, PenLine, Shapes, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, AlignStartVertical, AlignCenterVertical, AlignEndVertical } from "lucide-react";
+import { Trash2, Palette, Paintbrush, PenLine, Shapes, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Spline, Minus, CornerDownRight } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES, getShapeDefinition } from "./canvasShapes";
 import type { CanvasShapeId } from "./canvasShapes";
@@ -547,21 +547,37 @@ export const CanvasTextNode = memo(CanvasTextNodeInner);
 // ── Link Node ─────────────────────────────────────────────────────────────────
 
 function CanvasLinkNodeInner({ id, data, selected }: NodeProps) {
-  const d = data as { url?: string; color?: string; bgColor?: string };
+  const d = data as { url?: string; title?: string; color?: string; bgColor?: string };
   const url = d.url ?? "";
 
-  let displayUrl: string;
+  let hostname: string;
   try {
-    displayUrl = new URL(url).hostname;
+    hostname = new URL(url).hostname;
   } catch {
-    displayUrl = url;
+    hostname = url;
   }
+
+  const faviconUrl = url ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=32` : undefined;
+
+  const openInBrowser = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div className="canvas-link-node" style={{ ...(d.color ? { borderColor: d.color } : {}), ...(d.bgColor ? { backgroundColor: d.bgColor } : {}) }}>
       <Resizer id={id} selected={selected} autoHeight />
       <CanvasNodeToolbar id={id} selected={selected} />
-      <span className="canvas-link-node-url" title={url}>{displayUrl}</span>
+      <div className="canvas-link-node-content">
+        {faviconUrl && <img src={faviconUrl} alt="" className="canvas-link-node-favicon" />}
+        <div className="canvas-link-node-info">
+          {d.title && <span className="canvas-link-node-title">{d.title}</span>}
+          <span className="canvas-link-node-url" title={url}>{hostname}</span>
+        </div>
+        <button className="canvas-link-node-open nodrag" title="Open in browser" onClick={openInBrowser}>
+          ↗
+        </button>
+      </div>
       <FourHandles />
     </div>
   );
@@ -676,10 +692,15 @@ function CanvasEdgeInner({
     }
   }, [editing, promptLabel]);
 
-  const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX, sourceY, targetX, targetY,
-    sourcePosition, targetPosition,
-  });
+  const edgeType = (data as Record<string, unknown> | undefined)?.edgeType as string | undefined;
+  const canvasDefaultEdgeType = useUIStore((s) => s.canvasDefaultEdgeType);
+  const effectiveType = edgeType ?? canvasDefaultEdgeType ?? "bezier";
+
+  const [edgePath, labelX, labelY] = effectiveType === "straight"
+    ? getStraightPath({ sourceX, sourceY, targetX, targetY })
+    : effectiveType === "step"
+      ? getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition })
+      : getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
 
   const commitLabel = (value: string) => {
     const trimmed = value.trim();
@@ -819,6 +840,29 @@ function CanvasEdgeInner({
               {showColors && (
                 <ColorPickerDropdown onSelect={handleColor} onClear={handleClearColor} clearLabel="Clear color" />
               )}
+            </div>
+            <div className="canvas-edge-type-picker">
+              <button
+                className={`canvas-node-toolbar-btn${effectiveType === "bezier" ? " canvas-node-toolbar-btn--active" : ""}`}
+                title="Bezier"
+                onClick={() => setEdges((eds) => eds.map((ed) => ed.id !== id ? ed : { ...ed, data: { ...(ed.data as object), edgeType: "bezier" } }))}
+              >
+                <Spline size={14} />
+              </button>
+              <button
+                className={`canvas-node-toolbar-btn${effectiveType === "straight" ? " canvas-node-toolbar-btn--active" : ""}`}
+                title="Straight"
+                onClick={() => setEdges((eds) => eds.map((ed) => ed.id !== id ? ed : { ...ed, data: { ...(ed.data as object), edgeType: "straight" } }))}
+              >
+                <Minus size={14} />
+              </button>
+              <button
+                className={`canvas-node-toolbar-btn${effectiveType === "step" ? " canvas-node-toolbar-btn--active" : ""}`}
+                title="Step"
+                onClick={() => setEdges((eds) => eds.map((ed) => ed.id !== id ? ed : { ...ed, data: { ...(ed.data as object), edgeType: "step" } }))}
+              >
+                <CornerDownRight size={14} />
+              </button>
             </div>
           </div>
         )}

@@ -130,6 +130,8 @@ export function SettingsModal() {
   const setCanvasBackgroundVariant = useUIStore((s) => s.setCanvasBackgroundVariant);
   const canvasNodeShadow = useUIStore((s) => s.canvasNodeShadow);
   const setCanvasNodeShadow = useUIStore((s) => s.setCanvasNodeShadow);
+  const canvasDefaultEdgeType = useUIStore((s) => s.canvasDefaultEdgeType);
+  const setCanvasDefaultEdgeType = useUIStore((s) => s.setCanvasDefaultEdgeType);
   const codeTheme = useUIStore((s) => s.codeTheme);
   const setCodeTheme = useUIStore((s) => s.setCodeTheme);
   const effectiveEditorTheme = useUIStore((s) => s.effectiveEditorTheme);
@@ -914,6 +916,19 @@ export function SettingsModal() {
 
       <div className="settings-section">
         <div className="settings-section-title">Edges</div>
+        <div className="settings-row">
+          <span className="settings-label">Default style</span>
+          <div className="settings-control">
+            <select
+              value={canvasDefaultEdgeType}
+              onChange={(e) => setCanvasDefaultEdgeType(e.target.value)}
+            >
+              <option value="bezier">Bezier (curved)</option>
+              <option value="straight">Straight</option>
+              <option value="step">Step (elbow)</option>
+            </select>
+          </div>
+        </div>
         <div className="settings-row">
           <span className="settings-label">Arrow size</span>
           <div className="settings-control">

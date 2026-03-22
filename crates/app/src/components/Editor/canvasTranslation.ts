@@ -34,6 +34,7 @@ interface JsonCanvasFileNode extends JsonCanvasNodeBase {
 interface JsonCanvasLinkNode extends JsonCanvasNodeBase {
   type: "link";
   url: string;
+  title?: string;
 }
 
 interface JsonCanvasGroupNode extends JsonCanvasNodeBase {
@@ -59,6 +60,7 @@ interface JsonCanvasEdge {
   toEnd?: "none" | "arrow";
   color?: string;
   label?: string;
+  edgeType?: string;
 }
 
 export interface JsonCanvas {
@@ -107,6 +109,7 @@ export function canvasToFlow(canvas: JsonCanvas): { nodes: Node[]; edges: Edge[]
         break;
       case "link":
         data.url = cn.url;
+        if (cn.title) data.title = cn.title;
         break;
       case "group":
         if (cn.label) data.label = cn.label;
@@ -176,6 +179,7 @@ export function canvasToFlow(canvas: JsonCanvas): { nodes: Node[]; edges: Edge[]
 
     if (ce.label) edge.label = ce.label;
     if (ce.color) edge.style = { stroke: ce.color };
+    if (ce.edgeType) edge.data = { ...(edge.data as object ?? {}), edgeType: ce.edgeType };
 
     return edge;
   });
@@ -247,8 +251,11 @@ export function flowToCanvas(nodes: Node[], edges: Edge[]): JsonCanvas {
         if (data.subpath) node.subpath = String(data.subpath);
         return node;
       }
-      case "link":
-        return { ...base, type: "link" as const, url: String(data.url ?? "") };
+      case "link": {
+        const node: JsonCanvasLinkNode = { ...base, type: "link" as const, url: String(data.url ?? "") };
+        if (data.title) node.title = String(data.title);
+        return node;
+      }
       case "group": {
         const node: JsonCanvasGroupNode = { ...base, type: "group" as const };
         if (data.label) node.label = String(data.label);
@@ -283,6 +290,10 @@ export function flowToCanvas(nodes: Node[], edges: Edge[]): JsonCanvas {
     if (e.label) ce.label = String(e.label);
     if (e.style && typeof e.style === "object" && "stroke" in e.style) {
       ce.color = String(e.style.stroke);
+    }
+    const edgeData = e.data as Record<string, unknown> | undefined;
+    if (edgeData?.edgeType && edgeData.edgeType !== "bezier") {
+      ce.edgeType = String(edgeData.edgeType);
     }
 
     return ce;

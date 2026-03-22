@@ -161,7 +161,7 @@ All 4 node types share these components:
 |------|-----------|--------------|
 | **File** | `CanvasFileNode` | Reads `graphStore.nodes.get(filePath)` for title/type/tags. Double-click opens note (via `openNote`/`openPlainFile`/`openTab` depending on file type). Supports `.canvas` and `.excalidraw` files (opens in dedicated editors). Shows "missing reference" badge for broken links. Border color defaults to note type color. |
 | **Text** | `CanvasTextNode` | Double-click enters editing mode (textarea). Escape cancels, blur commits. Shape-aware via `data-shape` attribute. Vertical alignment via flexbox `alignItems`. Sticky notes read `canvasStickyPin`/`canvasStickyTape`/`canvasStickyLines` from uiStore. |
-| **Link** | `CanvasLinkNode` | Extracts hostname from URL for display. Simplest node type. |
+| **Link** | `CanvasLinkNode` | Shows favicon, optional title, hostname, and "Open in browser" button. Favicon loaded from Google favicon service. |
 | **Group** | `CanvasGroupNode` | `zIndex: -1`. Double-click label to edit (input). Enter commits, Escape cancels (uses `cancelledRef` to prevent blur from committing after Escape). Background color defaults to `var(--bg-tertiary)`. |
 
 All node inner components are wrapped with `memo()`.
@@ -185,9 +185,9 @@ Fixed-size shapes use `style.height` instead of `style.minHeight`. Adding a new 
 
 Custom `CanvasEdge` component replaces the default React Flow edge.
 
-- **Path**: Bezier via `getBezierPath()`.
+- **Path**: Bezier (default), Straight, or Step. Determined by `data.edgeType` per-edge or `canvasDefaultEdgeType` setting as fallback. Uses `getBezierPath()`, `getStraightPath()`, or `getSmoothStepPath()`.
 - **Label**: Displayed at midpoint. Double-click to edit. New edges (`data.isNew = true`) auto-prompt for label input.
-- **Toolbar**: Shown when selected (not during label edit). Contains: Edit label, Delete, Color picker.
+- **Toolbar**: Shown when selected (not during label edit). Contains: Edit label, Delete, Color picker, Edge type picker (bezier/straight/step).
 - **Color sync**: Color changes update both `style.stroke` AND marker IDs (`brainmap-arrow-{color}`) so the arrow matches the line.
 - **Custom SVG markers**: Defined inline in the ReactFlow component. One default marker (`brainmap-arrow`) + one per unique edge color. Size controlled by `canvasArrowSize` setting.
 
@@ -261,7 +261,9 @@ All settings are persisted to `brainmap:uiPrefs` localStorage. Each has a `setCa
 | `canvasShowMinimap` | `boolean` | `true` | Show navigable minimap in corner |
 | `canvasSnapToGrid` | `boolean` | `false` | Snap nodes to grid when dragging |
 | `canvasSnapGridSize` | `number` | `20` | Grid snap interval in pixels |
-| `canvasNodeShadow` | `boolean` | `true` | Drop shadows on file/text/link nodes |
+| `canvasNodeShadow` | `number` | `8` | Drop shadow size on file/text/link nodes (0 = off) |
+| `canvasDefaultEdgeType` | `string` | `"bezier"` | Default edge path style: `"bezier"`, `"straight"`, or `"step"` |
+| `canvasFileBrowserWidth` | `number` | `260` | File browser drawer width (persisted) |
 | `canvasArrowSize` | `number` | `25` | SVG arrow marker size |
 | `canvasEdgeWidth` | `number` | `1` | Edge stroke width (CSS var `--edge-width`) |
 | `canvasCardBgOpacity` | `number` | `15` | Card background opacity |
