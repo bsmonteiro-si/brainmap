@@ -23,10 +23,12 @@ import { useUIStore } from "../../stores/uiStore";
 import { log } from "../../utils/logger";
 import { canvasToFlow, flowToCanvas } from "./canvasTranslation";
 import type { JsonCanvas } from "./canvasTranslation";
-import { StickyNote, FileText, FilePlus, Layers, ChevronDown, MousePointer2, Hand, Group, Trash2, Copy, Ungroup, PanelRightOpen, Search, GripVertical } from "lucide-react";
+import { StickyNote, FileText, FilePlus, Layers, ChevronDown, ChevronRight, MousePointer2, Hand, Group, Trash2, Copy, Ungroup, PanelRightOpen, Search, GripVertical, Folder, FolderOpen } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES } from "./canvasShapes";
 import { useGraphStore } from "../../stores/graphStore";
+import { buildTree, fuzzyFilterTree } from "../Layout/FileTreePanel";
+import type { TreeNode } from "../Layout/FileTreePanel";
 import { CanvasFileNode, CanvasTextNode, CanvasLinkNode, CanvasGroupNode, CanvasEdge } from "./canvasNodes";
 
 // ── Panel mode context ────────────────────────────────────────────────────────
@@ -93,6 +95,51 @@ const NODE_TYPES = {
 const EDGE_TYPES = {
   default: CanvasEdge,
 };
+
+// ── File browser tree node (recursive) ────────────────────────────────────────
+
+function FileBrowserNode({ node, depth, expanded, onToggle }: {
+  node: TreeNode; depth: number;
+  expanded: Set<string>; onToggle: (path: string) => void;
+}) {
+  const isOpen = expanded.has(node.fullPath);
+  if (node.isFolder) {
+    return (
+      <>
+        <div
+          className="canvas-file-browser-item canvas-file-browser-folder"
+          style={{ paddingLeft: 8 + depth * 16 }}
+          onClick={() => onToggle(node.fullPath)}
+        >
+          {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          {isOpen ? <FolderOpen size={14} /> : <Folder size={14} />}
+          <span className="canvas-file-browser-title">{node.name}</span>
+          {node.noteCount != null && node.noteCount > 0 && (
+            <span className="canvas-file-browser-count">{node.noteCount}</span>
+          )}
+        </div>
+        {isOpen && node.children.map((c) => (
+          <FileBrowserNode key={c.fullPath} node={c} depth={depth + 1} expanded={expanded} onToggle={onToggle} />
+        ))}
+      </>
+    );
+  }
+  return (
+    <div
+      className="canvas-file-browser-item"
+      style={{ paddingLeft: 8 + depth * 16 }}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("application/brainmap-canvas-file", node.fullPath);
+        e.dataTransfer.effectAllowed = "copy";
+      }}
+    >
+      <GripVertical size={12} className="canvas-file-browser-grip" />
+      <span className="canvas-file-browser-title">{node.title || node.name}</span>
+      {node.note_type && <span className="canvas-file-browser-type">{node.note_type}</span>}
+    </div>
+  );
+}
 
 // Module-level pending saves (same pattern as Excalidraw)
 const pendingSaves = new Map<string, { nodes: unknown[]; edges: unknown[] }>();
@@ -169,8 +216,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
     "--sticky-pin": canvasStickyPin ? "block" : "none",
     "--sticky-tape": canvasStickyTape ? "block" : "none",
     "--sticky-lines": canvasStickyLines ? "block" : "none",
-    "--sticky-curl": canvasStickyCurl ? "1" : "0",
-    "--sticky-stripe": canvasStickyStripe ? "1" : "0",
+    "--sticky-curl": `${canvasStickyCurl}px`,
+    "--sticky-stripe": `${canvasStickyStripe}px`,
     "--rounded-radius": `${canvasRoundedRadius}px`,
     "--group-font-family": canvasGroupFontFamily,
     "--group-font-size": `${canvasGroupFontSize}px`,
@@ -922,31 +969,22 @@ export function CanvasEditorInner({ path }: { path: string }) {
   // ── File browser drawer ──────────────────────────────────────────────────
   const [fileBrowserOpen, setFileBrowserOpen] = useState(false);
   const [fileBrowserFilter, setFileBrowserFilter] = useState("");
-  const [fileBrowserTab, setFileBrowserTab] = useState<"notes" | "files">("notes");
+  const [fileBrowserExpanded, setFileBrowserExpanded] = useState<Set<string>>(new Set());
 
-  const fileBrowserItems = useMemo(() => {
+  const toggleFbFolder = useCallback((path: string) => {
+    setFileBrowserExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path); else next.add(path);
+      return next;
+    });
+  }, []);
+
+  const fileBrowserTree = useMemo(() => {
     if (!fileBrowserOpen) return [];
-    const lf = fileBrowserFilter.toLowerCase();
-    const results: { path: string; title: string; noteType: string }[] = [];
-    if (fileBrowserTab === "notes") {
-      allNodes.forEach((n) => {
-        if (n.note_type === "folder") return;
-        if (lf && !n.title.toLowerCase().includes(lf) && !n.path.toLowerCase().includes(lf)) return;
-        results.push({ path: n.path, title: n.title, noteType: n.note_type });
-      });
-    } else {
-      const graphPaths = new Set<string>();
-      allNodes.forEach((n) => graphPaths.add(n.path));
-      for (const fp of workspaceFiles) {
-        if (graphPaths.has(fp)) continue;
-        const name = fp.split("/").pop() ?? fp;
-        if (lf && !name.toLowerCase().includes(lf) && !fp.toLowerCase().includes(lf)) continue;
-        const ext = name.includes(".") ? name.split(".").pop()! : "file";
-        results.push({ path: fp, title: name, noteType: ext });
-      }
-    }
-    return results.slice(0, 50);
-  }, [fileBrowserOpen, fileBrowserFilter, fileBrowserTab, allNodes, workspaceFiles]);
+    const tree = buildTree(allNodes, undefined, workspaceFiles);
+    if (!fileBrowserFilter) return tree;
+    return fuzzyFilterTree(tree, fileBrowserFilter);
+  }, [fileBrowserOpen, fileBrowserFilter, allNodes, workspaceFiles]);
 
   // Handle drop from file browser drawer onto canvas
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -1499,7 +1537,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
             <input
               className="canvas-file-browser-search"
               type="text"
-              placeholder={fileBrowserTab === "notes" ? "Search notes..." : "Search files..."}
+              placeholder="Search files..."
               value={fileBrowserFilter}
               onChange={(e) => setFileBrowserFilter(e.target.value)}
               autoFocus
@@ -1512,39 +1550,19 @@ export function CanvasEditorInner({ path }: { path: string }) {
               ×
             </button>
           </div>
-          <div className="canvas-file-browser-tabs">
-            <button
-              className={`canvas-picker-tab${fileBrowserTab === "notes" ? " canvas-picker-tab--active" : ""}`}
-              onClick={() => { setFileBrowserTab("notes"); setFileBrowserFilter(""); }}
-            >
-              Notes
-            </button>
-            <button
-              className={`canvas-picker-tab${fileBrowserTab === "files" ? " canvas-picker-tab--active" : ""}`}
-              onClick={() => { setFileBrowserTab("files"); setFileBrowserFilter(""); }}
-            >
-              Files
-            </button>
-          </div>
           <div className="canvas-file-browser-list">
-            {fileBrowserItems.map((n) => (
-              <div
-                key={n.path}
-                className="canvas-file-browser-item"
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData("application/brainmap-canvas-file", n.path);
-                  e.dataTransfer.effectAllowed = "copy";
-                }}
-              >
-                <GripVertical size={12} className="canvas-file-browser-grip" />
-                <span className="canvas-file-browser-title">{n.title}</span>
-                <span className="canvas-file-browser-type">{n.noteType}</span>
-              </div>
-            ))}
-            {fileBrowserItems.length === 0 && (
-              <div className="canvas-file-browser-empty">No items found</div>
+            {fileBrowserTree.length === 0 && (
+              <div className="canvas-file-browser-empty">No files found</div>
             )}
+            {fileBrowserTree.map((node) => (
+              <FileBrowserNode
+                key={node.fullPath}
+                node={node}
+                depth={0}
+                expanded={fileBrowserExpanded}
+                onToggle={toggleFbFolder}
+              />
+            ))}
           </div>
         </div>
       )}

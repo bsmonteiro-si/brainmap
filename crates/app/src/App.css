@@ -4976,6 +4976,20 @@ body {
   opacity: 0.6;
   flex-shrink: 0;
 }
+.canvas-file-browser-folder {
+  cursor: pointer;
+  gap: 4px;
+  opacity: 0.85;
+}
+.canvas-file-browser-folder:hover {
+  opacity: 1;
+}
+.canvas-file-browser-count {
+  font-size: 10px;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
 .canvas-file-browser-empty {
   padding: 20px;
   text-align: center;
@@ -5313,8 +5327,8 @@ body {
   background: var(--sticky-color, #fef3c7);
   border-radius: 2px;
   box-shadow:
-    2px 2px var(--sticky-shadow, 6px) rgba(0, 0, 0, 0.15),
-    inset 0 calc(-8px * var(--sticky-curl, 1)) 12px -8px rgba(0, 0, 0, 0.06);
+    2px 2px var(--sticky-shadow, 6px) rgba(0, 0, 0, 0.28),
+    inset 0 calc(-1 * var(--sticky-curl, 8px)) calc(var(--sticky-curl, 8px) * 1.5) calc(-0.5 * var(--sticky-curl, 8px)) rgba(0, 0, 0, 0.18);
   transform: rotate(calc(-1 * var(--sticky-rotation, 1.5deg)));
   position: relative;
 }
@@ -5326,8 +5340,8 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: calc(6px * var(--sticky-stripe, 1));
-  background: rgba(0, 0, 0, 0.04);
+  height: var(--sticky-stripe, 6px);
+  background: rgba(0, 0, 0, 0.10);
   border-radius: 2px 2px 0 0;
   pointer-events: none;
   z-index: 1;
@@ -5347,7 +5361,7 @@ body {
   right: 0;
   width: var(--sticky-fold, 20px);
   height: var(--sticky-fold, 20px);
-  background: linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, 0.08) 50%);
+  background: linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, 0.18) 50%);
   border-radius: 0 0 2px 0;
   pointer-events: none;
   z-index: 1;

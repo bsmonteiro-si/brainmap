@@ -16,7 +16,7 @@ import { log } from "../../utils/logger";
 import { computeNewPath, isValidDrop, getParentFolder, isSameFolder, computeReorderedList, initCustomOrderFromTree, computeDropZone } from "../../utils/fileTreeDnd";
 import { computeRenamePath, validateRenameNameFormat } from "../../utils/fileTreeRename";
 
-interface TreeNode {
+export interface TreeNode {
   name: string;
   fullPath: string;
   title: string;
