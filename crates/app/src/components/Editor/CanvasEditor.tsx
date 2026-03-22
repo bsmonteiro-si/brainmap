@@ -23,7 +23,7 @@ import { useUIStore } from "../../stores/uiStore";
 import { log } from "../../utils/logger";
 import { canvasToFlow, flowToCanvas } from "./canvasTranslation";
 import type { JsonCanvas } from "./canvasTranslation";
-import { StickyNote, FileText, FilePlus, Layers, ChevronDown, MousePointer2, Hand, Group, Trash2, Copy, Ungroup } from "lucide-react";
+import { StickyNote, FileText, FilePlus, Layers, ChevronDown, MousePointer2, Hand, Group, Trash2, Copy, Ungroup, PanelRightOpen, Search, GripVertical } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES } from "./canvasShapes";
 import { useGraphStore } from "../../stores/graphStore";
@@ -206,6 +206,9 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const pendingViewportRef = useRef<Viewport | "fitView" | null>(null);
   const nodesInitialized = useNodesInitialized();
   const hasRestoredViewportRef = useRef(false);
+
+  // ── Clipboard for copy/paste ─────────────────────────────────────────────
+  const clipboardRef = useRef<{ nodes: string; edges: string } | null>(null);
 
   // ── Undo/Redo stacks ─────────────────────────────────────────────────────
   const MAX_CANVAS_UNDO = 30;
@@ -665,6 +668,111 @@ export function CanvasEditorInner({ path }: { path: string }) {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // Space bar for temporary pan mode
+  const priorModeRef = useRef<"pan" | "select" | null>(null);
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key !== " " || e.repeat) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("textarea, input, [contenteditable]")) return;
+      e.preventDefault();
+      priorModeRef.current = interactionMode;
+      setInteractionMode("pan");
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.key !== " ") return;
+      if (priorModeRef.current !== null) {
+        setInteractionMode(priorModeRef.current);
+        priorModeRef.current = null;
+      }
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+  }, [interactionMode]);
+
+  // Cmd+C / Cmd+V for copy/paste
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("textarea, input, [contenteditable]")) return;
+
+      if (e.key === "c") {
+        // Copy selected nodes + their connecting edges
+        const selectedNodes = nodesRef.current.filter((n) => n.selected);
+        if (selectedNodes.length === 0) return;
+        const selectedIds = new Set(selectedNodes.map((n) => n.id));
+        const selectedEdges = edgesRef.current.filter(
+          (edge) => selectedIds.has(edge.source) && selectedIds.has(edge.target),
+        );
+        clipboardRef.current = {
+          nodes: JSON.stringify(selectedNodes),
+          edges: JSON.stringify(selectedEdges),
+        };
+      } else if (e.key === "v" && clipboardRef.current) {
+        e.preventDefault();
+        pushSnapshot();
+        const copiedNodes = JSON.parse(clipboardRef.current.nodes);
+        const copiedEdges = JSON.parse(clipboardRef.current.edges);
+        if (copiedNodes.length === 0) return;
+
+        const now = Date.now();
+        const idMap = new Map<string, string>();
+        copiedNodes.forEach((n: { id: string }, i: number) => {
+          idMap.set(n.id, `node-${now}-${i}-${Math.random().toString(36).slice(2, 6)}`);
+        });
+
+        // Place at viewport center
+        const viewport = reactFlowInstance.getViewport();
+        const container = document.querySelector(".canvas-container");
+        const cw = container?.clientWidth ?? 800;
+        const ch = container?.clientHeight ?? 600;
+        const centerX = (-viewport.x + cw / 2) / viewport.zoom;
+        const centerY = (-viewport.y + ch / 2) / viewport.zoom;
+
+        // Compute centroid of copied nodes for offset
+        let sumX = 0, sumY = 0;
+        for (const n of copiedNodes) { sumX += n.position.x; sumY += n.position.y; }
+        const avgX = sumX / copiedNodes.length;
+        const avgY = sumY / copiedNodes.length;
+        const offsetX = centerX - avgX;
+        const offsetY = centerY - avgY;
+
+        const newNodes = copiedNodes.map((n: Record<string, unknown>) => ({
+          ...n,
+          id: idMap.get(n.id as string)!,
+          position: {
+            x: (n.position as { x: number; y: number }).x + offsetX,
+            y: (n.position as { x: number; y: number }).y + offsetY,
+          },
+          data: { ...(n.data as object) },
+          style: n.style ? { ...(n.style as object) } : undefined,
+          selected: true,
+          ...(n.parentId && idMap.has(n.parentId as string) ? { parentId: idMap.get(n.parentId as string) } : { parentId: undefined }),
+        }));
+
+        const newEdges = copiedEdges.map((e: Record<string, unknown>) => ({
+          ...e,
+          id: `edge-${now}-${Math.random().toString(36).slice(2, 6)}`,
+          source: idMap.get(e.source as string)!,
+          target: idMap.get(e.target as string)!,
+          selected: false,
+        }));
+
+        // Deselect existing nodes
+        setNodes((nds) => [...nds.map((n) => ({ ...n, selected: false })), ...newNodes]);
+        if (newEdges.length > 0) setEdges((eds) => [...eds, ...newEdges]);
+        requestAnimationFrame(() => scheduleSave());
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [setNodes, setEdges, reactFlowInstance, scheduleSave, pushSnapshot]);
+
   // Group selected elements
   const groupSelected = useCallback(() => {
     const selected = nodesRef.current.filter((n) => n.selected && n.type !== "canvasGroup");
@@ -810,6 +918,63 @@ export function CanvasEditorInner({ path }: { path: string }) {
   // ── Note list for pickers ────────────────────────────────────────────────
   const allNodes = useGraphStore((s) => s.nodes);
   const workspaceFiles = useGraphStore((s) => s.workspaceFiles);
+
+  // ── File browser drawer ──────────────────────────────────────────────────
+  const [fileBrowserOpen, setFileBrowserOpen] = useState(false);
+  const [fileBrowserFilter, setFileBrowserFilter] = useState("");
+  const [fileBrowserTab, setFileBrowserTab] = useState<"notes" | "files">("notes");
+
+  const fileBrowserItems = useMemo(() => {
+    if (!fileBrowserOpen) return [];
+    const lf = fileBrowserFilter.toLowerCase();
+    const results: { path: string; title: string; noteType: string }[] = [];
+    if (fileBrowserTab === "notes") {
+      allNodes.forEach((n) => {
+        if (n.note_type === "folder") return;
+        if (lf && !n.title.toLowerCase().includes(lf) && !n.path.toLowerCase().includes(lf)) return;
+        results.push({ path: n.path, title: n.title, noteType: n.note_type });
+      });
+    } else {
+      const graphPaths = new Set<string>();
+      allNodes.forEach((n) => graphPaths.add(n.path));
+      for (const fp of workspaceFiles) {
+        if (graphPaths.has(fp)) continue;
+        const name = fp.split("/").pop() ?? fp;
+        if (lf && !name.toLowerCase().includes(lf) && !fp.toLowerCase().includes(lf)) continue;
+        const ext = name.includes(".") ? name.split(".").pop()! : "file";
+        results.push({ path: fp, title: name, noteType: ext });
+      }
+    }
+    return results.slice(0, 50);
+  }, [fileBrowserOpen, fileBrowserFilter, fileBrowserTab, allNodes, workspaceFiles]);
+
+  // Handle drop from file browser drawer onto canvas
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes("application/brainmap-canvas-file")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    const filePath = e.dataTransfer.getData("application/brainmap-canvas-file");
+    if (!filePath) return;
+    e.preventDefault();
+    pushSnapshot();
+    const flowPos = reactFlowInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    const id = `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setNodes((nds) => [
+      ...nds,
+      {
+        id,
+        type: "canvasFile",
+        position: { x: flowPos.x, y: flowPos.y },
+        data: { file: filePath },
+        style: { width: canvasDefaultCardWidth, minHeight: canvasDefaultCardHeight },
+      },
+    ]);
+    requestAnimationFrame(() => scheduleSave());
+  }, [reactFlowInstance, setNodes, scheduleSave, pushSnapshot, canvasDefaultCardWidth, canvasDefaultCardHeight]);
 
   // ── Toolbar: add node at viewport center ────────────────────────────────
   const [toolbarPicker, setToolbarPicker] = useState(false);
@@ -983,6 +1148,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
         defaultEdgeOptions={{ markerEnd: "brainmap-arrow" }}
         snapToGrid={canvasSnapToGrid}
         snapGrid={[canvasSnapGridSize, canvasSnapGridSize]}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       >
         {/* Custom arrow markers — one per edge color + default */}
         <svg style={{ position: "absolute", width: 0, height: 0 }}>
@@ -1115,6 +1282,14 @@ export function CanvasEditorInner({ path }: { path: string }) {
             onClick={() => createNoteForCanvas()}
           >
             <FilePlus size={22} />
+          </button>
+          <div className="canvas-toolbar-separator" />
+          <button
+            className={`canvas-toolbar-btn${fileBrowserOpen ? " canvas-toolbar-btn--active" : ""}`}
+            title="File browser"
+            onClick={() => setFileBrowserOpen(!fileBrowserOpen)}
+          >
+            <PanelRightOpen size={22} />
           </button>
         </Panel>
       </ReactFlow>
@@ -1317,6 +1492,62 @@ export function CanvasEditorInner({ path }: { path: string }) {
           </div>
         );
       })()}
+      {fileBrowserOpen && (
+        <div className="canvas-file-browser" onClick={(e) => e.stopPropagation()}>
+          <div className="canvas-file-browser-header">
+            <Search size={14} className="canvas-file-browser-search-icon" />
+            <input
+              className="canvas-file-browser-search"
+              type="text"
+              placeholder={fileBrowserTab === "notes" ? "Search notes..." : "Search files..."}
+              value={fileBrowserFilter}
+              onChange={(e) => setFileBrowserFilter(e.target.value)}
+              autoFocus
+            />
+            <button
+              className="canvas-file-browser-close"
+              onClick={() => setFileBrowserOpen(false)}
+              title="Close"
+            >
+              ×
+            </button>
+          </div>
+          <div className="canvas-file-browser-tabs">
+            <button
+              className={`canvas-picker-tab${fileBrowserTab === "notes" ? " canvas-picker-tab--active" : ""}`}
+              onClick={() => { setFileBrowserTab("notes"); setFileBrowserFilter(""); }}
+            >
+              Notes
+            </button>
+            <button
+              className={`canvas-picker-tab${fileBrowserTab === "files" ? " canvas-picker-tab--active" : ""}`}
+              onClick={() => { setFileBrowserTab("files"); setFileBrowserFilter(""); }}
+            >
+              Files
+            </button>
+          </div>
+          <div className="canvas-file-browser-list">
+            {fileBrowserItems.map((n) => (
+              <div
+                key={n.path}
+                className="canvas-file-browser-item"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("application/brainmap-canvas-file", n.path);
+                  e.dataTransfer.effectAllowed = "copy";
+                }}
+              >
+                <GripVertical size={12} className="canvas-file-browser-grip" />
+                <span className="canvas-file-browser-title">{n.title}</span>
+                <span className="canvas-file-browser-type">{n.noteType}</span>
+              </div>
+            ))}
+            {fileBrowserItems.length === 0 && (
+              <div className="canvas-file-browser-empty">No items found</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

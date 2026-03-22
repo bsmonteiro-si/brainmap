@@ -30,6 +30,7 @@ CanvasEditor (public export, per path key)
           Selection toolbar (inline, position: absolute)
         Context menus (pane, element, shape picker, note picker)
         Toolbar pickers (shape, note reference)
+        File browser drawer (toggleable right-side panel with DnD)
 
 CanvasPanel (right sidebar)
   CanvasPanelModeContext.Provider value={true}
@@ -98,6 +99,8 @@ RF_TO_CANVAS_TYPE:  canvasText -> text,  canvasFile -> file,  canvasLink -> link
 | `undoStackRef` / `redoStackRef` | `{ nodes: string; edges: string }[]` | Undo/redo snapshot stacks |
 | `isUndoingRef` | `boolean` | Suppresses snapshot push during undo/redo replay |
 | `isDraggingRef` / `isResizingRef` | `boolean` | Tracks gesture state for snapshot coalescing |
+| `clipboardRef` | `{nodes: string; edges: string} \| null` | Internal copy/paste clipboard |
+| `priorModeRef` | `"pan" \| "select" \| null` | Saved mode during Space bar temporary pan |
 
 ### Module-Level State
 
@@ -224,6 +227,9 @@ Appears above selected nodes when `selectedCount >= 2` and not during selection 
 |-----|--------|-------|
 | H | Pan mode | Not in textarea/input/contenteditable |
 | V | Select mode | Not in textarea/input/contenteditable |
+| Space (hold) | Temporary pan mode (release restores prior mode) | Not in textarea/input/contenteditable |
+| Cmd+C | Copy selected nodes + connecting edges | Not in textarea/input/contenteditable |
+| Cmd+V | Paste at viewport center | Not in textarea/input/contenteditable |
 | Cmd+Z | Undo | Capture phase; not in textarea/input |
 | Cmd+Y / Cmd+Shift+Z | Redo | Capture phase; not in textarea/input |
 | Cmd+D | Duplicate selected | Global |
