@@ -4883,7 +4883,6 @@ body {
   position: absolute;
   top: 0;
   right: 0;
-  width: 260px;
   height: 100%;
   background: var(--bg-primary);
   border-left: 1px solid var(--border-color);
@@ -4894,6 +4893,19 @@ body {
 }
 .canvas-container.canvas-light .canvas-file-browser {
   box-shadow: -2px 0 12px rgba(0, 0, 0, 0.1);
+}
+.canvas-file-browser-resize-handle {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 11;
+}
+.canvas-file-browser-resize-handle:hover {
+  background: var(--accent);
+  opacity: 0.3;
 }
 .canvas-file-browser-header {
   display: flex;
@@ -5327,7 +5339,7 @@ body {
   background: var(--sticky-color, #fef3c7);
   border-radius: 2px;
   box-shadow:
-    2px 2px var(--sticky-shadow, 6px) rgba(0, 0, 0, 0.28),
+    3px 4px var(--sticky-shadow, 6px) 1px rgba(0, 0, 0, 0.45),
     inset 0 calc(-1 * var(--sticky-curl, 8px)) calc(var(--sticky-curl, 8px) * 1.5) calc(-0.5 * var(--sticky-curl, 8px)) rgba(0, 0, 0, 0.18);
   transform: rotate(calc(-1 * var(--sticky-rotation, 1.5deg)));
   position: relative;

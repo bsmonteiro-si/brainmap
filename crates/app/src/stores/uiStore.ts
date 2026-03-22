@@ -211,9 +211,9 @@ interface PersistedPrefs {
   canvasStickyFoldSize?: number;
   canvasStickyPin?: boolean;
   canvasStickyTape?: boolean;
-  canvasStickyLines?: boolean;
-  canvasStickyCurl?: boolean;
-  canvasStickyStripe?: boolean;
+  canvasStickyLines?: number;
+  canvasStickyCurl?: number;
+  canvasStickyStripe?: number;
   canvasRoundedRadius?: number;
   canvasGroupFontFamily?: string;
   canvasGroupFontSize?: number;
@@ -226,6 +226,7 @@ interface PersistedPrefs {
   canvasSnapGridSize?: number;
   canvasBackgroundVariant?: string;
   canvasNodeShadow?: number;
+  canvasFileBrowserWidth?: number;
   codeTheme?: string;
   homeNotes?: Record<string, string>; // workspaceRoot → notePath
   tooltipFontSize?: number;
@@ -365,9 +366,9 @@ interface UIState {
   canvasStickyFoldSize: number;
   canvasStickyPin: boolean;
   canvasStickyTape: boolean;
-  canvasStickyLines: boolean;
-  canvasStickyCurl: boolean;
-  canvasStickyStripe: boolean;
+  canvasStickyLines: number;
+  canvasStickyCurl: number;
+  canvasStickyStripe: number;
   canvasRoundedRadius: number;
   canvasGroupFontFamily: string;
   canvasGroupFontSize: number;
@@ -380,6 +381,7 @@ interface UIState {
   canvasSnapGridSize: number;
   canvasBackgroundVariant: string;
   canvasNodeShadow: number;
+  canvasFileBrowserWidth: number;
   codeTheme: string;
   homeNotePath: string | null;
   customFileOrder: Record<string, string[]>;
@@ -411,9 +413,9 @@ interface UIState {
   setCanvasStickyFoldSize: (v: number) => void;
   setCanvasStickyPin: (v: boolean) => void;
   setCanvasStickyTape: (v: boolean) => void;
-  setCanvasStickyLines: (v: boolean) => void;
-  setCanvasStickyCurl: (v: boolean) => void;
-  setCanvasStickyStripe: (v: boolean) => void;
+  setCanvasStickyLines: (v: number) => void;
+  setCanvasStickyCurl: (v: number) => void;
+  setCanvasStickyStripe: (v: number) => void;
   setCanvasRoundedRadius: (v: number) => void;
   setCanvasGroupFontFamily: (v: string) => void;
   setCanvasGroupFontSize: (v: number) => void;
@@ -426,6 +428,7 @@ interface UIState {
   setCanvasSnapGridSize: (v: number) => void;
   setCanvasBackgroundVariant: (v: string) => void;
   setCanvasNodeShadow: (v: number) => void;
+  setCanvasFileBrowserWidth: (v: number) => void;
   setCodeTheme: (theme: string) => void;
   toggleGraphMode: () => void;
   openCommandPalette: () => void;
@@ -624,9 +627,9 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasStickyFoldSize: storedPrefs.canvasStickyFoldSize ?? 20,
   canvasStickyPin: storedPrefs.canvasStickyPin ?? false,
   canvasStickyTape: storedPrefs.canvasStickyTape ?? false,
-  canvasStickyLines: storedPrefs.canvasStickyLines ?? false,
-  canvasStickyCurl: storedPrefs.canvasStickyCurl ?? true,
-  canvasStickyStripe: storedPrefs.canvasStickyStripe ?? true,
+  canvasStickyLines: typeof storedPrefs.canvasStickyLines === "number" ? storedPrefs.canvasStickyLines : storedPrefs.canvasStickyLines === true ? 10 : 0,
+  canvasStickyCurl: typeof storedPrefs.canvasStickyCurl === "number" ? storedPrefs.canvasStickyCurl : storedPrefs.canvasStickyCurl === false ? 0 : 8,
+  canvasStickyStripe: typeof storedPrefs.canvasStickyStripe === "number" ? storedPrefs.canvasStickyStripe : storedPrefs.canvasStickyStripe === false ? 0 : 6,
   canvasRoundedRadius: storedPrefs.canvasRoundedRadius ?? 24,
   canvasGroupFontFamily: storedPrefs.canvasGroupFontFamily ?? "sans-serif",
   canvasGroupFontSize: storedPrefs.canvasGroupFontSize ?? 13,
@@ -639,6 +642,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasSnapGridSize: storedPrefs.canvasSnapGridSize ?? 20,
   canvasBackgroundVariant: storedPrefs.canvasBackgroundVariant ?? "dots",
   canvasNodeShadow: storedPrefs.canvasNodeShadow ?? 8,
+  canvasFileBrowserWidth: storedPrefs.canvasFileBrowserWidth ?? 260,
   codeTheme: storedPrefs.codeTheme ?? "GitHub Dark",
   graphMode: "navigate",
   commandPaletteOpen: false,
@@ -851,15 +855,15 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ canvasStickyTape });
     savePrefs({ canvasStickyTape });
   },
-  setCanvasStickyLines: (canvasStickyLines: boolean) => {
+  setCanvasStickyLines: (canvasStickyLines: number) => {
     set({ canvasStickyLines });
     savePrefs({ canvasStickyLines });
   },
-  setCanvasStickyCurl: (canvasStickyCurl: boolean) => {
+  setCanvasStickyCurl: (canvasStickyCurl: number) => {
     set({ canvasStickyCurl });
     savePrefs({ canvasStickyCurl });
   },
-  setCanvasStickyStripe: (canvasStickyStripe: boolean) => {
+  setCanvasStickyStripe: (canvasStickyStripe: number) => {
     set({ canvasStickyStripe });
     savePrefs({ canvasStickyStripe });
   },
@@ -910,6 +914,10 @@ export const useUIStore = create<UIState>((set, get) => ({
   setCanvasNodeShadow: (canvasNodeShadow: number) => {
     set({ canvasNodeShadow });
     savePrefs({ canvasNodeShadow });
+  },
+  setCanvasFileBrowserWidth: (canvasFileBrowserWidth: number) => {
+    set({ canvasFileBrowserWidth });
+    savePrefs({ canvasFileBrowserWidth });
   },
 
   toggleGraphMode: () => {

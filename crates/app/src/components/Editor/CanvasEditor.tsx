@@ -215,7 +215,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
     "--sticky-fold": `${canvasStickyFoldSize}px`,
     "--sticky-pin": canvasStickyPin ? "block" : "none",
     "--sticky-tape": canvasStickyTape ? "block" : "none",
-    "--sticky-lines": canvasStickyLines ? "block" : "none",
+    "--sticky-lines": `${canvasStickyLines}`,
     "--sticky-curl": `${canvasStickyCurl}px`,
     "--sticky-stripe": `${canvasStickyStripe}px`,
     "--rounded-radius": `${canvasRoundedRadius}px`,
@@ -970,6 +970,9 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const [fileBrowserOpen, setFileBrowserOpen] = useState(false);
   const [fileBrowserFilter, setFileBrowserFilter] = useState("");
   const [fileBrowserExpanded, setFileBrowserExpanded] = useState<Set<string>>(new Set());
+  const fileBrowserWidth = useUIStore((s) => s.canvasFileBrowserWidth);
+  const setFileBrowserWidth = useUIStore((s) => s.setCanvasFileBrowserWidth);
+  const fbResizingRef = useRef(false);
 
   const toggleFbFolder = useCallback((path: string) => {
     setFileBrowserExpanded((prev) => {
@@ -1167,7 +1170,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
-        onPaneClick={() => { setToolbarPicker(false); setToolbarShapePicker(false); }}
+        onPaneClick={() => { setToolbarPicker(false); setToolbarShapePicker(false); setFileBrowserOpen(false); }}
         onPaneContextMenu={handlePaneContextMenu}
         onNodeContextMenu={handleNodeContextMenu}
 
@@ -1531,7 +1534,32 @@ export function CanvasEditorInner({ path }: { path: string }) {
         );
       })()}
       {fileBrowserOpen && (
-        <div className="canvas-file-browser" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="canvas-file-browser"
+          style={{ width: fileBrowserWidth }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className="canvas-file-browser-resize-handle"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              fbResizingRef.current = true;
+              const startX = e.clientX;
+              const startW = fileBrowserWidth;
+              const onMove = (ev: MouseEvent) => {
+                if (!fbResizingRef.current) return;
+                const newW = Math.max(180, Math.min(500, startW - (ev.clientX - startX)));
+                setFileBrowserWidth(newW);
+              };
+              const onUp = () => {
+                fbResizingRef.current = false;
+                document.removeEventListener("mousemove", onMove);
+                document.removeEventListener("mouseup", onUp);
+              };
+              document.addEventListener("mousemove", onMove);
+              document.addEventListener("mouseup", onUp);
+            }}
+          />
           <div className="canvas-file-browser-header">
             <Search size={14} className="canvas-file-browser-search-icon" />
             <input
