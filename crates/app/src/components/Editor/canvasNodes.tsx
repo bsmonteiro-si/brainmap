@@ -334,8 +334,20 @@ function Resizer({ id, selected, minWidth = 120, minHeight = 40, autoHeight = fa
 }) {
   const { setNodes } = useReactFlow();
 
-  // When autoHeight is enabled, NodeResizer sets style.height during resize.
-  // Convert it back to minHeight so the node can still auto-expand for content.
+  // On resize start, convert minHeight → height so the CSS floor is removed and
+  // the user can freely shrink the node. On resize end, convert back to minHeight
+  // so the node can still auto-expand for content.
+  const handleResizeStart = useCallback(() => {
+    if (!autoHeight) return;
+    setNodes((nds) => nds.map((n) => {
+      if (n.id !== id) return n;
+      const style = (n.style ?? {}) as Record<string, unknown>;
+      if (typeof style.minHeight !== "number") return n;
+      const { minHeight: mh, ...rest } = style;
+      return { ...n, style: { ...rest, height: mh } };
+    }));
+  }, [id, autoHeight, setNodes]);
+
   const handleResizeEnd = useCallback(() => {
     if (!autoHeight) return;
     setNodes((nds) => nds.map((n) => {
@@ -354,6 +366,7 @@ function Resizer({ id, selected, minWidth = 120, minHeight = 40, autoHeight = fa
       minHeight={minHeight}
       lineClassName="canvas-resize-line"
       handleClassName="canvas-resize-handle"
+      onResizeStart={autoHeight ? handleResizeStart : undefined}
       onResizeEnd={autoHeight ? handleResizeEnd : undefined}
     />
   );
