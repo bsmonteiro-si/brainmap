@@ -561,7 +561,10 @@ function CanvasLinkNodeInner({ id, data, selected }: NodeProps) {
 
   const openInBrowser = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (url) window.open(url, "_blank", "noopener,noreferrer");
+    if (!url) return;
+    import("@tauri-apps/plugin-shell").then((mod) => mod.open(url)).catch(() => {
+      window.open(url, "_blank", "noopener,noreferrer");
+    });
   };
 
   return (

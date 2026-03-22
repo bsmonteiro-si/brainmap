@@ -1087,9 +1087,9 @@ export function CanvasEditorInner({ path }: { path: string }) {
     let title: string | undefined;
     try { title = new URL(url).hostname; } catch { /* invalid */ }
     if (mode === "context") {
-      addNodeAtMenu("canvasLink", { url, title }, canvasDefaultCardWidth, 60);
+      addNodeAtMenu("canvasLink", { url, title });
     } else {
-      addNodeAtCenter("canvasLink", { url, title }, canvasDefaultCardWidth, 60);
+      addNodeAtCenter("canvasLink", { url, title });
     }
     setLinkInputMode(null);
     setLinkInputValue("");
