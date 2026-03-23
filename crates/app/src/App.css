@@ -5154,6 +5154,14 @@ body {
 }
 
 /* ── Node toolbar ── */
+
+/* React Flow sets z-index inline from node.internals.z + 1.
+   For group nodes (zIndex: -1), the toolbar ends up at z=0 and gets
+   obscured by other nodes. Force the portal wrapper above everything. */
+.react-flow__node-toolbar {
+  z-index: 1000 !important;
+}
+
 .canvas-node-toolbar {
   display: flex;
   gap: 2px;

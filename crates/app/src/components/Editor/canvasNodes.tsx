@@ -115,6 +115,10 @@ function FourHandles() {
 const selectSelectedCount = (s: ReactFlowState) =>
   Array.from(s.nodeLookup.values()).filter((n) => n.selected).length;
 
+const selectTotalSelectedCount = (s: ReactFlowState) =>
+  Array.from(s.nodeLookup.values()).filter((n) => n.selected).length +
+  Array.from(s.edgeLookup.values()).filter((e) => e.selected).length;
+
 function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlign, textVAlign }: {
   id: string; selected: boolean; shape?: string;
   fontSize?: number; fontFamily?: string; textAlign?: string; textVAlign?: string;
@@ -753,6 +757,7 @@ function CanvasEdgeInner({
   data,
 }: EdgeProps) {
   const { setEdges } = useReactFlow();
+  const totalSelectedCount = useStore(selectTotalSelectedCount);
   const [showColors, setShowColors] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(String(label ?? ""));
@@ -893,8 +898,8 @@ function CanvasEdgeInner({
             {label}
           </div>
         ) : null}
-        {/* Toolbar */}
-        {selected && !showInput && (
+        {/* Toolbar — hide when multiple elements are selected */}
+        {selected && !showInput && totalSelectedCount <= 1 && (
           <div
             className="canvas-edge-toolbar"
             style={{ transform: `translate(-50%, -100%) translate(${labelX}px,${labelY - 16}px)` }}
