@@ -2,6 +2,13 @@
 
 Feature history moved from CLAUDE.md. Organized by phase and feature area.
 
+## Image Viewer
+
+- **Dedicated image viewer**: Image files (`.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.webp`, `.ico`, `.bmp`) now open in a built-in viewer instead of showing "Binary file — cannot be displayed".
+- **Zoom and pan**: Ctrl/Cmd+scroll to zoom, click-and-drag to pan. Toolbar buttons for zoom in/out and reset.
+- **Image info**: Toolbar displays file name, pixel dimensions, and file size.
+- **Read-only**: No save logic — uses Tauri's asset protocol to load images directly.
+
 ## Typed Canvas Cards (Card Kinds)
 
 - **Summary, Question, Transition**: Three semantic card kinds for text nodes. Each has a colored badge label and solid border for visual differentiation.

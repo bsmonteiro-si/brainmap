@@ -160,7 +160,7 @@ function App() {
 
         // Custom editor tabs — unmount cleanup handles saving; just close
         const closingTab = useTabStore.getState().getTab(closingId);
-        if (closingTab?.kind === "excalidraw" || closingTab?.kind === "canvas") {
+        if (closingTab?.kind === "excalidraw" || closingTab?.kind === "canvas" || closingTab?.kind === "image") {
           closeTabAndNavigateNext(closingId);
           return;
         }
@@ -194,7 +194,9 @@ function App() {
           });
         } else {
           const tab = tabId ? useTabStore.getState().getTab(tabId) : null;
-          if (tab?.kind === "excalidraw") {
+          if (tab?.kind === "image") {
+            // Images are read-only — no-op
+          } else if (tab?.kind === "excalidraw") {
             window.dispatchEvent(new CustomEvent("excalidraw:save", { detail: tab.path }));
           } else if (tab?.kind === "canvas") {
             window.dispatchEvent(new CustomEvent("canvas:save", { detail: tab.path }));

@@ -134,6 +134,10 @@ export class TauriBridge implements BrainMapAPI {
     return invoke<PlainFileDetail>("read_plain_file", { path });
   }
 
+  async resolveImagePath(path: string): Promise<PdfFileMeta> {
+    return invoke<PdfFileMeta>("resolve_image_path", { path });
+  }
+
   async resolvePdfPath(path: string): Promise<PdfFileMeta> {
     return invoke<PdfFileMeta>("resolve_pdf_path", { path });
   }

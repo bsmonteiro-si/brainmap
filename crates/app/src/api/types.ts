@@ -108,6 +108,7 @@ export interface BrainMapAPI {
   createPlainFile(path: string, body?: string): Promise<string>;
   deletePlainFile(path: string): Promise<void>;
   readPlainFile(path: string): Promise<PlainFileDto>;
+  resolveImagePath(path: string): Promise<PdfMetaDto>;
   resolvePdfPath(path: string): Promise<PdfMetaDto>;
   loadPdfHighlights(pdfPath: string): Promise<PdfHighlight[]>;
   savePdfHighlights(pdfPath: string, highlights: PdfHighlight[]): Promise<void>;

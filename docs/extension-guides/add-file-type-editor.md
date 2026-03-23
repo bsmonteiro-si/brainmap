@@ -7,6 +7,7 @@ Use this guide when the file type needs its own full-screen editor (not just a p
 ## Reference implementations
 
 - `PdfViewer.tsx` — read-only viewer (simpler, no save logic)
+- `ImageViewer.tsx` — read-only viewer with zoom/pan (simplest, no save logic, no external library)
 - `ExcalidrawEditor.tsx` — full read/write editor with auto-save, error boundary, lazy loading
 
 ## Architecture overview
@@ -262,6 +263,7 @@ If the library supports theming independently from the app:
 | `.pdf` | `"pdf"` | PdfViewer | No (highlights only) | Phase 1c |
 | `.excalidraw` | `"excalidraw"` | ExcalidrawEditor | Yes | Phase 1c |
 | `.canvas` | `"canvas"` | CanvasEditor | Yes | Phase 1c |
+| `.png`/`.jpg`/`.jpeg`/`.gif`/`.svg`/`.webp`/`.ico`/`.bmp` | `"image"` | ImageViewer | No (read-only) | Phase 1c |
 
 ## Common pitfalls
 

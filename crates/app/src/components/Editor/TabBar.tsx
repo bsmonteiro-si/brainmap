@@ -120,7 +120,7 @@ export function TabBar() {
     if (tab.kind === "untitled") {
       useGraphStore.getState().selectNode(null);
       useEditorStore.getState().activateUntitledTab(path);
-    } else if (tab.kind === "pdf" || tab.kind === "excalidraw" || tab.kind === "canvas") {
+    } else if (tab.kind === "pdf" || tab.kind === "excalidraw" || tab.kind === "canvas" || tab.kind === "image") {
       useGraphStore.getState().selectNode(null);
       useTabStore.getState().activateTab(path);
       useEditorStore.getState().clearForCustomTab();
@@ -164,7 +164,7 @@ export function TabBar() {
 
     // PDF tabs are never dirty — just close
     // Excalidraw tabs save via unmount cleanup in ExcalidrawEditor
-    if (tab && (tab.kind === "pdf" || tab.kind === "excalidraw" || tab.kind === "canvas")) {
+    if (tab && (tab.kind === "pdf" || tab.kind === "excalidraw" || tab.kind === "canvas" || tab.kind === "image")) {
       closeTabAndNavigateNext(id);
       return;
     }
@@ -245,11 +245,12 @@ export function TabBar() {
           title={tab.kind === "untitled" ? tab.title : tab.path}
         >
           <NoteTypeIcon noteType={tab.kind === "untitled" ? undefined : (tab.noteType ?? undefined)} fileName={tab.kind === "untitled" ? undefined : tab.path?.split("/").pop()} size={14} />
-          <span className="tab-title">{(tab.kind === "canvas" || tab.kind === "excalidraw" || tab.kind === "pdf") ? tab.title.replace(/\.[^.]+$/, "") : tab.title}</span>
+          <span className="tab-title">{(tab.kind === "canvas" || tab.kind === "excalidraw" || tab.kind === "pdf" || tab.kind === "image") ? tab.title.replace(/\.[^.]+$/, "") : tab.title}</span>
           {tab.kind === "canvas" && <span className="tab-ext-badge tab-ext-badge--canvas">.canvas</span>}
           {tab.kind === "excalidraw" && <span className="tab-ext-badge tab-ext-badge--excalidraw">.excalidraw</span>}
           {tab.kind === "pdf" && <span className="tab-ext-badge tab-ext-badge--pdf">.pdf</span>}
-          {(tab.id === activeTabId && tab.kind !== "excalidraw" && tab.kind !== "pdf" && tab.kind !== "canvas" ? editorIsDirty : tab.isDirty) && <span className="tab-dirty-dot" />}
+          {tab.kind === "image" && <span className="tab-ext-badge tab-ext-badge--image">{tab.title.match(/\.[^.]+$/)?.[0] ?? ""}</span>}
+          {(tab.id === activeTabId && tab.kind !== "excalidraw" && tab.kind !== "pdf" && tab.kind !== "canvas" && tab.kind !== "image" ? editorIsDirty : tab.isDirty) && <span className="tab-dirty-dot" />}
           <button
             className="tab-close"
             onClick={(e) => handleClose(e, tab.id)}

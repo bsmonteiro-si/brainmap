@@ -4,7 +4,7 @@ import {
   BaseEdge, EdgeLabelRenderer, getBezierPath, getStraightPath, getSmoothStepPath, useReactFlow, useStore,
 } from "@xyflow/react";
 import type { NodeProps, EdgeProps, ReactFlowState } from "@xyflow/react";
-import { Trash2, Palette, Paintbrush, PenLine, Shapes, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Spline, Minus, CornerDownRight, ChevronDown, ChevronRight } from "lucide-react";
+import { Trash2, Palette, Paintbrush, PenLine, Shapes, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Spline, Minus, CornerDownRight, ChevronDown, ChevronRight, FileText, FileImage, FileVideo, FileAudio, FileSpreadsheet, FileArchive, Presentation, LayoutDashboard, PenTool } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES, getShapeDefinition } from "./canvasShapes";
 import type { CanvasShapeId } from "./canvasShapes";
@@ -399,6 +399,30 @@ function Resizer({ id, selected, minWidth = 120, minHeight = 40, autoHeight = fa
   );
 }
 
+// ── File type visual identification ──────────────────────────────────────────
+
+function getFileTypeInfo(filePath: string): { icon: React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>; label: string; color: string } | null {
+  const ext = filePath.split(".").pop()?.toLowerCase();
+  if (!ext) return null;
+  switch (ext) {
+    case "pdf": return { icon: FileText, label: "PDF", color: "#e74c3c" };
+    case "png": case "jpg": case "jpeg": case "gif": case "svg": case "webp": case "bmp": case "ico":
+      return { icon: FileImage, label: ext.toUpperCase(), color: "#9b59b6" };
+    case "mp4": case "mov": case "avi": case "mkv": case "webm":
+      return { icon: FileVideo, label: ext.toUpperCase(), color: "#e67e22" };
+    case "mp3": case "wav": case "ogg": case "flac": case "m4a": case "aac":
+      return { icon: FileAudio, label: ext.toUpperCase(), color: "#1abc9c" };
+    case "pptx": case "ppt": return { icon: Presentation, label: ext.toUpperCase(), color: "#e74c3c" };
+    case "xlsx": case "xls": case "csv": return { icon: FileSpreadsheet, label: ext.toUpperCase(), color: "#27ae60" };
+    case "docx": case "doc": return { icon: FileText, label: ext.toUpperCase(), color: "#3498db" };
+    case "zip": case "tar": case "gz": case "rar": case "7z":
+      return { icon: FileArchive, label: ext.toUpperCase(), color: "#95a5a6" };
+    case "canvas": return { icon: LayoutDashboard, label: "CANVAS", color: "#8e44ad" };
+    case "excalidraw": return { icon: PenTool, label: "DRAW", color: "#f39c12" };
+    default: return null;
+  }
+}
+
 // ── File Node ─────────────────────────────────────────────────────────────────
 
 function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
@@ -435,7 +459,8 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
   const title = node?.title ?? filePath.split("/").pop() ?? filePath;
   const noteType = node?.note_type;
   const tags = node?.tags ?? [];
-  const borderColor = d.color ?? (noteType ? getNodeColor(noteType) : "var(--border-color)");
+  const fileTypeInfo = getFileTypeInfo(filePath);
+  const borderColor = d.color ?? (noteType ? getNodeColor(noteType) : fileTypeInfo?.color ?? "var(--border-color)");
 
   return (
     <div
@@ -453,7 +478,18 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
           {noteType}
         </span>
       )}
+      {!noteType && fileTypeInfo && (
+        <span
+          className="canvas-file-node-badge"
+          style={{ backgroundColor: fileTypeInfo.color }}
+        >
+          <fileTypeInfo.icon size={10} /> {fileTypeInfo.label}
+        </span>
+      )}
       <div className="canvas-file-node-header">
+        {!noteType && fileTypeInfo && (
+          <fileTypeInfo.icon size={16} className="canvas-file-node-icon" style={{ color: fileTypeInfo.color }} />
+        )}
         <span className="canvas-file-node-title">{title}</span>
       </div>
       {tags.length > 0 && (
@@ -533,9 +569,9 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
   const stickyTape = useUIStore((s) => s.canvasStickyTape);
 
   const cardKindMeta = d.cardKind ? CARD_KIND_META.find((m) => m.id === d.cardKind) : undefined;
-  // Card kind provides default border color + solid style; explicit user color overrides
-  const effectiveBorderColor = borderColor ?? cardKindMeta?.color;
-  const effectiveBorderStyle = cardKindMeta && !borderColor ? "solid" as const : undefined;
+  const kindColor = cardKindMeta?.color;
+  // User color overrides kind color for border
+  const effectiveBorderColor = borderColor ?? undefined;
 
   return (
     <div
@@ -548,8 +584,12 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
       } : {})}
       style={{
         ...(effectiveBorderColor ? { borderColor: effectiveBorderColor } : {}),
-        ...(effectiveBorderStyle ? { borderStyle: effectiveBorderStyle } : {}),
         ...(d.bgColor ? { backgroundColor: d.bgColor } : {}),
+        ...(kindColor ? {
+          borderLeft: `3px solid ${kindColor}`,
+          boxShadow: `0 0 12px color-mix(in srgb, ${kindColor} 20%, transparent), 0 2px 8px rgba(0,0,0,0.3)`,
+          background: `linear-gradient(180deg, color-mix(in srgb, ${kindColor} 10%, var(--bg-primary)) 0%, var(--bg-primary) 60%)`,
+        } : {}),
       }}
       onDoubleClick={() => { setEditValue(text); setEditing(true); }}
     >
@@ -558,10 +598,10 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
       {cardKindMeta && (() => {
         const BadgeIcon = (LucideIcons as Record<string, React.ComponentType<{ size?: number }>>)[cardKindMeta.icon];
         return (
-          <span className={`canvas-card-kind-badge canvas-card-kind-badge--${d.cardKind}`}>
-            {BadgeIcon && <BadgeIcon size={10} />}
-            {cardKindMeta.label}
-          </span>
+          <div className="canvas-card-kind-header" style={{ color: kindColor }}>
+            {BadgeIcon && <BadgeIcon size={12} />}
+            <span>{cardKindMeta.label}</span>
+          </div>
         );
       })()}
       {editing ? (

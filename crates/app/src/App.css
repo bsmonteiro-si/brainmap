@@ -497,6 +497,10 @@ body {
   background: rgba(231, 76, 60, 0.15);
   color: #f87171;
 }
+.tab-ext-badge--image {
+  background: rgba(155, 89, 182, 0.15);
+  color: #c084fc;
+}
 
 .tab-title {
   overflow: hidden;
@@ -5343,6 +5347,13 @@ body {
   align-items: flex-start;
 }
 
+.canvas-file-node-icon {
+  flex-shrink: 0;
+  margin-right: 6px;
+  margin-top: 1px;
+  opacity: 0.8;
+}
+
 .canvas-file-node-title {
   font-weight: 600;
   font-size: 13px;
@@ -5364,6 +5375,9 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .canvas-file-node-tags {
@@ -5389,6 +5403,7 @@ body {
 }
 
 .canvas-text-node {
+  position: relative;
   background: var(--bg-primary);
   border: 1px var(--card-border-style, dashed) var(--border-color);
   border-radius: 6px;
@@ -5434,27 +5449,51 @@ body {
 
 /* ── Card kind variants (typed text cards) ─────────────────────────────────── */
 
-.canvas-card-kind-badge {
-  position: absolute;
-  top: -10px;
-  left: 10px;
-  font-size: 9px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  color: #fff;
+/* Typed cards use: left accent bar, gradient background, glow — all inline.
+   The header strip below replaces the old floating badge. */
+
+.canvas-card-kind-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  white-space: nowrap;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
+  letter-spacing: 0.05em;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid currentColor;
+  opacity: 0.85;
+  align-self: flex-start;
 }
-.canvas-card-kind-badge--summary    { background: #3b82f6; }
-.canvas-card-kind-badge--question   { background: #f59e0b; }
-.canvas-card-kind-badge--transition { background: #10b981; }
 
-/* Border color + solid style for card kinds is applied inline from CARD_KIND_META.color */
+/* Typed cards: solid transparent border + bottom accent via pseudo-element */
+.canvas-text-node[data-card-kind] {
+  border-style: solid;
+  border-width: 1px;
+  border-color: transparent;
+  /* Let the inline borderLeft radius follow the card corners */
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+  overflow: hidden;
+}
+
+/* Bottom accent bar */
+.canvas-text-node[data-card-kind]::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 0 0 6px 6px;
+  /* Color inherited from the inline borderLeft via currentColor won't work here,
+     so we use the data attribute to pick the right color */
+}
+.canvas-text-node[data-card-kind="summary"]::after    { background: #3b82f6; }
+.canvas-text-node[data-card-kind="question"]::after   { background: #f59e0b; }
+.canvas-text-node[data-card-kind="transition"]::after  { background: #10b981; }
 
 /* ── Shape variants for text cards ──────────────────────────────────────────── */
 
@@ -6096,4 +6135,105 @@ body {
 .canvas-container.canvas-light .canvas-shape-picker {
   background: #fff;
   border-color: #ddd;
+}
+
+/* ── Image Viewer ──────────────────────────────────────────── */
+
+.image-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.image-viewer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.image-viewer-info {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.image-viewer-dim {
+  opacity: 0.7;
+}
+
+.image-viewer-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.image-viewer-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 4px;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.image-viewer-btn:hover {
+  background: var(--bg-hover);
+}
+
+.image-viewer-zoom-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  min-width: 36px;
+  text-align: center;
+}
+
+.image-viewer-canvas {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  background: var(--bg-primary);
+}
+
+.image-viewer-canvas--panning {
+  cursor: grabbing;
+}
+
+.image-viewer-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transform-origin: center center;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.image-viewer-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  gap: 8px;
+}
+
+.image-viewer-error {
+  color: var(--text-danger, #e74c3c);
 }

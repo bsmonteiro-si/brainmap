@@ -323,7 +323,8 @@ pub struct PlainFileDto {
     pub binary: bool,
 }
 
-// ── PDF DTOs ─────────────────────────────────────────────────────
+// ── File Meta DTOs ──────────────────────────────────────────────
+// Used by resolve_pdf_path and resolve_image_path for asset protocol loading.
 
 #[derive(Debug, Serialize, TS)]
 #[ts(export, export_to = "../../src/api/generated/")]
@@ -333,6 +334,9 @@ pub struct PdfMetaDto {
     #[ts(type = "number")]
     pub size_bytes: u64,
 }
+
+/// Type alias for clarity — image resolution returns the same shape as PDF.
+pub type ImageMetaDto = PdfMetaDto;
 
 // ── PDF Highlight DTOs ───────────────────────────────────────────
 

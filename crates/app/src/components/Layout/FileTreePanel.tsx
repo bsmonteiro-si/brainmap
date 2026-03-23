@@ -785,20 +785,30 @@ function FileTreeNode({
     ? highlightFuzzyMatch(node.title, node.matchIndices)
     : node.title;
 
+  // Keep in sync with IMAGE_EXTS in handlers.rs::handle_resolve_image_path
+  const IMAGE_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", ".bmp"];
+
   const handleClick = () => {
-    if (node.fullPath.toLowerCase().endsWith(".pdf")) {
+    const lowerPath = node.fullPath.toLowerCase();
+    if (IMAGE_EXTS.some((ext) => lowerPath.endsWith(ext))) {
+      const fileName = node.fullPath.split("/").pop() ?? node.fullPath;
+      useTabStore.getState().openTab(node.fullPath, "image", fileName, null);
+      useEditorStore.getState().clearForCustomTab();
+      return;
+    }
+    if (lowerPath.endsWith(".pdf")) {
       const fileName = node.fullPath.split("/").pop() ?? node.fullPath;
       useTabStore.getState().openTab(node.fullPath, "pdf", fileName, null);
       useEditorStore.getState().clearForCustomTab();
       return;
     }
-    if (node.fullPath.toLowerCase().endsWith(".excalidraw")) {
+    if (lowerPath.endsWith(".excalidraw")) {
       const fileName = node.fullPath.split("/").pop() ?? node.fullPath;
       useTabStore.getState().openTab(node.fullPath, "excalidraw", fileName, null);
       useEditorStore.getState().clearForCustomTab();
       return;
     }
-    if (node.fullPath.toLowerCase().endsWith(".canvas")) {
+    if (lowerPath.endsWith(".canvas")) {
       useUIStore.getState().openCanvasInPanel(node.fullPath);
       return;
     }

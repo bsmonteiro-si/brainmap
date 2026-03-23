@@ -427,6 +427,39 @@ pub fn handle_read_plain_file(ws: &Workspace, path: &str) -> Result<PlainFileDto
     }
 }
 
+/// Resolve an image file path and return metadata for asset protocol loading.
+/// Does NOT read file content — the frontend loads via Tauri's asset:// URL.
+pub fn handle_resolve_image_path(ws: &Workspace, path: &str) -> Result<ImageMetaDto, String> {
+    // Keep in sync with IMAGE_EXTS in FileTreePanel.tsx
+    const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "svg", "webp", "ico", "bmp"];
+    let abs = validate_relative_path(&ws.root, path)?;
+    if !abs.exists() {
+        return Err(format!("File not found: {}", path));
+    }
+    let ext = abs.extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase());
+    let ext_str = ext.as_deref().unwrap_or("");
+    if !IMAGE_EXTS.contains(&ext_str) {
+        return Err(format!("Not an image file: {}", path));
+    }
+    let meta = std::fs::metadata(&abs)
+        .map_err(|e| format!("Failed to read file metadata: {}", e))?;
+    let size = meta.len();
+    const MAX_IMAGE_SIZE: u64 = 100 * 1024 * 1024; // 100 MB
+    if size > MAX_IMAGE_SIZE {
+        return Err(format!(
+            "Image file too large ({:.1} MB). Maximum supported size is 100 MB.",
+            size as f64 / (1024.0 * 1024.0)
+        ));
+    }
+    Ok(ImageMetaDto {
+        path: path.to_string(),
+        absolute_path: abs.to_string_lossy().to_string(),
+        size_bytes: size,
+    })
+}
+
 /// Resolve a PDF file path and return metadata for asset protocol loading.
 /// Does NOT read file content — the frontend loads via Tauri's asset:// URL.
 pub fn handle_resolve_pdf_path(ws: &Workspace, path: &str) -> Result<PdfMetaDto, String> {
