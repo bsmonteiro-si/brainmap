@@ -342,20 +342,20 @@ function Resizer({ id, selected, minWidth = 120, minHeight = 40, autoHeight = fa
 }) {
   const { setNodes } = useReactFlow();
 
-  // On resize start, convert minHeight → height so the CSS floor is removed and
-  // the user can freely shrink the node. On resize end, convert back to minHeight
-  // so the node can still auto-expand for content.
+  // On resize start, drop CSS min-height to the component floor so the user can
+  // freely shrink the node, and set an explicit height to preserve the visual start.
+  // On resize end, convert back to minHeight so the node can still auto-expand.
   const handleResizeStart = useCallback(() => {
     if (!autoHeight) return;
     setNodes((nds) => nds.map((n) => {
       if (n.id !== id) return n;
       const style = (n.style ?? {}) as Record<string, unknown>;
       if (typeof style.minHeight !== "number") return n;
-      const { minHeight: mh, ...rest } = style;
+      const mh = style.minHeight as number;
       const actualH = n.measured?.height ?? mh;
-      return { ...n, style: { ...rest, height: actualH } };
+      return { ...n, style: { ...style, minHeight: minHeight, height: actualH } };
     }));
-  }, [id, autoHeight, setNodes]);
+  }, [id, autoHeight, minHeight, setNodes]);
 
   const handleResizeEnd = useCallback(() => {
     if (!autoHeight) return;

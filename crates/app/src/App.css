@@ -5274,6 +5274,7 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   position: absolute;
   pointer-events: all;
+  z-index: 1000;
 }
 
 .canvas-edge-label {
@@ -5296,6 +5297,7 @@ body {
 .canvas-edge-label-input-wrapper {
   position: absolute;
   pointer-events: all;
+  z-index: 1000;
 }
 
 .canvas-edge-label-input {
