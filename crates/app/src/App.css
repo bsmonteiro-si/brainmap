@@ -5457,14 +5457,12 @@ body {
   align-items: center;
   gap: 5px;
   width: 100%;
-  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding-bottom: 6px;
   margin-bottom: 4px;
-  border-bottom: 1px solid currentColor;
-  opacity: 0.45;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 25%, transparent);
   align-self: flex-start;
 }
 

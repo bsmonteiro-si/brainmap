@@ -596,10 +596,11 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
       <Resizer id={id} selected={selected} autoHeight={!isFixedShape} />
       <CanvasNodeToolbar id={id} selected={selected} shape={d.shape ?? "rectangle"} fontSize={d.fontSize} fontFamily={d.fontFamily} textAlign={d.textAlign} textVAlign={d.textVAlign} />
       {cardKindMeta && (() => {
+        const headerFontSize = Math.round((d.fontSize ?? 13) * 0.75);
         const BadgeIcon = (LucideIcons as Record<string, React.ComponentType<{ size?: number }>>)[cardKindMeta.icon];
         return (
-          <div className="canvas-card-kind-header" style={{ color: kindColor }}>
-            {BadgeIcon && <BadgeIcon size={12} />}
+          <div className="canvas-card-kind-header" style={{ color: kindColor, fontSize: headerFontSize }}>
+            {BadgeIcon && <BadgeIcon size={headerFontSize} />}
             <span>{cardKindMeta.label}</span>
           </div>
         );
