@@ -115,10 +115,12 @@ export function SettingsModal() {
   const canvasGroupFontFamily = useUIStore((s) => s.canvasGroupFontFamily);
   const canvasGroupFontSize = useUIStore((s) => s.canvasGroupFontSize);
   const canvasGroupBorderOpacity = useUIStore((s) => s.canvasGroupBorderOpacity);
+  const canvasGroupBorderStyle = useUIStore((s) => s.canvasGroupBorderStyle);
   const canvasGroupFillOpacity = useUIStore((s) => s.canvasGroupFillOpacity);
   const setCanvasGroupFontFamily = useUIStore((s) => s.setCanvasGroupFontFamily);
   const setCanvasGroupFontSize = useUIStore((s) => s.setCanvasGroupFontSize);
   const setCanvasGroupBorderOpacity = useUIStore((s) => s.setCanvasGroupBorderOpacity);
+  const setCanvasGroupBorderStyle = useUIStore((s) => s.setCanvasGroupBorderStyle);
   const setCanvasGroupFillOpacity = useUIStore((s) => s.setCanvasGroupFillOpacity);
   const canvasSelectionColor = useUIStore((s) => s.canvasSelectionColor);
   const canvasSelectionWidth = useUIStore((s) => s.canvasSelectionWidth);
@@ -1227,6 +1229,20 @@ export function SettingsModal() {
               />
               <span className="settings-size-value">{canvasGroupBorderOpacity}%</span>
             </div>
+          </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Border style</span>
+          <div className="settings-control">
+            <select
+              value={canvasGroupBorderStyle}
+              onChange={(e) => setCanvasGroupBorderStyle(e.target.value)}
+            >
+              <option value="dashed">Dashed</option>
+              <option value="solid">Solid</option>
+              <option value="dotted">Dotted</option>
+              <option value="none">None</option>
+            </select>
           </div>
         </div>
         <div className="settings-row">

@@ -907,6 +907,10 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ canvasGroupBorderOpacity });
     savePrefs({ canvasGroupBorderOpacity });
   },
+  setCanvasGroupBorderStyle: (canvasGroupBorderStyle: string) => {
+    set({ canvasGroupBorderStyle });
+    savePrefs({ canvasGroupBorderStyle });
+  },
   setCanvasGroupFillOpacity: (canvasGroupFillOpacity: number) => {
     set({ canvasGroupFillOpacity });
     savePrefs({ canvasGroupFillOpacity });

@@ -638,6 +638,7 @@ export const CanvasLinkNode = memo(CanvasLinkNodeInner);
 function CanvasGroupNodeInner({ id, data, selected }: NodeProps) {
   const d = data as { label?: string; color?: string; collapsed?: boolean; expandedWidth?: number; expandedHeight?: number };
   const groupBorderOpacity = useUIStore((s) => s.canvasGroupBorderOpacity);
+  const groupBorderStyle = useUIStore((s) => s.canvasGroupBorderStyle);
   const groupFillOpacity = useUIStore((s) => s.canvasGroupFillOpacity);
   const bgColor = d.color ?? "var(--bg-tertiary)";
   const label = d.label ?? "";
@@ -732,6 +733,7 @@ function CanvasGroupNodeInner({ id, data, selected }: NodeProps) {
       style={{
         backgroundColor: `color-mix(in srgb, ${bgColor} ${groupFillOpacity}%, transparent)`,
         borderColor: `color-mix(in srgb, var(--text-muted) ${groupBorderOpacity}%, transparent)`,
+        borderStyle: groupBorderStyle as React.CSSProperties["borderStyle"],
       }}
     >
       {!collapsed && <Resizer id={id} selected={selected} minWidth={200} minHeight={150} />}
