@@ -202,6 +202,7 @@ interface PersistedPrefs {
   canvasArrowSize?: number;
   canvasEdgeWidth?: number;
   canvasCardBgOpacity?: number;
+  canvasCardBorderStyle?: string;
   canvasDefaultCardWidth?: number;
   canvasDefaultCardHeight?: number;
   canvasCalloutTailSize?: number;
@@ -218,6 +219,7 @@ interface PersistedPrefs {
   canvasGroupFontFamily?: string;
   canvasGroupFontSize?: number;
   canvasGroupBorderOpacity?: number;
+  canvasGroupBorderStyle?: string;
   canvasGroupFillOpacity?: number;
   canvasSelectionColor?: string;
   canvasSelectionWidth?: number;
@@ -360,6 +362,7 @@ interface UIState {
   canvasArrowSize: number;
   canvasEdgeWidth: number;
   canvasCardBgOpacity: number;
+  canvasCardBorderStyle: string;
   canvasDefaultCardWidth: number;
   canvasDefaultCardHeight: number;
   canvasCalloutTailSize: number;
@@ -376,6 +379,7 @@ interface UIState {
   canvasGroupFontFamily: string;
   canvasGroupFontSize: number;
   canvasGroupBorderOpacity: number;
+  canvasGroupBorderStyle: string;
   canvasGroupFillOpacity: number;
   canvasSelectionColor: string;
   canvasSelectionWidth: number;
@@ -410,6 +414,7 @@ interface UIState {
   setCanvasArrowSize: (size: number) => void;
   setCanvasEdgeWidth: (v: number) => void;
   setCanvasCardBgOpacity: (opacity: number) => void;
+  setCanvasCardBorderStyle: (v: string) => void;
   setCanvasDefaultCardWidth: (v: number) => void;
   setCanvasDefaultCardHeight: (v: number) => void;
   setCanvasCalloutTailSize: (v: number) => void;
@@ -426,6 +431,7 @@ interface UIState {
   setCanvasGroupFontFamily: (v: string) => void;
   setCanvasGroupFontSize: (v: number) => void;
   setCanvasGroupBorderOpacity: (v: number) => void;
+  setCanvasGroupBorderStyle: (v: string) => void;
   setCanvasGroupFillOpacity: (v: number) => void;
   setCanvasSelectionColor: (v: string) => void;
   setCanvasSelectionWidth: (v: number) => void;
@@ -627,6 +633,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasArrowSize: storedPrefs.canvasArrowSize ?? 12,
   canvasEdgeWidth: storedPrefs.canvasEdgeWidth ?? 2,
   canvasCardBgOpacity: storedPrefs.canvasCardBgOpacity ?? 15,
+  canvasCardBorderStyle: storedPrefs.canvasCardBorderStyle ?? "dashed",
   canvasDefaultCardWidth: storedPrefs.canvasDefaultCardWidth ?? 300,
   canvasDefaultCardHeight: storedPrefs.canvasDefaultCardHeight ?? 150,
   canvasCalloutTailSize: storedPrefs.canvasCalloutTailSize ?? 18,
@@ -643,6 +650,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasGroupFontFamily: storedPrefs.canvasGroupFontFamily ?? "sans-serif",
   canvasGroupFontSize: storedPrefs.canvasGroupFontSize ?? 13,
   canvasGroupBorderOpacity: storedPrefs.canvasGroupBorderOpacity ?? 50,
+  canvasGroupBorderStyle: storedPrefs.canvasGroupBorderStyle ?? "dashed",
   canvasGroupFillOpacity: storedPrefs.canvasGroupFillOpacity ?? 15,
   canvasSelectionColor: storedPrefs.canvasSelectionColor ?? "#4a9eff",
   canvasSelectionWidth: storedPrefs.canvasSelectionWidth ?? 4,
@@ -830,6 +838,10 @@ export const useUIStore = create<UIState>((set, get) => ({
   setCanvasCardBgOpacity: (canvasCardBgOpacity: number) => {
     set({ canvasCardBgOpacity });
     savePrefs({ canvasCardBgOpacity });
+  },
+  setCanvasCardBorderStyle: (canvasCardBorderStyle: string) => {
+    set({ canvasCardBorderStyle });
+    savePrefs({ canvasCardBorderStyle });
   },
   setCanvasDefaultCardWidth: (canvasDefaultCardWidth: number) => {
     set({ canvasDefaultCardWidth });

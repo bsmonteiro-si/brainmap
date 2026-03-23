@@ -97,6 +97,8 @@ export function SettingsModal() {
   const setCanvasArrowSize = useUIStore((s) => s.setCanvasArrowSize);
   const setCanvasEdgeWidth = useUIStore((s) => s.setCanvasEdgeWidth);
   const setCanvasCardBgOpacity = useUIStore((s) => s.setCanvasCardBgOpacity);
+  const canvasCardBorderStyle = useUIStore((s) => s.canvasCardBorderStyle);
+  const setCanvasCardBorderStyle = useUIStore((s) => s.setCanvasCardBorderStyle);
   const setCanvasDefaultCardWidth = useUIStore((s) => s.setCanvasDefaultCardWidth);
   const setCanvasDefaultCardHeight = useUIStore((s) => s.setCanvasDefaultCardHeight);
   const setCanvasCalloutTailSize = useUIStore((s) => s.setCanvasCalloutTailSize);
@@ -969,6 +971,20 @@ export function SettingsModal() {
 
       <div className="settings-section">
         <div className="settings-section-title">Cards</div>
+        <div className="settings-row">
+          <span className="settings-label">Border style</span>
+          <div className="settings-control">
+            <select
+              value={canvasCardBorderStyle}
+              onChange={(e) => setCanvasCardBorderStyle(e.target.value)}
+            >
+              <option value="dashed">Dashed</option>
+              <option value="solid">Solid</option>
+              <option value="dotted">Dotted</option>
+              <option value="none">None</option>
+            </select>
+          </div>
+        </div>
         <div className="settings-row">
           <span className="settings-label">Fill opacity</span>
           <div className="settings-control">

@@ -174,7 +174,6 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
         return { ...n, data: rest };
       }),
     );
-    setShowColors(false);
   };
 
   const handleBgColor = (bgColor: string) => {
@@ -193,11 +192,10 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
         return { ...n, data: rest };
       }),
     );
-    setShowBgColors(false);
   };
 
   return (
-    <NodeToolbar isVisible={(selected && selectedCount <= 1) || showColors || showBgColors} position={Position.Top} offset={8}>
+    <NodeToolbar isVisible={selected && selectedCount <= 1} position={Position.Top} offset={8}>
       <div className="canvas-node-toolbar">
         <button
           className="canvas-node-toolbar-btn"
@@ -879,7 +877,6 @@ function CanvasEdgeInner({
         };
       }),
     );
-    setShowColors(false);
   };
 
   const startEditing = (e: React.MouseEvent) => {
@@ -922,7 +919,7 @@ function CanvasEdgeInner({
           </div>
         ) : null}
         {/* Toolbar — hide when multiple elements are selected */}
-        {(selected || showColors) && !showInput && totalSelectedCount <= 1 && (
+        {selected && !showInput && totalSelectedCount <= 1 && (
           <div
             className="canvas-edge-toolbar"
             style={{ transform: `translate(-50%, -100%) translate(${labelX}px,${labelY - 16}px)` }}
@@ -943,7 +940,7 @@ function CanvasEdgeInner({
                 <Palette size={16} />
               </button>
               {showColors && (
-                <ColorPickerDropdown onSelect={handleColor} onClear={handleClearColor} clearLabel="Clear color" />
+                <ColorPickerDropdown onSelect={handleColor} onClear={handleClearColor} onClose={() => setShowColors(false)} clearLabel="Clear color" />
               )}
             </div>
             <div className="canvas-edge-type-picker">

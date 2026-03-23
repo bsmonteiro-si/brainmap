@@ -197,6 +197,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const canvasRoundedRadius = useUIStore((s) => s.canvasRoundedRadius);
   const canvasGroupFontFamily = useUIStore((s) => s.canvasGroupFontFamily);
   const canvasGroupFontSize = useUIStore((s) => s.canvasGroupFontSize);
+  const canvasCardBorderStyle = useUIStore((s) => s.canvasCardBorderStyle);
   const canvasSelectionColor = useUIStore((s) => s.canvasSelectionColor);
   const canvasSelectionWidth = useUIStore((s) => s.canvasSelectionWidth);
   const canvasDefaultCardWidth = useUIStore((s) => s.canvasDefaultCardWidth);
@@ -224,6 +225,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
     "--rounded-radius": `${canvasRoundedRadius}px`,
     "--group-font-family": canvasGroupFontFamily,
     "--group-font-size": `${canvasGroupFontSize}px`,
+    "--card-border-style": canvasCardBorderStyle,
     "--edge-width": `${canvasEdgeWidth}px`,
     "--canvas-selection-color": canvasSelectionColor,
     "--canvas-selection-width": `${canvasSelectionWidth}px`,
