@@ -1144,6 +1144,72 @@ export function CanvasEditorInner({ path }: { path: string }) {
     return results.slice(0, 30);
   }, [toolbarPicker, toolbarFilter, toolbarPickerTab, allNodes, workspaceFiles]);
 
+  // Auto-parent/unparent nodes when dragged into/out of groups
+  const handleNodeDragStop = useCallback(
+    (_event: React.MouseEvent, draggedNode: { id: string }) => {
+      setNodes((nds) => {
+        const node = nds.find((n) => n.id === draggedNode.id);
+        if (!node || node.type === "canvasGroup") return nds;
+
+        // Compute absolute position of the dragged node
+        const currentParent = node.parentId ? nds.find((n) => n.id === node.parentId) : undefined;
+        const absX = node.position.x + (currentParent?.position.x ?? 0);
+        const absY = node.position.y + (currentParent?.position.y ?? 0);
+        const nodeW = parseFloat(String(node.style?.width ?? "")) || node.measured?.width || 250;
+        const nodeH = parseFloat(String(node.style?.height ?? node.style?.minHeight ?? "")) || node.measured?.height || 100;
+        const nodeCX = absX + nodeW / 2;
+        const nodeCY = absY + nodeH / 2;
+
+        // Find the best (smallest) group whose bounds contain the node center
+        let bestGroup: typeof node | null = null;
+        let bestArea = Infinity;
+        for (const g of nds) {
+          if (g.type !== "canvasGroup" || g.id === node.id) continue;
+          if ((g.data as Record<string, unknown>)?.collapsed) continue;
+          const gw = parseFloat(String(g.style?.width ?? "")) || 400;
+          const gh = parseFloat(String(g.style?.height ?? "")) || 300;
+          if (nodeCX >= g.position.x && nodeCX <= g.position.x + gw &&
+              nodeCY >= g.position.y && nodeCY <= g.position.y + gh) {
+            const area = gw * gh;
+            if (area < bestArea) { bestGroup = g; bestArea = area; }
+          }
+        }
+
+        // Already parented to the right group (or no change needed)
+        if (bestGroup && node.parentId === bestGroup.id) return nds;
+        if (!bestGroup && !node.parentId) return nds;
+
+        if (bestGroup) {
+          // Parent into group — convert to relative position
+          // Ensure parent precedes child in array (React Flow requirement)
+          const updated = nds.map((n) => {
+            if (n.id !== node.id) return n;
+            return {
+              ...n,
+              parentId: bestGroup!.id,
+              position: { x: absX - bestGroup!.position.x, y: absY - bestGroup!.position.y },
+            };
+          });
+          const parentIdx = updated.findIndex((n) => n.id === bestGroup!.id);
+          const childIdx = updated.findIndex((n) => n.id === node.id);
+          if (childIdx < parentIdx) {
+            const [child] = updated.splice(childIdx, 1);
+            updated.splice(parentIdx, 0, child);
+          }
+          return updated;
+        } else {
+          // Dragged out of group — convert to absolute position
+          return nds.map((n) => {
+            if (n.id !== node.id) return n;
+            return { ...n, parentId: undefined, position: { x: absX, y: absY } };
+          });
+        }
+      });
+      requestAnimationFrame(() => scheduleSave());
+    },
+    [setNodes, scheduleSave],
+  );
+
   // Stable nodeTypes reference (must not change between renders)
   const nodeTypes = useMemo(() => NODE_TYPES, []);
   const edgeTypes = useMemo(() => EDGE_TYPES, []);
@@ -1230,6 +1296,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
         defaultEdgeOptions={{ markerEnd: "brainmap-arrow" }}
         snapToGrid={canvasSnapToGrid}
         snapGrid={[canvasSnapGridSize, canvasSnapGridSize]}
+        onNodeDragStop={handleNodeDragStop}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         onViewportChange={(vp) => setZoomLevel(vp.zoom)}
