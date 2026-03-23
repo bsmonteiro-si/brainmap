@@ -77,8 +77,14 @@ export const useTabStore = create<TabStoreState>((set, get) => ({
     const { tabs, activeTabId } = get();
     const existing = tabs.find((t) => t.id === path);
     if (existing) {
-      // Tab already open — just activate it
-      set({ activeTabId: path });
+      // Tab already open — activate it, updating kind if it changed
+      // (e.g., a file first opened as plain-file now recognized as image)
+      if (existing.kind !== kind) {
+        const updated = tabs.map((t) => t.id === path ? { ...t, kind, title, noteType } : t);
+        set({ tabs: updated, activeTabId: path });
+      } else {
+        set({ activeTabId: path });
+      }
       return;
     }
     // Insert new tab after the currently active tab

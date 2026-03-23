@@ -5464,7 +5464,7 @@ body {
   padding-bottom: 6px;
   margin-bottom: 4px;
   border-bottom: 1px solid currentColor;
-  opacity: 0.85;
+  opacity: 0.45;
   align-self: flex-start;
 }
 
@@ -5486,10 +5486,9 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 2px;
+  height: 1px;
   border-radius: 0 0 6px 6px;
-  /* Color inherited from the inline borderLeft via currentColor won't work here,
-     so we use the data attribute to pick the right color */
+  opacity: 0.45;
 }
 .canvas-text-node[data-card-kind="summary"]::after    { background: #3b82f6; }
 .canvas-text-node[data-card-kind="question"]::after   { background: #f59e0b; }
