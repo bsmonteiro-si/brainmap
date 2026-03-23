@@ -5473,10 +5473,6 @@ body {
   border-style: solid;
   border-width: 1px;
   border-color: transparent;
-  /* Let the inline borderLeft radius follow the card corners */
-  border-top-left-radius: 6px;
-  border-bottom-left-radius: 6px;
-  overflow: hidden;
 }
 
 /* Bottom accent bar */
