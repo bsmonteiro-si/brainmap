@@ -4,7 +4,7 @@ import {
   BaseEdge, EdgeLabelRenderer, getBezierPath, getStraightPath, getSmoothStepPath, useReactFlow, useStore,
 } from "@xyflow/react";
 import type { NodeProps, EdgeProps, ReactFlowState } from "@xyflow/react";
-import { Trash2, Palette, Paintbrush, PenLine, Shapes, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Spline, Minus, CornerDownRight } from "lucide-react";
+import { Trash2, Palette, Paintbrush, PenLine, Shapes, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Spline, Minus, CornerDownRight, ChevronDown, ChevronRight } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES, getShapeDefinition } from "./canvasShapes";
 import type { CanvasShapeId } from "./canvasShapes";
@@ -591,9 +591,10 @@ export const CanvasLinkNode = memo(CanvasLinkNodeInner);
 // ── Group Node ────────────────────────────────────────────────────────────────
 
 function CanvasGroupNodeInner({ id, data, selected }: NodeProps) {
-  const d = data as { label?: string; color?: string };
+  const d = data as { label?: string; color?: string; collapsed?: boolean; expandedWidth?: number; expandedHeight?: number };
   const bgColor = d.color ?? "var(--bg-tertiary)";
   const label = d.label ?? "";
+  const collapsed = d.collapsed === true;
 
   const { setNodes } = useReactFlow();
   const [editing, setEditing] = useState(false);
@@ -635,11 +636,57 @@ function CanvasGroupNodeInner({ id, data, selected }: NodeProps) {
     setEditing(true);
   };
 
+  const toggleCollapse = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNodes((nds) => {
+      if (collapsed) {
+        // Expand: restore children visibility and original dimensions
+        return nds.map((n) => {
+          if (n.id === id) {
+            const nd = n.data as Record<string, unknown>;
+            const ew = nd.expandedWidth as number | undefined;
+            const eh = nd.expandedHeight as number | undefined;
+            const { collapsed: _, expandedWidth: _ew, expandedHeight: _eh, ...restData } = nd;
+            return {
+              ...n,
+              data: restData,
+              style: { ...n.style, width: ew ?? (n.style?.width as number ?? 400), height: eh ?? (n.style?.height as number ?? 300) },
+            };
+          }
+          if (n.parentId === id) {
+            return { ...n, hidden: false };
+          }
+          return n;
+        });
+      } else {
+        // Collapse: save dimensions, shrink, hide children
+        const currentW = (nds.find((n) => n.id === id)?.style?.width as number) ?? 400;
+        const currentH = (nds.find((n) => n.id === id)?.style?.height as number) ?? 300;
+        return nds.map((n) => {
+          if (n.id === id) {
+            return {
+              ...n,
+              data: { ...n.data, collapsed: true, expandedWidth: currentW, expandedHeight: currentH },
+              style: { ...n.style, width: currentW, height: 8 },
+            };
+          }
+          if (n.parentId === id) {
+            return { ...n, hidden: true };
+          }
+          return n;
+        });
+      }
+    });
+  };
+
   return (
-    <div className="canvas-group-node" style={{ backgroundColor: bgColor }}>
-      <Resizer id={id} selected={selected} minWidth={200} minHeight={150} />
+    <div className={`canvas-group-node${collapsed ? " canvas-group-node--collapsed" : ""}`} style={{ backgroundColor: bgColor }}>
+      {!collapsed && <Resizer id={id} selected={selected} minWidth={200} minHeight={150} />}
       <CanvasNodeToolbar id={id} selected={selected} />
       <div className="canvas-group-node-label" style={d.color ? { color: d.color } : undefined} onDoubleClick={startEditing}>
+        <button className="canvas-group-collapse-btn nodrag" onClick={toggleCollapse} title={collapsed ? "Expand group" : "Collapse group"}>
+          {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+        </button>
         {editing ? (
           <input
             ref={inputRef}
@@ -658,7 +705,7 @@ function CanvasGroupNodeInner({ id, data, selected }: NodeProps) {
           <span>{label || "Group"}</span>
         )}
       </div>
-      <FourHandles />
+      {!collapsed && <FourHandles />}
     </div>
   );
 }

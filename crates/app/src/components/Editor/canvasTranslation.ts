@@ -42,6 +42,7 @@ interface JsonCanvasGroupNode extends JsonCanvasNodeBase {
   label?: string;
   background?: string;
   backgroundStyle?: "cover" | "ratio" | "repeat";
+  collapsed?: boolean;
 }
 
 type JsonCanvasNode =
@@ -115,6 +116,7 @@ export function canvasToFlow(canvas: JsonCanvas): { nodes: Node[]; edges: Edge[]
         if (cn.label) data.label = cn.label;
         if (cn.background) data.background = cn.background;
         if (cn.backgroundStyle) data.backgroundStyle = cn.backgroundStyle;
+        if (cn.collapsed) data.collapsed = true;
         break;
     }
 
@@ -261,6 +263,7 @@ export function flowToCanvas(nodes: Node[], edges: Edge[]): JsonCanvas {
         if (data.label) node.label = String(data.label);
         if (data.background) node.background = String(data.background);
         if (data.backgroundStyle) node.backgroundStyle = String(data.backgroundStyle) as "cover" | "ratio" | "repeat";
+        if (data.collapsed) node.collapsed = true;
         return node;
       }
       default:
