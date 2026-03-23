@@ -107,7 +107,7 @@ describe("canvasToFlow", () => {
     expect(edges[0].sourceHandle).toBe("bottom");
     expect(edges[0].targetHandle).toBe("top-target");
     expect(edges[0].label).toBe("supports");
-    expect(edges[0].markerEnd).toEqual({ type: "arrowclosed" });
+    expect(edges[0].markerEnd).toBe("brainmap-arrow");
   });
 
   it("converts edge with no arrow on target", () => {
@@ -123,7 +123,7 @@ describe("canvasToFlow", () => {
       edges: [{ id: "e3", fromNode: "a", toNode: "b", fromEnd: "arrow", toEnd: "none" }],
     };
     const { edges } = canvasToFlow(canvas);
-    expect(edges[0].markerStart).toEqual({ type: "arrowclosed" });
+    expect(edges[0].markerStart).toBe("brainmap-arrow");
     expect(edges[0].markerEnd).toBeUndefined();
   });
 
@@ -133,6 +133,24 @@ describe("canvasToFlow", () => {
     };
     const { edges } = canvasToFlow(canvas);
     expect(edges[0].style).toEqual({ stroke: "#e74c3c" });
+  });
+
+  it("uses colored marker ID when edge has color", () => {
+    const canvas: JsonCanvas = {
+      edges: [{ id: "e5", fromNode: "a", toNode: "b", color: "#e74c3c" }],
+    };
+    const { edges } = canvasToFlow(canvas);
+    expect(edges[0].markerEnd).toBe("brainmap-arrow-#e74c3c");
+    expect(edges[0].style).toEqual({ stroke: "#e74c3c" });
+  });
+
+  it("uses colored marker ID for fromEnd arrow with color", () => {
+    const canvas: JsonCanvas = {
+      edges: [{ id: "e6", fromNode: "a", toNode: "b", fromEnd: "arrow", toEnd: "none", color: "#3498db" }],
+    };
+    const { edges } = canvasToFlow(canvas);
+    expect(edges[0].markerStart).toBe("brainmap-arrow-#3498db");
+    expect(edges[0].markerEnd).toBeUndefined();
   });
 });
 
@@ -168,7 +186,7 @@ describe("flowToCanvas", () => {
         sourceHandle: "bottom",
         targetHandle: "top-target",
         label: "supports",
-        markerEnd: { type: "arrowclosed" as const },
+        markerEnd: "brainmap-arrow",
       }],
     );
     expect(canvas.edges).toHaveLength(1);
@@ -179,6 +197,38 @@ describe("flowToCanvas", () => {
     expect(e.toSide).toBe("top");
     expect(e.toEnd).toBe("arrow");
     expect(e.label).toBe("supports");
+  });
+
+  it("converts edge back with string marker IDs", () => {
+    const canvas = flowToCanvas(
+      [],
+      [{
+        id: "e2",
+        source: "a",
+        target: "b",
+        markerEnd: "brainmap-arrow",
+      }],
+    );
+    const e = canvas.edges![0];
+    expect(e.toEnd).toBe("arrow");
+  });
+
+  it("converts edge back with colored string marker IDs", () => {
+    const canvas = flowToCanvas(
+      [],
+      [{
+        id: "e3",
+        source: "a",
+        target: "b",
+        markerEnd: "brainmap-arrow-#e74c3c",
+        markerStart: "brainmap-arrow-#e74c3c",
+        style: { stroke: "#e74c3c" },
+      }],
+    );
+    const e = canvas.edges![0];
+    expect(e.toEnd).toBe("arrow");
+    expect(e.fromEnd).toBe("arrow");
+    expect(e.color).toBe("#e74c3c");
   });
 });
 
@@ -402,6 +452,54 @@ describe("auto-height (width-only for auto-height nodes)", () => {
     const { nodes } = canvasToFlow(original);
     const result = flowToCanvas(nodes, []);
     expect(result.nodes![0].height).toBe(160);
+  });
+});
+
+describe("cardKind", () => {
+  it("canvasToFlow preserves cardKind on text nodes", () => {
+    const canvas: JsonCanvas = {
+      nodes: [{ id: "t1", type: "text", text: "Key point", cardKind: "summary", x: 0, y: 0, width: 250, height: 100 }],
+    };
+    const { nodes } = canvasToFlow(canvas);
+    expect(nodes[0].data.cardKind).toBe("summary");
+  });
+
+  it("canvasToFlow handles text nodes without cardKind (backward compat)", () => {
+    const canvas: JsonCanvas = {
+      nodes: [{ id: "t1", type: "text", text: "Plain", x: 0, y: 0, width: 250, height: 100 }],
+    };
+    const { nodes } = canvasToFlow(canvas);
+    expect(nodes[0].data.cardKind).toBeUndefined();
+  });
+
+  it("flowToCanvas emits cardKind when set", () => {
+    const canvas = flowToCanvas(
+      [{ id: "t1", type: "canvasText", position: { x: 0, y: 0 }, data: { text: "Q", cardKind: "question" }, style: { width: 250, height: 100 } }],
+      [],
+    );
+    const n = canvas.nodes![0] as { cardKind?: string };
+    expect(n.cardKind).toBe("question");
+  });
+
+  it("flowToCanvas omits cardKind when undefined", () => {
+    const canvas = flowToCanvas(
+      [{ id: "t1", type: "canvasText", position: { x: 0, y: 0 }, data: { text: "Plain" }, style: { width: 250, height: 100 } }],
+      [],
+    );
+    const n = canvas.nodes![0];
+    expect("cardKind" in n).toBe(false);
+  });
+
+  it("round-trip preserves cardKind", () => {
+    const original: JsonCanvas = {
+      nodes: [{ id: "t1", type: "text", text: "Bridge", cardKind: "transition", x: 10, y: 20, width: 300, height: 150 }],
+    };
+    const { nodes } = canvasToFlow(original);
+    expect(nodes[0].data.cardKind).toBe("transition");
+    const result = flowToCanvas(nodes, []);
+    const n = result.nodes![0] as { cardKind?: string; text: string };
+    expect(n.cardKind).toBe("transition");
+    expect(n.text).toBe("Bridge");
   });
 });
 

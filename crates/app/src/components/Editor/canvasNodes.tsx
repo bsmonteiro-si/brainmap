@@ -45,6 +45,14 @@ const VERTICAL_ALIGNMENTS = [
   { id: "bottom", icon: AlignEndVertical, label: "Bottom" },
 ] as const;
 
+// ── Card kind metadata (typed text card subtypes) ────────────────────────────
+
+export const CARD_KIND_META: { id: string; label: string; icon: string; color: string }[] = [
+  { id: "summary",    label: "Summary",    icon: "ClipboardList",  color: "#3b82f6" },
+  { id: "question",   label: "Question",   icon: "HelpCircle",     color: "#f59e0b" },
+  { id: "transition", label: "Transition", icon: "ArrowRightLeft", color: "#10b981" },
+];
+
 // ── Color picker dropdown (shared by node + edge toolbars) ────────────────────
 
 function ColorPickerDropdown({
@@ -449,7 +457,7 @@ export const CanvasFileNode = memo(CanvasFileNodeInner);
 // ── Text Node ─────────────────────────────────────────────────────────────────
 
 function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
-  const d = data as { text?: string; color?: string; bgColor?: string; shape?: string; fontSize?: number; fontFamily?: string; textAlign?: string; textVAlign?: string };
+  const d = data as { text?: string; color?: string; bgColor?: string; shape?: string; fontSize?: number; fontFamily?: string; textAlign?: string; textVAlign?: string; cardKind?: string };
   const text = d.text ?? "";
   const borderColor = d.color ?? undefined;
   const shapeDef = getShapeDefinition(d.shape);
@@ -506,19 +514,38 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
   const stickyPin = useUIStore((s) => s.canvasStickyPin);
   const stickyTape = useUIStore((s) => s.canvasStickyTape);
 
+  const cardKindMeta = d.cardKind ? CARD_KIND_META.find((m) => m.id === d.cardKind) : undefined;
+  // Card kind provides default border color + solid style; explicit user color overrides
+  const effectiveBorderColor = borderColor ?? cardKindMeta?.color;
+  const effectiveBorderStyle = cardKindMeta && !borderColor ? "solid" as const : undefined;
+
   return (
     <div
       className="canvas-text-node"
       data-shape={d.shape || "rectangle"}
+      data-card-kind={d.cardKind || undefined}
       {...(isSticky ? {
         "data-sticky-pin": stickyPin ? "true" : undefined,
         "data-sticky-tape": stickyTape ? "true" : undefined,
       } : {})}
-      style={{ ...(borderColor ? { borderColor } : {}), ...(d.bgColor ? { backgroundColor: d.bgColor } : {}) }}
+      style={{
+        ...(effectiveBorderColor ? { borderColor: effectiveBorderColor } : {}),
+        ...(effectiveBorderStyle ? { borderStyle: effectiveBorderStyle } : {}),
+        ...(d.bgColor ? { backgroundColor: d.bgColor } : {}),
+      }}
       onDoubleClick={() => { setEditValue(text); setEditing(true); }}
     >
       <Resizer id={id} selected={selected} autoHeight={!isFixedShape} />
       <CanvasNodeToolbar id={id} selected={selected} shape={d.shape ?? "rectangle"} fontSize={d.fontSize} fontFamily={d.fontFamily} textAlign={d.textAlign} textVAlign={d.textVAlign} />
+      {cardKindMeta && (() => {
+        const BadgeIcon = (LucideIcons as Record<string, React.ComponentType<{ size?: number }>>)[cardKindMeta.icon];
+        return (
+          <span className={`canvas-card-kind-badge canvas-card-kind-badge--${d.cardKind}`}>
+            {BadgeIcon && <BadgeIcon size={10} />}
+            {cardKindMeta.label}
+          </span>
+        );
+      })()}
       {editing ? (
         <div className="canvas-text-node-body" style={bodyStyle}>
           <textarea
@@ -837,7 +864,7 @@ function CanvasEdgeInner({
 
   return (
     <>
-      <BaseEdge path={edgePath} markerEnd={markerEnd} markerStart={markerStart} style={style} />
+      <BaseEdge path={edgePath} markerEnd={markerEnd} markerStart={markerStart} style={style} interactionWidth={20} />
       <EdgeLabelRenderer>
         {/* Label display or input */}
         {showInput ? (

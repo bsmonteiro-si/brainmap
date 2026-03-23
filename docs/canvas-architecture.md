@@ -70,7 +70,7 @@ RF_TO_CANVAS_TYPE:  canvasText -> text,  canvasFile -> file,  canvasLink -> link
 - **Parented nodes**: JSON Canvas stores absolute positions; React Flow needs parent-relative. The function subtracts parent position for children.
 - **Parent ordering**: React Flow requires parent nodes to precede children in the array. The function sorts accordingly.
 - **Edge handles**: `fromSide` maps to `sourceHandle` directly. `toSide` maps to `targetHandle` with `"-target"` suffix (handles have separate source/target IDs).
-- **Edge arrows**: Default `toEnd = "arrow"` per spec. Creates `MarkerType.ArrowClosed` markers.
+- **Edge arrows**: Default `toEnd = "arrow"` per spec. Creates custom SVG marker string IDs (`"brainmap-arrow"` or `"brainmap-arrow-{color}"`). Colored marker IDs are coupled with `edge.style.stroke` which drives the `<marker>` SVG defs in CanvasEditor.
 
 ### flowToCanvas (React Flow -> JSON Canvas)
 
@@ -78,7 +78,7 @@ RF_TO_CANVAS_TYPE:  canvasText -> text,  canvasFile -> file,  canvasLink -> link
 - **Width resolution**: `n.width > style.width > measured.width > 250` (fallback chain).
 - **Height**: `max(measured.height, n.height ?? style.height ?? style.minHeight ?? 100)`.
 - **Default stripping**: Only emits optional fields when non-default (shape != "rectangle", fontSize != 13, textAlign != "center", textVAlign != "center").
-- **Edge markers**: Detects arrows from both `MarkerType` objects and string marker IDs.
+- **Edge markers**: Detects arrows from both object markers and string marker IDs (e.g., `"brainmap-arrow"`).
 - **Target handle suffix**: Strips `-target` suffix from `targetHandle` when converting back to `toSide`.
 
 ## State Management
@@ -160,11 +160,29 @@ All 4 node types share these components:
 | Type | Component | Key Behavior |
 |------|-----------|--------------|
 | **File** | `CanvasFileNode` | Reads `graphStore.nodes.get(filePath)` for title/type/tags. Double-click opens note (via `openNote`/`openPlainFile`/`openTab` depending on file type). Supports `.canvas` and `.excalidraw` files (opens in dedicated editors). Shows "missing reference" badge for broken links. Border color defaults to note type color. |
-| **Text** | `CanvasTextNode` | Double-click enters editing mode (textarea). Escape cancels, blur commits. Shape-aware via `data-shape` attribute. Vertical alignment via flexbox `alignItems`. Sticky notes read `canvasStickyPin`/`canvasStickyTape`/`canvasStickyLines` from uiStore. |
+| **Text** | `CanvasTextNode` | Double-click enters editing mode (textarea). Escape cancels, blur commits. Shape-aware via `data-shape` attribute. Vertical alignment via flexbox `alignItems`. Sticky notes read `canvasStickyPin`/`canvasStickyTape`/`canvasStickyLines` from uiStore. Supports **card kinds** (see below). |
 | **Link** | `CanvasLinkNode` | Shows favicon, optional title, hostname, and "Open in browser" button. Favicon loaded from Google favicon service. |
 | **Group** | `CanvasGroupNode` | `zIndex: -1`. Double-click label to edit (input). Enter commits, Escape cancels (uses `cancelledRef` to prevent blur from committing after Escape). Background color defaults to `var(--bg-tertiary)`. Collapse/expand toggle: chevron button hides children and shrinks to label-only; persisted via `data.collapsed`. |
 
 All node inner components are wrapped with `memo()`.
+
+## Card Kinds (Typed Text Cards)
+
+Text nodes support an optional `cardKind` field that adds semantic intent. This is a **subtype** of text nodes — they share all editing behavior (double-click, textarea, formatting) but get visual differentiation.
+
+| Card Kind | Badge Color | Border Color | Purpose |
+|-----------|-------------|--------------|---------|
+| `summary` | `#3b82f6` (blue) | `#3b82f6` | Condensed takeaways |
+| `question` | `#f59e0b` (amber) | `#f59e0b` | Open inquiries |
+| `transition` | `#10b981` (green) | `#10b981` | Bridges between ideas |
+
+**Visual treatment**: Typed cards show a colored badge label above the card (`position: absolute; top: -10px`) and use a solid border (plain text cards use dashed). The `data-card-kind` attribute on the outer div drives CSS styling.
+
+**Data model**: `cardKind` is an optional field on `JsonCanvasTextNode` (values: `"summary"`, `"question"`, `"transition"`). It's serialized to `.canvas` files as a custom extension field — omitted when undefined for backward compatibility.
+
+**Metadata**: `CARD_KIND_META` array in `canvasNodes.tsx` (exported for use by `CanvasEditor.tsx`) defines `id`, `label`, `icon`, and `color` for each kind.
+
+**Adding a new card kind**: Add an entry to `CARD_KIND_META` in `canvasNodes.tsx`, add the `CanvasCardKind` union member in `canvasTranslation.ts`, and add CSS for `.canvas-card-kind-badge--{id}` and `.canvas-text-node[data-card-kind="{id}"]` in `App.css`.
 
 ## Shapes (canvasShapes.ts)
 
@@ -189,17 +207,18 @@ Custom `CanvasEdge` component replaces the default React Flow edge.
 - **Label**: Displayed at midpoint. Double-click to edit. New edges (`data.isNew = true`) auto-prompt for label input.
 - **Toolbar**: Shown when selected (not during label edit). Contains: Edit label, Delete, Color picker, Edge type picker (bezier/straight/step).
 - **Color sync**: Color changes update both `style.stroke` AND marker IDs (`brainmap-arrow-{color}`) so the arrow matches the line.
-- **Custom SVG markers**: Defined inline in the ReactFlow component. One default marker (`brainmap-arrow`) + one per unique edge color. Size controlled by `canvasArrowSize` setting.
+- **Custom SVG markers**: Defined inline in the ReactFlow component. One default marker (`brainmap-arrow`) + one per unique edge color. Size controlled by `canvasArrowSize` setting. `refX=8` pulls arrow tip slightly back from the path endpoint to avoid overlapping nodes.
+- **Interaction width**: `BaseEdge` uses `interactionWidth={20}` for a 20px invisible hit area, making edges easy to click regardless of visible stroke width.
 
 ## Context Menus
 
 ### Pane Context Menu (right-click empty area)
 
-Items: Add Text Card, Add Shaped Card... (sub-menu with all 6 shapes), Add Note Reference (tabbed picker: Notes/Files, filtered, max 30 results), Add Group, Create New Note (opens CreateNoteDialog, callback adds file node at click position).
+Items: Add Text Card, Add Summary Card, Add Question Card, Add Transition Card, Add Shaped Card... (sub-menu with all 6 shapes), Add Note Reference (tabbed picker: Notes/Files, filtered, max 30 results), Add Group, Create New Note (opens CreateNoteDialog, callback adds file node at click position).
 
 ### Element Context Menu (right-click node/edge)
 
-Items: Duplicate (nodes only), Group Selection (when >= 2 selected), Ungroup (groups with children only), Delete.
+Items: Duplicate (nodes only), Change Card Kind... (text nodes only — sub-menu: Text (plain), Summary, Question, Transition), Group Selection (when >= 2 selected), Ungroup (groups with children only), Delete.
 
 ### Counter-Zoom Compensation
 
@@ -211,7 +230,7 @@ Located at `Panel position="bottom-center"`:
 
 1. **Pan mode** (Hand icon, H key) / **Select mode** (MousePointer2 icon, V key)
 2. Separator
-3. **Add text card** (StickyNote icon) + caret for shape dropdown
+3. **Add text card** (StickyNote icon) + caret for shape/card-kind dropdown (shapes + separator + card kinds: Summary, Question, Transition)
 4. **Add note reference** (FileText icon) — opens tabbed picker popup
 5. **Add group** (Layers icon)
 6. Separator
@@ -264,8 +283,8 @@ All settings are persisted to `brainmap:uiPrefs` localStorage. Each has a `setCa
 | `canvasNodeShadow` | `number` | `8` | Drop shadow size on file/text/link nodes (0 = off) |
 | `canvasDefaultEdgeType` | `string` | `"bezier"` | Default edge path style: `"bezier"`, `"straight"`, or `"step"` |
 | `canvasFileBrowserWidth` | `number` | `260` | File browser drawer width (persisted) |
-| `canvasArrowSize` | `number` | `25` | SVG arrow marker size |
-| `canvasEdgeWidth` | `number` | `1` | Edge stroke width (CSS var `--edge-width`) |
+| `canvasArrowSize` | `number` | `12` | SVG arrow marker size |
+| `canvasEdgeWidth` | `number` | `2` | Edge stroke width (CSS var `--edge-width`) |
 | `canvasCardBgOpacity` | `number` | `15` | Card background opacity |
 | `canvasDefaultCardWidth` | `number` | `300` | Default new card width |
 | `canvasDefaultCardHeight` | `number` | `150` | Default new card height |

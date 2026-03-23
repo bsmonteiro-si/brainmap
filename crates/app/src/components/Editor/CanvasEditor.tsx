@@ -26,6 +26,7 @@ import type { JsonCanvas } from "./canvasTranslation";
 import { StickyNote, FileText, FilePlus, Layers, ChevronDown, ChevronRight, MousePointer2, Hand, Group, Trash2, Copy, Ungroup, PanelRightOpen, Search, GripVertical, Folder, FolderOpen, HelpCircle, Link2 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES } from "./canvasShapes";
+import { CARD_KIND_META } from "./canvasNodes";
 import { useGraphStore } from "../../stores/graphStore";
 import { buildTree, fuzzyFilterTree } from "../Layout/FileTreePanel";
 import type { TreeNode } from "../Layout/FileTreePanel";
@@ -284,17 +285,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
         try {
           const parsed: JsonCanvas = JSON.parse(file.body);
           const { nodes: rfNodes, edges: rfEdges } = canvasToFlow(parsed);
-          const strEdges = rfEdges.map((e) => {
-            const stroke = (e.style as Record<string, unknown> | undefined)?.stroke;
-            const mid = typeof stroke === "string" ? `brainmap-arrow-${stroke}` : "brainmap-arrow";
-            return {
-              ...e,
-              markerEnd: e.markerEnd ? mid : undefined,
-              markerStart: e.markerStart ? mid : undefined,
-            };
-          });
           setNodes(rfNodes);
-          setEdges(strEdges);
+          setEdges(rfEdges);
           try {
             lastSavedRef.current = JSON.stringify(flowToCanvas(rfNodes, rfEdges));
           } catch {
@@ -574,6 +566,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
 
   // Element context menu (right-click on a node or edge)
   const [elemCtxMenu, setElemCtxMenu] = useState<{ x: number; y: number; nodeId?: string; edgeId?: string } | null>(null);
+  const [showCardKindPicker, setShowCardKindPicker] = useState(false);
 
   // Context menu coords: menus use position:fixed inside the counter-zoomed
   // container, so the browser divides left/top by the zoom factor — multiply
@@ -605,7 +598,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
     [uiZoom],
   );
 
-  const closeElemCtxMenu = useCallback(() => setElemCtxMenu(null), []);
+  const closeElemCtxMenu = useCallback(() => { setElemCtxMenu(null); setShowCardKindPicker(false); }, []);
 
   const deleteSelected = useCallback(() => {
     pushSnapshot();
@@ -647,6 +640,23 @@ export function CanvasEditorInner({ path }: { path: string }) {
     closeElemCtxMenu();
     requestAnimationFrame(() => scheduleSave());
   }, [setNodes, setEdges, elemCtxMenu, closeElemCtxMenu, scheduleSave, pushSnapshot]);
+
+  const changeCardKind = useCallback((kind: string | undefined) => {
+    pushSnapshot();
+    setNodes((nds) => nds.map((n) => {
+      if (!n.selected && n.id !== elemCtxMenu?.nodeId) return n;
+      if (n.type !== "canvasText") return n;
+      const data = { ...n.data };
+      if (kind) {
+        data.cardKind = kind;
+      } else {
+        delete data.cardKind;
+      }
+      return { ...n, data };
+    }));
+    closeElemCtxMenu();
+    requestAnimationFrame(() => scheduleSave());
+  }, [setNodes, elemCtxMenu, closeElemCtxMenu, scheduleSave, pushSnapshot]);
 
   const duplicateSelected = useCallback(() => {
     pushSnapshot();
@@ -1277,6 +1287,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
+        connectionMode="loose"
         onPaneClick={() => { setToolbarPicker(false); setToolbarShapePicker(false); setFileBrowserOpen(false); setLinkInputMode(null); }}
         onPaneContextMenu={handlePaneContextMenu}
         onNodeContextMenu={handleNodeContextMenu}
@@ -1304,7 +1315,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
         {/* Custom arrow markers — one per edge color + default */}
         <svg style={{ position: "absolute", width: 0, height: 0 }}>
           <defs>
-            <marker id="brainmap-arrow" viewBox="0 0 10 10" refX="10" refY="5"
+            <marker id="brainmap-arrow" viewBox="0 0 10 10" refX="8" refY="5"
               markerWidth={canvasArrowSize} markerHeight={canvasArrowSize} orient="auto-start-reverse">
               <polygon points="0,0 10,5 0,10" fill="#b1b1b7" />
             </marker>
@@ -1314,7 +1325,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
                 return typeof s === "string" ? [s] : [];
               }),
             )).map((color) => (
-              <marker key={color} id={`brainmap-arrow-${color}`} viewBox="0 0 10 10" refX="10" refY="5"
+              <marker key={color} id={`brainmap-arrow-${color}`} viewBox="0 0 10 10" refX="8" refY="5"
                 markerWidth={canvasArrowSize} markerHeight={canvasArrowSize} orient="auto-start-reverse">
                 <polygon points="0,0 10,5 0,10" fill={color} />
               </marker>
@@ -1493,6 +1504,24 @@ export function CanvasEditorInner({ path }: { path: string }) {
               </button>
             );
           })}
+          <div className="canvas-toolbar-shape-separator" />
+          {CARD_KIND_META.map((ck) => {
+            const Icon = (LucideIcons as Record<string, React.ComponentType<{ size?: number }>>)[ck.icon];
+            return (
+              <button
+                key={ck.id}
+                className="canvas-toolbar-shape-btn"
+                title={ck.label}
+                onClick={() => {
+                  addNodeAtCenter("canvasText", { text: "", cardKind: ck.id });
+                  setToolbarShapePicker(false);
+                }}
+              >
+                {Icon && <Icon size={18} />}
+                <span>{ck.label}</span>
+              </button>
+            );
+          })}
         </div>
       )}
       {toolbarPicker && (
@@ -1550,6 +1579,15 @@ export function CanvasEditorInner({ path }: { path: string }) {
               >
                 Add Text Card
               </div>
+              {CARD_KIND_META.map((ck) => (
+                <div
+                  key={ck.id}
+                  className="context-menu-item"
+                  onClick={() => addNodeAtMenu("canvasText", { text: "", cardKind: ck.id })}
+                >
+                  Add {ck.label} Card
+                </div>
+              ))}
               <div
                 className="context-menu-item"
                 onClick={() => { setShowCtxShapes(true); setShowNoteSelect(false); }}
@@ -1653,32 +1691,61 @@ export function CanvasEditorInner({ path }: { path: string }) {
       {elemCtxMenu && (() => {
         const clickedNode = elemCtxMenu.nodeId ? nodesRef.current.find((n) => n.id === elemCtxMenu.nodeId) : undefined;
         const isGroup = clickedNode?.type === "canvasGroup";
+        const isTextNode = clickedNode?.type === "canvasText";
         const hasChildren = isGroup && nodesRef.current.some((n) => n.parentId === clickedNode.id);
         const canGroup = selectedCount >= 2;
+        const currentCardKind = isTextNode ? (clickedNode.data as Record<string, unknown>).cardKind as string | undefined : undefined;
         return (
           <div
             className="context-menu"
             style={{ left: elemCtxMenu.x, top: elemCtxMenu.y, minWidth: 140 }}
             onClick={(e) => e.stopPropagation()}
           >
-            {elemCtxMenu.nodeId && (
-              <div className="context-menu-item" onClick={duplicateSelected}>
-                Duplicate
-              </div>
+            {!showCardKindPicker ? (
+              <>
+                {elemCtxMenu.nodeId && (
+                  <div className="context-menu-item" onClick={duplicateSelected}>
+                    Duplicate
+                  </div>
+                )}
+                {isTextNode && (
+                  <div className="context-menu-item" onClick={() => setShowCardKindPicker(true)}>
+                    Change Card Kind...
+                  </div>
+                )}
+                {canGroup && (
+                  <div className="context-menu-item" onClick={() => { groupSelected(); closeElemCtxMenu(); }}>
+                    Group Selection
+                  </div>
+                )}
+                {isGroup && hasChildren && (
+                  <div className="context-menu-item" onClick={ungroupSelected}>
+                    Ungroup
+                  </div>
+                )}
+                <div className="context-menu-item context-menu-item--danger" onClick={deleteSelected}>
+                  Delete
+                </div>
+              </>
+            ) : (
+              <>
+                <div
+                  className={`context-menu-item${!currentCardKind ? " context-menu-item--active" : ""}`}
+                  onClick={() => changeCardKind(undefined)}
+                >
+                  Text (plain)
+                </div>
+                {CARD_KIND_META.map((ck) => (
+                  <div
+                    key={ck.id}
+                    className={`context-menu-item${currentCardKind === ck.id ? " context-menu-item--active" : ""}`}
+                    onClick={() => changeCardKind(ck.id)}
+                  >
+                    {ck.label}
+                  </div>
+                ))}
+              </>
             )}
-            {canGroup && (
-              <div className="context-menu-item" onClick={() => { groupSelected(); closeElemCtxMenu(); }}>
-                Group Selection
-              </div>
-            )}
-            {isGroup && hasChildren && (
-              <div className="context-menu-item" onClick={ungroupSelected}>
-                Ungroup
-              </div>
-            )}
-            <div className="context-menu-item context-menu-item--danger" onClick={deleteSelected}>
-              Delete
-            </div>
           </div>
         );
       })()}

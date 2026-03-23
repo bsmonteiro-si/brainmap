@@ -1,4 +1,3 @@
-import { MarkerType } from "@xyflow/react";
 import type { Node, Edge } from "@xyflow/react";
 
 // ── JSON Canvas types ─────────────────────────────────────────────────────────
@@ -15,6 +14,8 @@ interface JsonCanvasNodeBase {
   parentId?: string;
 }
 
+export type CanvasCardKind = "summary" | "question" | "transition";
+
 interface JsonCanvasTextNode extends JsonCanvasNodeBase {
   type: "text";
   text: string;
@@ -23,6 +24,7 @@ interface JsonCanvasTextNode extends JsonCanvasNodeBase {
   fontFamily?: string;
   textAlign?: string;
   textVAlign?: string;
+  cardKind?: CanvasCardKind;
 }
 
 interface JsonCanvasFileNode extends JsonCanvasNodeBase {
@@ -103,6 +105,7 @@ export function canvasToFlow(canvas: JsonCanvas): { nodes: Node[]; edges: Edge[]
         if (cn.fontFamily) data.fontFamily = cn.fontFamily;
         if (cn.textAlign) data.textAlign = cn.textAlign;
         if (cn.textVAlign) data.textVAlign = cn.textVAlign;
+        if (cn.cardKind) data.cardKind = cn.cardKind;
         break;
       case "file":
         data.file = cn.file;
@@ -170,13 +173,17 @@ export function canvasToFlow(canvas: JsonCanvas): { nodes: Node[]; edges: Edge[]
     if (ce.fromSide) edge.sourceHandle = ce.fromSide;
     if (ce.toSide) edge.targetHandle = `${ce.toSide}-target`;
 
-    // Default: arrow on target end
+    // Default: arrow on target end.
+    // Marker IDs must match the custom SVG <marker> defs in CanvasEditor.tsx.
+    // Colored variants (brainmap-arrow-{color}) work because ce.color also sets
+    // edge.style.stroke, which drives the per-color <marker> def generation.
     const toEnd = ce.toEnd ?? "arrow";
+    const markerId = ce.color ? `brainmap-arrow-${ce.color}` : "brainmap-arrow";
     if (toEnd === "arrow") {
-      edge.markerEnd = { type: MarkerType.ArrowClosed };
+      edge.markerEnd = markerId;
     }
     if (ce.fromEnd === "arrow") {
-      edge.markerStart = { type: MarkerType.ArrowClosed };
+      edge.markerStart = markerId;
     }
 
     if (ce.label) edge.label = ce.label;
@@ -246,6 +253,7 @@ export function flowToCanvas(nodes: Node[], edges: Edge[]): JsonCanvas {
         if (data.fontFamily) node.fontFamily = String(data.fontFamily);
         if (data.textAlign && data.textAlign !== "center") node.textAlign = String(data.textAlign);
         if (data.textVAlign && data.textVAlign !== "center") node.textVAlign = String(data.textVAlign);
+        if (data.cardKind) node.cardKind = String(data.cardKind) as CanvasCardKind;
         return node;
       }
       case "file": {

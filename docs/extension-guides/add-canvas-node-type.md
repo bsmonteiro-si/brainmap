@@ -2,6 +2,8 @@
 
 Adds a new visual card type to the canvas editor. Canvas currently has 4 node types: file, text, link, group. Follow this checklist to add a 5th (or beyond).
 
+> **Semantic variants vs new types**: If your new "type" is essentially a text card with different visual treatment (e.g., Summary, Question, Transition), use the **card kind subtype pattern** instead of a full new node type. Add an entry to `CARD_KIND_META` in `canvasNodes.tsx`, extend the `CanvasCardKind` union in `canvasTranslation.ts`, and add CSS. See `docs/canvas-architecture.md` § Card Kinds for details. Only create a full new node type when the rendering or data model is fundamentally different from text cards.
+
 ## Reference implementations
 
 - `CanvasLinkNode` in `canvasNodes.tsx` — simplest node (good starting template)

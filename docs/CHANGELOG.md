@@ -2,6 +2,13 @@
 
 Feature history moved from CLAUDE.md. Organized by phase and feature area.
 
+## Typed Canvas Cards (Card Kinds)
+
+- **Summary, Question, Transition**: Three semantic card kinds for text nodes. Each has a colored badge label and solid border for visual differentiation.
+- **Create via toolbar or context menu**: Shape dropdown includes card kinds; pane context menu has dedicated "Add X Card" items.
+- **Change card kind**: Right-click a text node → "Change Card Kind..." to convert between plain text and any card kind.
+- **Backward compatible**: `cardKind` is an optional extension field in the JSON Canvas format — older versions silently ignore it.
+
 ## Canvas Support (JSON Canvas)
 
 - **Standalone `.canvas` files**: Create, open, and edit spatial canvas views using the open JSON Canvas specification (jsoncanvas.org).
