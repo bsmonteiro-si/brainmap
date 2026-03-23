@@ -5462,8 +5462,8 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding-bottom: 6px;
-  margin-bottom: 4px;
+  padding-bottom: 8px;
+  margin-bottom: 6px;
   border-bottom: 1px solid color-mix(in srgb, currentColor 25%, transparent);
   align-self: flex-start;
 }
