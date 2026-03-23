@@ -58,14 +58,28 @@ export const CARD_KIND_META: { id: string; label: string; icon: string; color: s
 function ColorPickerDropdown({
   onSelect,
   onClear,
+  onClose,
   clearLabel = "Clear",
 }: {
   onSelect: (color: string) => void;
   onClear: () => void;
+  onClose: () => void;
   clearLabel?: string;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [onClose]);
+
   return (
-    <div className="canvas-color-picker">
+    <div className="canvas-color-picker" ref={ref}>
       {CANVAS_COLORS.map((c) => (
         <button
           key={c.id}
@@ -75,17 +89,21 @@ function ColorPickerDropdown({
           onClick={() => onSelect(c.color)}
         />
       ))}
-      <label className="canvas-color-swatch canvas-color-swatch--custom" title="Custom color">
+      <label className="canvas-color-swatch canvas-color-swatch--custom" title="Custom color"
+        onClick={(e) => e.stopPropagation()}
+      >
         <input
           type="color"
           className="canvas-color-input-hidden"
-          onChange={(e) => onSelect(e.target.value)}
+          onInput={(e) => onSelect((e.target as HTMLInputElement).value)}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         />
       </label>
       <button
         className="canvas-color-swatch canvas-color-swatch--clear"
         title={clearLabel}
-        onClick={onClear}
+        onClick={() => { onClear(); onClose(); }}
       >
         ×
       </button>
@@ -146,7 +164,6 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
         n.id === id ? { ...n, data: { ...n.data, color } } : n,
       ),
     );
-    setShowColors(false);
   };
 
   const handleClearColor = () => {
@@ -166,7 +183,6 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
         n.id === id ? { ...n, data: { ...n.data, bgColor } } : n,
       ),
     );
-    setShowBgColors(false);
   };
 
   const handleClearBgColor = () => {
@@ -181,7 +197,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
   };
 
   return (
-    <NodeToolbar isVisible={selected && selectedCount <= 1} position={Position.Top} offset={8}>
+    <NodeToolbar isVisible={(selected && selectedCount <= 1) || showColors || showBgColors} position={Position.Top} offset={8}>
       <div className="canvas-node-toolbar">
         <button
           className="canvas-node-toolbar-btn"
@@ -199,7 +215,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
             <Palette size={16} />
           </button>
           {showColors && (
-            <ColorPickerDropdown onSelect={handleColor} onClear={handleClearColor} clearLabel="Clear color" />
+            <ColorPickerDropdown onSelect={handleColor} onClear={handleClearColor} onClose={() => setShowColors(false)} clearLabel="Clear color" />
           )}
         </div>
         <div className="canvas-node-toolbar-color-wrapper">
@@ -211,7 +227,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
             <Paintbrush size={16} />
           </button>
           {showBgColors && (
-            <ColorPickerDropdown onSelect={handleBgColor} onClear={handleClearBgColor} clearLabel="Clear background" />
+            <ColorPickerDropdown onSelect={handleBgColor} onClear={handleClearBgColor} onClose={() => setShowBgColors(false)} clearLabel="Clear background" />
           )}
         </div>
         {shape !== undefined && (
@@ -623,6 +639,8 @@ export const CanvasLinkNode = memo(CanvasLinkNodeInner);
 
 function CanvasGroupNodeInner({ id, data, selected }: NodeProps) {
   const d = data as { label?: string; color?: string; collapsed?: boolean; expandedWidth?: number; expandedHeight?: number };
+  const groupBorderOpacity = useUIStore((s) => s.canvasGroupBorderOpacity);
+  const groupFillOpacity = useUIStore((s) => s.canvasGroupFillOpacity);
   const bgColor = d.color ?? "var(--bg-tertiary)";
   const label = d.label ?? "";
   const collapsed = d.collapsed === true;
@@ -711,7 +729,13 @@ function CanvasGroupNodeInner({ id, data, selected }: NodeProps) {
   };
 
   return (
-    <div className={`canvas-group-node${collapsed ? " canvas-group-node--collapsed" : ""}`} style={{ backgroundColor: bgColor }}>
+    <div
+      className={`canvas-group-node${collapsed ? " canvas-group-node--collapsed" : ""}`}
+      style={{
+        backgroundColor: `color-mix(in srgb, ${bgColor} ${groupFillOpacity}%, transparent)`,
+        borderColor: `color-mix(in srgb, var(--text-muted) ${groupBorderOpacity}%, transparent)`,
+      }}
+    >
       {!collapsed && <Resizer id={id} selected={selected} minWidth={200} minHeight={150} />}
       <CanvasNodeToolbar id={id} selected={selected} />
       <div className="canvas-group-node-label" style={d.color ? { color: d.color } : undefined} onDoubleClick={startEditing}>
@@ -840,7 +864,6 @@ function CanvasEdgeInner({
         };
       }),
     );
-    setShowColors(false);
   };
 
   const handleClearColor = () => {
@@ -899,7 +922,7 @@ function CanvasEdgeInner({
           </div>
         ) : null}
         {/* Toolbar — hide when multiple elements are selected */}
-        {selected && !showInput && totalSelectedCount <= 1 && (
+        {(selected || showColors) && !showInput && totalSelectedCount <= 1 && (
           <div
             className="canvas-edge-toolbar"
             style={{ transform: `translate(-50%, -100%) translate(${labelX}px,${labelY - 16}px)` }}

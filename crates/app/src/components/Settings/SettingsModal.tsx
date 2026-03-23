@@ -112,8 +112,12 @@ export function SettingsModal() {
   const setCanvasRoundedRadius = useUIStore((s) => s.setCanvasRoundedRadius);
   const canvasGroupFontFamily = useUIStore((s) => s.canvasGroupFontFamily);
   const canvasGroupFontSize = useUIStore((s) => s.canvasGroupFontSize);
+  const canvasGroupBorderOpacity = useUIStore((s) => s.canvasGroupBorderOpacity);
+  const canvasGroupFillOpacity = useUIStore((s) => s.canvasGroupFillOpacity);
   const setCanvasGroupFontFamily = useUIStore((s) => s.setCanvasGroupFontFamily);
   const setCanvasGroupFontSize = useUIStore((s) => s.setCanvasGroupFontSize);
+  const setCanvasGroupBorderOpacity = useUIStore((s) => s.setCanvasGroupBorderOpacity);
+  const setCanvasGroupFillOpacity = useUIStore((s) => s.setCanvasGroupFillOpacity);
   const canvasSelectionColor = useUIStore((s) => s.canvasSelectionColor);
   const canvasSelectionWidth = useUIStore((s) => s.canvasSelectionWidth);
   const setCanvasSelectionColor = useUIStore((s) => s.setCanvasSelectionColor);
@@ -1192,13 +1196,45 @@ export function SettingsModal() {
       </div>
 
       <div className="settings-section">
-        <div className="settings-section-title">Group Label</div>
+        <div className="settings-section-title">Group</div>
         <div className="settings-row">
-          <span className="settings-label">Family</span>
+          <span className="settings-label">Border intensity</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={5}
+                max={100}
+                step={5}
+                value={canvasGroupBorderOpacity}
+                onChange={(e) => setCanvasGroupBorderOpacity(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasGroupBorderOpacity}%</span>
+            </div>
+          </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Fill intensity</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={canvasGroupFillOpacity}
+                onChange={(e) => setCanvasGroupFillOpacity(Number(e.target.value))}
+              />
+              <span className="settings-size-value">{canvasGroupFillOpacity}%</span>
+            </div>
+          </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Label family</span>
           <FontFamilySelect value={canvasGroupFontFamily} onChange={setCanvasGroupFontFamily} />
         </div>
         <div className="settings-row">
-          <span className="settings-label">Size</span>
+          <span className="settings-label">Label size</span>
           <div className="settings-control">
             <div className="settings-size-row">
               <input

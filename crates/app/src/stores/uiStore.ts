@@ -217,6 +217,8 @@ interface PersistedPrefs {
   canvasRoundedRadius?: number;
   canvasGroupFontFamily?: string;
   canvasGroupFontSize?: number;
+  canvasGroupBorderOpacity?: number;
+  canvasGroupFillOpacity?: number;
   canvasSelectionColor?: string;
   canvasSelectionWidth?: number;
   canvasPanelFontFamily?: string;
@@ -373,6 +375,8 @@ interface UIState {
   canvasRoundedRadius: number;
   canvasGroupFontFamily: string;
   canvasGroupFontSize: number;
+  canvasGroupBorderOpacity: number;
+  canvasGroupFillOpacity: number;
   canvasSelectionColor: string;
   canvasSelectionWidth: number;
   canvasPanelFontFamily: string;
@@ -421,6 +425,8 @@ interface UIState {
   setCanvasRoundedRadius: (v: number) => void;
   setCanvasGroupFontFamily: (v: string) => void;
   setCanvasGroupFontSize: (v: number) => void;
+  setCanvasGroupBorderOpacity: (v: number) => void;
+  setCanvasGroupFillOpacity: (v: number) => void;
   setCanvasSelectionColor: (v: string) => void;
   setCanvasSelectionWidth: (v: number) => void;
   setCanvasPanelFontFamily: (v: string) => void;
@@ -636,6 +642,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   canvasRoundedRadius: storedPrefs.canvasRoundedRadius ?? 24,
   canvasGroupFontFamily: storedPrefs.canvasGroupFontFamily ?? "sans-serif",
   canvasGroupFontSize: storedPrefs.canvasGroupFontSize ?? 13,
+  canvasGroupBorderOpacity: storedPrefs.canvasGroupBorderOpacity ?? 50,
+  canvasGroupFillOpacity: storedPrefs.canvasGroupFillOpacity ?? 15,
   canvasSelectionColor: storedPrefs.canvasSelectionColor ?? "#4a9eff",
   canvasSelectionWidth: storedPrefs.canvasSelectionWidth ?? 4,
   canvasPanelFontFamily: storedPrefs.canvasPanelFontFamily ?? DEFAULT_UI_FONT,
@@ -882,6 +890,14 @@ export const useUIStore = create<UIState>((set, get) => ({
   setCanvasGroupFontSize: (canvasGroupFontSize: number) => {
     set({ canvasGroupFontSize });
     savePrefs({ canvasGroupFontSize });
+  },
+  setCanvasGroupBorderOpacity: (canvasGroupBorderOpacity: number) => {
+    set({ canvasGroupBorderOpacity });
+    savePrefs({ canvasGroupBorderOpacity });
+  },
+  setCanvasGroupFillOpacity: (canvasGroupFillOpacity: number) => {
+    set({ canvasGroupFillOpacity });
+    savePrefs({ canvasGroupFillOpacity });
   },
   setCanvasSelectionColor: (canvasSelectionColor: string) => {
     set({ canvasSelectionColor });
