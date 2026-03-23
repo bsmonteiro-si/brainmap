@@ -31,6 +31,7 @@ interface JsonCanvasFileNode extends JsonCanvasNodeBase {
   type: "file";
   file: string;
   subpath?: string;
+  titleVAlign?: string;
 }
 
 interface JsonCanvasLinkNode extends JsonCanvasNodeBase {
@@ -110,6 +111,7 @@ export function canvasToFlow(canvas: JsonCanvas): { nodes: Node[]; edges: Edge[]
       case "file":
         data.file = cn.file;
         if (cn.subpath) data.subpath = cn.subpath;
+        if (cn.titleVAlign) data.titleVAlign = cn.titleVAlign;
         break;
       case "link":
         data.url = cn.url;
@@ -259,6 +261,7 @@ export function flowToCanvas(nodes: Node[], edges: Edge[]): JsonCanvas {
       case "file": {
         const node: JsonCanvasFileNode = { ...base, type: "file" as const, file: String(data.file ?? "") };
         if (data.subpath) node.subpath = String(data.subpath);
+        if (data.titleVAlign && data.titleVAlign !== "center") node.titleVAlign = String(data.titleVAlign);
         return node;
       }
       case "link": {

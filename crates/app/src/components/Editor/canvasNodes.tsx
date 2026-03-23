@@ -137,9 +137,9 @@ const selectTotalSelectedCount = (s: ReactFlowState) =>
   Array.from(s.nodeLookup.values()).filter((n) => n.selected).length +
   Array.from(s.edgeLookup.values()).filter((e) => e.selected).length;
 
-function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlign, textVAlign }: {
+function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlign, textVAlign, titleVAlign }: {
   id: string; selected: boolean; shape?: string;
-  fontSize?: number; fontFamily?: string; textAlign?: string; textVAlign?: string;
+  fontSize?: number; fontFamily?: string; textAlign?: string; textVAlign?: string; titleVAlign?: string;
 }) {
   const { setNodes, setEdges } = useReactFlow();
   const selectedCount = useStore(selectSelectedCount);
@@ -348,6 +348,23 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
             )}
           </div>
         )}
+        {titleVAlign !== undefined && (
+          <div className="canvas-node-toolbar-color-wrapper">
+            <button
+              className="canvas-node-toolbar-btn"
+              title="Title position"
+              onClick={() => {
+                const order = ["top", "center", "bottom"];
+                const idx = order.indexOf(titleVAlign || "top");
+                setNodeData({ titleVAlign: order[(idx + 1) % 3] });
+              }}
+            >
+              {(titleVAlign || "top") === "top" && <AlignStartVertical size={16} />}
+              {titleVAlign === "center" && <AlignCenterVertical size={16} />}
+              {titleVAlign === "bottom" && <AlignEndVertical size={16} />}
+            </button>
+          </div>
+        )}
       </div>
     </NodeToolbar>
   );
@@ -360,6 +377,9 @@ function Resizer({ id, selected, minWidth = 120, minHeight = 40, autoHeight = fa
 }) {
   const { setNodes } = useReactFlow();
 
+  // Capture the content height before resize starts so we can compare on end
+  const preResizeHeightRef = useRef<number>(0);
+
   // On resize start, drop CSS min-height to the component floor so the user can
   // freely shrink the node, and set an explicit height to preserve the visual start.
   // On resize end, convert back to minHeight so the node can still auto-expand.
@@ -371,6 +391,7 @@ function Resizer({ id, selected, minWidth = 120, minHeight = 40, autoHeight = fa
       if (typeof style.minHeight !== "number") return n;
       const mh = style.minHeight as number;
       const actualH = n.measured?.height ?? mh;
+      preResizeHeightRef.current = actualH;
       return { ...n, style: { ...style, minHeight: minHeight, height: actualH } };
     }));
   }, [id, autoHeight, minHeight, setNodes]);
@@ -381,8 +402,14 @@ function Resizer({ id, selected, minWidth = 120, minHeight = 40, autoHeight = fa
       if (n.id !== id) return n;
       const style = (n.style ?? {}) as Record<string, unknown>;
       if (typeof style.height !== "number") return n;
+      const h = style.height as number;
       const { height, ...rest } = style;
-      return { ...n, style: { ...rest, minHeight: height } };
+      if (h < preResizeHeightRef.current) {
+        // User shrunk below original content height: keep explicit height
+        return { ...n, style: { ...rest, height: h } };
+      }
+      // User kept or grew: restore minHeight for auto-expand
+      return { ...n, style: { ...rest, minHeight: h } };
     }));
   }, [id, autoHeight, setNodes]);
 
@@ -426,7 +453,7 @@ function getFileTypeInfo(filePath: string): { icon: React.ComponentType<{ size?:
 // ── File Node ─────────────────────────────────────────────────────────────────
 
 function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
-  const d = data as { file?: string; subpath?: string; color?: string; bgColor?: string };
+  const d = data as { file?: string; subpath?: string; color?: string; bgColor?: string; titleVAlign?: string };
   const filePath = d.file ?? "";
   const node = useGraphStore((s) => s.nodes.get(filePath));
   const fileExists = useGraphStore((s) => s.workspaceFiles.includes(filePath));
@@ -465,11 +492,12 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
   return (
     <div
       className="canvas-file-node"
+      data-title-valign={d.titleVAlign || "center"}
       style={{ borderLeftColor: borderColor, ...(d.bgColor ? { backgroundColor: d.bgColor } : {}) }}
       onDoubleClick={openFile}
     >
       <Resizer id={id} selected={selected} minWidth={150} minHeight={50} autoHeight />
-      <CanvasNodeToolbar id={id} selected={selected} />
+      <CanvasNodeToolbar id={id} selected={selected} titleVAlign={d.titleVAlign ?? "center"} />
       {noteType && (
         <span
           className="canvas-file-node-badge"

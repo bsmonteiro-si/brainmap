@@ -5342,7 +5342,12 @@ body {
   flex: 1;
   box-sizing: border-box;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
+.canvas-file-node[data-title-valign="top"]    { justify-content: flex-start; }
+.canvas-file-node[data-title-valign="center"] { justify-content: center; }
+.canvas-file-node[data-title-valign="bottom"] { justify-content: flex-end; }
 
 .canvas-file-node-header {
   display: flex;
