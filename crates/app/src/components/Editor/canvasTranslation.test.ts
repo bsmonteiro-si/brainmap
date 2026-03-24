@@ -25,7 +25,7 @@ describe("canvasToFlow", () => {
     expect(nodes[0].type).toBe("canvasText");
     expect(nodes[0].position).toEqual({ x: 10, y: 20 });
     expect(nodes[0].data).toEqual({ text: "Hello" });
-    expect(nodes[0].style).toEqual({ width: 200 });
+    expect(nodes[0].style).toEqual({ width: 200, minHeight: 100 });
   });
 
   it("converts file node", () => {
@@ -341,21 +341,21 @@ describe("round-trip", () => {
   });
 });
 
-describe("auto-height (width-only for auto-height nodes)", () => {
-  it("canvasToFlow sets width-only for text rectangle nodes", () => {
+describe("auto-height (minHeight for auto-height nodes)", () => {
+  it("canvasToFlow sets width + minHeight for text rectangle nodes", () => {
     const canvas: JsonCanvas = {
       nodes: [{ id: "t1", type: "text", text: "Hello", x: 0, y: 0, width: 200, height: 100 }],
     };
     const { nodes } = canvasToFlow(canvas);
-    expect(nodes[0].style).toEqual({ width: 200 });
+    expect(nodes[0].style).toEqual({ width: 200, minHeight: 100 });
   });
 
-  it("canvasToFlow sets width-only for sticky nodes", () => {
+  it("canvasToFlow sets width + minHeight for sticky nodes", () => {
     const canvas: JsonCanvas = {
       nodes: [{ id: "t1", type: "text", text: "Note", shape: "sticky", x: 0, y: 0, width: 200, height: 200 }],
     };
     const { nodes } = canvasToFlow(canvas);
-    expect(nodes[0].style).toEqual({ width: 200 });
+    expect(nodes[0].style).toEqual({ width: 200, minHeight: 200 });
   });
 
   it("canvasToFlow sets fixed height for circle nodes", () => {
@@ -382,20 +382,20 @@ describe("auto-height (width-only for auto-height nodes)", () => {
     expect(nodes[0].style).toEqual({ width: 400, height: 300 });
   });
 
-  it("canvasToFlow sets width-only for file nodes", () => {
+  it("canvasToFlow sets width + minHeight for file nodes", () => {
     const canvas: JsonCanvas = {
       nodes: [{ id: "f1", type: "file", file: "test.md", x: 0, y: 0, width: 250, height: 80 }],
     };
     const { nodes } = canvasToFlow(canvas);
-    expect(nodes[0].style).toEqual({ width: 250 });
+    expect(nodes[0].style).toEqual({ width: 250, minHeight: 80 });
   });
 
-  it("canvasToFlow sets width-only for link nodes", () => {
+  it("canvasToFlow sets width + minHeight for link nodes", () => {
     const canvas: JsonCanvas = {
       nodes: [{ id: "l1", type: "link", url: "https://example.com", x: 0, y: 0, width: 200, height: 60 }],
     };
     const { nodes } = canvasToFlow(canvas);
-    expect(nodes[0].style).toEqual({ width: 200 });
+    expect(nodes[0].style).toEqual({ width: 200, minHeight: 60 });
   });
 
   it("flowToCanvas reads minHeight when style.height is absent", () => {

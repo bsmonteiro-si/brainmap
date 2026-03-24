@@ -1,4 +1,5 @@
 import { memo, useState, useRef, useEffect, useCallback } from "react";
+import { flushSync } from "react-dom";
 import {
   Handle, Position, NodeResizer, NodeToolbar,
   BaseEdge, EdgeLabelRenderer, getBezierPath, getStraightPath, getSmoothStepPath, useReactFlow, useStore,
@@ -12,7 +13,7 @@ import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { useTabStore } from "../../stores/tabStore";
 import { useUIStore } from "../../stores/uiStore";
-import { useCanvasPanelMode } from "./CanvasEditor";
+import { useCanvasPanelMode, useCanvasSave } from "./CanvasEditor";
 
 import { getNodeColor } from "../GraphView/graphStyles";
 
@@ -142,6 +143,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
   fontSize?: number; fontFamily?: string; textAlign?: string; textVAlign?: string; titleVAlign?: string;
 }) {
   const { setNodes, setEdges } = useReactFlow();
+  const scheduleSave = useCanvasSave();
   const selectedCount = useStore(selectSelectedCount);
   const [showColors, setShowColors] = useState(false);
   const [showBgColors, setShowBgColors] = useState(false);
@@ -151,11 +153,13 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
   const closeAllDropdowns = () => { setShowColors(false); setShowBgColors(false); setShowShapes(false); setShowTextFormat(false); };
   const setNodeData = (patch: Record<string, unknown>) => {
     setNodes((nds) => nds.map((n) => n.id === id ? { ...n, data: { ...n.data, ...patch } } : n));
+    scheduleSave();
   };
 
   const handleDelete = () => {
     setNodes((nds) => nds.filter((n) => n.id !== id));
     setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
+    scheduleSave();
   };
 
   const handleColor = (color: string) => {
@@ -164,6 +168,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
         n.id === id ? { ...n, data: { ...n.data, color } } : n,
       ),
     );
+    scheduleSave();
   };
 
   const handleClearColor = () => {
@@ -174,6 +179,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
         return { ...n, data: rest };
       }),
     );
+    scheduleSave();
   };
 
   const handleBgColor = (bgColor: string) => {
@@ -182,6 +188,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
         n.id === id ? { ...n, data: { ...n.data, bgColor } } : n,
       ),
     );
+    scheduleSave();
   };
 
   const handleClearBgColor = () => {
@@ -192,6 +199,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
         return { ...n, data: rest };
       }),
     );
+    scheduleSave();
   };
 
   return (
@@ -264,6 +272,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
                           return { ...n, data: newData };
                         }));
                         setShowShapes(false);
+                        scheduleSave();
                       }}
                     >
                       {Icon && <Icon size={16} />}
@@ -376,6 +385,7 @@ function Resizer({ id, selected, minWidth = 120, minHeight = 40, autoHeight = fa
   id: string; selected: boolean; minWidth?: number; minHeight?: number; autoHeight?: boolean;
 }) {
   const { setNodes } = useReactFlow();
+  const scheduleSave = useCanvasSave();
 
   // Capture the content height before resize starts so we can compare on end
   const preResizeHeightRef = useRef<number>(0);
@@ -383,17 +393,22 @@ function Resizer({ id, selected, minWidth = 120, minHeight = 40, autoHeight = fa
   // On resize start, drop CSS min-height to the component floor so the user can
   // freely shrink the node, and set an explicit height to preserve the visual start.
   // On resize end, convert back to minHeight so the node can still auto-expand.
+  // flushSync ensures the DOM has the lowered min-height before the first
+  // drag frame fires — without it, CSS min-height from the previous render
+  // prevents visual shrinking on the first pointer-move.
   const handleResizeStart = useCallback(() => {
     if (!autoHeight) return;
-    setNodes((nds) => nds.map((n) => {
-      if (n.id !== id) return n;
-      const style = (n.style ?? {}) as Record<string, unknown>;
-      if (typeof style.minHeight !== "number") return n;
-      const mh = style.minHeight as number;
-      const actualH = n.measured?.height ?? mh;
-      preResizeHeightRef.current = actualH;
-      return { ...n, style: { ...style, minHeight: minHeight, height: actualH } };
-    }));
+    flushSync(() => {
+      setNodes((nds) => nds.map((n) => {
+        if (n.id !== id) return n;
+        const style = (n.style ?? {}) as Record<string, unknown>;
+        if (typeof style.minHeight !== "number") return n;
+        const mh = style.minHeight as number;
+        const actualH = n.measured?.height ?? mh;
+        preResizeHeightRef.current = actualH;
+        return { ...n, style: { ...style, minHeight: minHeight, height: actualH } };
+      }));
+    });
   }, [id, autoHeight, minHeight, setNodes]);
 
   const handleResizeEnd = useCallback(() => {
@@ -411,7 +426,8 @@ function Resizer({ id, selected, minWidth = 120, minHeight = 40, autoHeight = fa
       // User kept or grew: restore minHeight for auto-expand
       return { ...n, style: { ...rest, minHeight: h } };
     }));
-  }, [id, autoHeight, setNodes]);
+    scheduleSave();
+  }, [id, autoHeight, setNodes, scheduleSave]);
 
   return (
     <NodeResizer
@@ -556,12 +572,10 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
   };
 
   const { setNodes } = useReactFlow();
+  const scheduleSave = useCanvasSave();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(text);
-  const latestTextRef = useRef(text);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => { latestTextRef.current = text; }, [text]);
 
   useEffect(() => {
     if (editing && textareaRef.current) {
@@ -579,16 +593,16 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
   }, [editing, editValue]);
 
   const commitEdit = () => {
-    latestTextRef.current = editValue;
     setNodes((nds) =>
       nds.map((n) => n.id === id ? { ...n, data: { ...n.data, text: editValue } } : n),
     );
     setEditing(false);
+    scheduleSave();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
-      setEditValue(latestTextRef.current);
+      setEditValue(text);
       setEditing(false);
     }
     // Don't propagate so React Flow doesn't handle Delete/Backspace while typing
@@ -623,7 +637,7 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
           background: `linear-gradient(180deg, color-mix(in srgb, ${kindColor} 10%, var(--bg-primary)) 0%, var(--bg-primary) 60%)`,
         } : {}),
       }}
-      onDoubleClick={() => { setEditValue(latestTextRef.current); setEditing(true); }}
+      onDoubleClick={() => { setEditValue(text); setEditing(true); }}
     >
       <Resizer id={id} selected={selected} autoHeight={!isFixedShape} />
       <CanvasNodeToolbar id={id} selected={selected} shape={d.shape ?? "rectangle"} fontSize={d.fontSize} fontFamily={d.fontFamily} textAlign={d.textAlign} textVAlign={d.textVAlign} />
@@ -718,6 +732,7 @@ function CanvasGroupNodeInner({ id, data, selected }: NodeProps) {
   const collapsed = d.collapsed === true;
 
   const { setNodes } = useReactFlow();
+  const scheduleSave = useCanvasSave();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(label);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -737,6 +752,7 @@ function CanvasGroupNodeInner({ id, data, selected }: NodeProps) {
       nds.map((n) => n.id === id ? { ...n, data: { ...n.data, label: trimmed || undefined } } : n),
     );
     setEditing(false);
+    scheduleSave();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -798,6 +814,7 @@ function CanvasGroupNodeInner({ id, data, selected }: NodeProps) {
         });
       }
     });
+    scheduleSave();
   };
 
   return (
@@ -854,6 +871,7 @@ function CanvasEdgeInner({
   data,
 }: EdgeProps) {
   const { setEdges } = useReactFlow();
+  const scheduleSave = useCanvasSave();
   const totalSelectedCount = useStore(selectTotalSelectedCount);
   const [showColors, setShowColors] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -896,6 +914,7 @@ function CanvasEdgeInner({
     );
     setEditing(false);
     setPromptLabel(false);
+    scheduleSave();
   };
 
   const handleLabelKeyDown = (e: React.KeyboardEvent) => {
@@ -915,6 +934,7 @@ function CanvasEdgeInner({
             return { ...ed, data: Object.keys(restData).length > 0 ? restData : undefined };
           }),
         );
+        scheduleSave();
       }
     }
   };
@@ -922,6 +942,7 @@ function CanvasEdgeInner({
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     setEdges((eds) => eds.filter((e) => e.id !== id));
+    scheduleSave();
   };
 
   const handleColor = (color: string) => {
@@ -937,6 +958,7 @@ function CanvasEdgeInner({
         };
       }),
     );
+    scheduleSave();
   };
 
   const handleClearColor = () => {
@@ -952,6 +974,7 @@ function CanvasEdgeInner({
         };
       }),
     );
+    scheduleSave();
   };
 
   const startEditing = (e: React.MouseEvent) => {
@@ -1022,21 +1045,21 @@ function CanvasEdgeInner({
               <button
                 className={`canvas-node-toolbar-btn${effectiveType === "bezier" ? " canvas-node-toolbar-btn--active" : ""}`}
                 title="Bezier"
-                onClick={() => setEdges((eds) => eds.map((ed) => ed.id !== id ? ed : { ...ed, data: { ...(ed.data as object), edgeType: "bezier" } }))}
+                onClick={() => { setEdges((eds) => eds.map((ed) => ed.id !== id ? ed : { ...ed, data: { ...(ed.data as object), edgeType: "bezier" } })); scheduleSave(); }}
               >
                 <Spline size={14} />
               </button>
               <button
                 className={`canvas-node-toolbar-btn${effectiveType === "straight" ? " canvas-node-toolbar-btn--active" : ""}`}
                 title="Straight"
-                onClick={() => setEdges((eds) => eds.map((ed) => ed.id !== id ? ed : { ...ed, data: { ...(ed.data as object), edgeType: "straight" } }))}
+                onClick={() => { setEdges((eds) => eds.map((ed) => ed.id !== id ? ed : { ...ed, data: { ...(ed.data as object), edgeType: "straight" } })); scheduleSave(); }}
               >
                 <Minus size={14} />
               </button>
               <button
                 className={`canvas-node-toolbar-btn${effectiveType === "step" ? " canvas-node-toolbar-btn--active" : ""}`}
                 title="Step"
-                onClick={() => setEdges((eds) => eds.map((ed) => ed.id !== id ? ed : { ...ed, data: { ...(ed.data as object), edgeType: "step" } }))}
+                onClick={() => { setEdges((eds) => eds.map((ed) => ed.id !== id ? ed : { ...ed, data: { ...(ed.data as object), edgeType: "step" } })); scheduleSave(); }}
               >
                 <CornerDownRight size={14} />
               </button>

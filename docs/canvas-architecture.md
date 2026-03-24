@@ -65,7 +65,7 @@ RF_TO_CANVAS_TYPE:  canvasText -> text,  canvasFile -> file,  canvasLink -> link
 
 ### canvasToFlow (JSON Canvas -> React Flow)
 
-- **Node size**: Groups and fixed shapes (circle, diamond) use `style: { width, height }`. All others use `style: { width }` only (height auto-grows via `minHeight`).
+- **Node size**: Groups and fixed shapes (circle, diamond) use `style: { width, height }`. All others use `style: { width, minHeight }` (height auto-grows from content, `minHeight` preserves the saved height as a floor).
 - **Groups**: get `zIndex: -1` (render behind other nodes).
 - **Parented nodes**: JSON Canvas stores absolute positions; React Flow needs parent-relative. The function subtracts parent position for children.
 - **Parent ordering**: React Flow requires parent nodes to precede children in the array. The function sorts accordingly.
@@ -128,6 +128,7 @@ Canvas uses ~25 `canvas*` settings from `uiStore`. See **UI Store Settings** sec
 4. **Save function**: `doSave()` is guarded by `savingRef` to prevent concurrent writes. Converts current state via `flowToCanvas()`, stringifies with 2-space indent, writes via `writePlainFile()`.
 5. **Save on unmount**: Cleanup effect checks `pendingSaves.has(path)` and calls `doSaveRef.current()`.
 6. **Cmd+S**: `App.tsx` dispatches custom event `"canvas:save"` with path as detail. `CanvasEditorInner` listens, cancels pending debounce, and saves immediately.
+7. **Child component saves via `CanvasSaveContext`**: Child components (node toolbars, text editing, edge editing) update React Flow's store via `useReactFlow().setNodes/setEdges`, which does NOT trigger the parent's `handleNodesChange`. To ensure these changes are persisted, `CanvasSaveContext` provides a stable `scheduleSave` callback (ref-backed to avoid re-rendering memo'd components). All child `setNodes`/`setEdges` calls are followed by `scheduleSave()`.
 
 ## Undo/Redo
 

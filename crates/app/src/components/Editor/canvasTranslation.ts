@@ -135,7 +135,7 @@ export function canvasToFlow(canvas: JsonCanvas): { nodes: Node[]; edges: Edge[]
         (cn.type === "text" && (cn.shape === "circle" || cn.shape === "diamond"))
       )
         ? { width: cn.width, height: cn.height }
-        : { width: cn.width },
+        : { width: cn.width, minHeight: cn.height },
       // Groups should render behind other nodes
       ...(cn.type === "group" ? { zIndex: -1 } : {}),
       ...(cn.parentId ? { parentId: cn.parentId } : {}),

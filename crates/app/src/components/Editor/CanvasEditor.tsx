@@ -38,6 +38,15 @@ import { CanvasFileNode, CanvasTextNode, CanvasLinkNode, CanvasGroupNode, Canvas
 export const CanvasPanelModeContext = createContext(false);
 export function useCanvasPanelMode() { return useContext(CanvasPanelModeContext); }
 
+// ── Save context ──────────────────────────────────────────────────────────────
+// Provides scheduleSave to child node/edge components so programmatic changes
+// (text edits, toolbar color/shape/font changes, edge label edits) trigger
+// debounced persistence.  Uses a stable callback backed by a ref so the context
+// value never changes identity and memo'd consumers aren't invalidated.
+const noop = () => {};
+export const CanvasSaveContext = createContext<() => void>(noop);
+export function useCanvasSave() { return useContext(CanvasSaveContext); }
+
 // ── Error boundary ────────────────────────────────────────────────────────────
 
 class CanvasErrorBoundary extends Component<{ children: ReactNode; path: string }, { error: string | null }> {
@@ -366,6 +375,15 @@ export function CanvasEditorInner({ path }: { path: string }) {
       doSaveRef.current();
     }, SAVE_DEBOUNCE_MS);
   }, [path]);
+
+  // Stable save trigger for child components (via CanvasSaveContext).
+  // Uses a ref so the callback identity never changes — memo'd node/edge
+  // components won't re-render when scheduleSave is recreated.
+  const scheduleSaveRef = useRef(scheduleSave);
+  scheduleSaveRef.current = scheduleSave;
+  const stableScheduleSave = useCallback(() => {
+    requestAnimationFrame(() => scheduleSaveRef.current());
+  }, []);
 
   // Listen for canvas:save event (Cmd+S)
   useEffect(() => {
@@ -1281,6 +1299,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   }
 
   return (
+    <CanvasSaveContext.Provider value={stableScheduleSave}>
     <div className={containerClass} style={{ ...shapeVars, ...counterZoomStyle }}>
       <ReactFlow
         nodes={nodes}
@@ -1850,6 +1869,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
         </div>
       )}
     </div>
+    </CanvasSaveContext.Provider>
   );
 }
 
