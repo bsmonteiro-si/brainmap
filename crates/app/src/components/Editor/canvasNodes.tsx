@@ -558,7 +558,10 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
   const { setNodes } = useReactFlow();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(text);
+  const latestTextRef = useRef(text);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => { latestTextRef.current = text; }, [text]);
 
   useEffect(() => {
     if (editing && textareaRef.current) {
@@ -576,6 +579,7 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
   }, [editing, editValue]);
 
   const commitEdit = () => {
+    latestTextRef.current = editValue;
     setNodes((nds) =>
       nds.map((n) => n.id === id ? { ...n, data: { ...n.data, text: editValue } } : n),
     );
@@ -584,7 +588,7 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
-      setEditValue(text);
+      setEditValue(latestTextRef.current);
       setEditing(false);
     }
     // Don't propagate so React Flow doesn't handle Delete/Backspace while typing
@@ -619,7 +623,7 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
           background: `linear-gradient(180deg, color-mix(in srgb, ${kindColor} 10%, var(--bg-primary)) 0%, var(--bg-primary) 60%)`,
         } : {}),
       }}
-      onDoubleClick={() => { setEditValue(text); setEditing(true); }}
+      onDoubleClick={() => { setEditValue(latestTextRef.current); setEditing(true); }}
     >
       <Resizer id={id} selected={selected} autoHeight={!isFixedShape} />
       <CanvasNodeToolbar id={id} selected={selected} shape={d.shape ?? "rectangle"} fontSize={d.fontSize} fontFamily={d.fontFamily} textAlign={d.textAlign} textVAlign={d.textVAlign} />
