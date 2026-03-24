@@ -2,6 +2,13 @@
 
 Feature history moved from CLAUDE.md. Organized by phase and feature area.
 
+## Video Viewer
+
+- **Dedicated video viewer**: Video files (`.mp4`, `.webm`, `.mov`, `.avi`, `.mkv`, `.ogv`) now open in a built-in viewer with native playback controls (play/pause, seeking, volume, fullscreen).
+- **Playback speed control**: Toolbar dropdown to select speed (0.25x, 0.5x, 0.75x, 1x, 1.25x, 1.5x, 2x).
+- **File info**: Toolbar displays file name and file size.
+- **Read-only**: No save logic — uses Tauri's asset protocol to load videos directly. 2 GB size limit.
+
 ## Image Viewer
 
 - **Dedicated image viewer**: Image files (`.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.webp`, `.ico`, `.bmp`) now open in a built-in viewer instead of showing "Binary file — cannot be displayed".

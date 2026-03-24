@@ -13,7 +13,7 @@ function navigateToActiveTab() {
       if (nextTab.kind === "untitled") {
         useGraphStore.getState().selectNode(null);
         useEditorStore.getState().activateUntitledTab(activeTabId);
-      } else if (nextTab.kind === "pdf" || nextTab.kind === "excalidraw" || nextTab.kind === "canvas" || nextTab.kind === "image") {
+      } else if (nextTab.kind === "pdf" || nextTab.kind === "excalidraw" || nextTab.kind === "canvas" || nextTab.kind === "image" || nextTab.kind === "video") {
         useGraphStore.getState().selectNode(null);
         useEditorStore.getState().clearForCustomTab();
       } else if (nextTab.kind === "note") {

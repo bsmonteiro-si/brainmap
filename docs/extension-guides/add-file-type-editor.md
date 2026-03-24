@@ -264,6 +264,7 @@ If the library supports theming independently from the app:
 | `.excalidraw` | `"excalidraw"` | ExcalidrawEditor | Yes | Phase 1c |
 | `.canvas` | `"canvas"` | CanvasEditor | Yes | Phase 1c |
 | `.png`/`.jpg`/`.jpeg`/`.gif`/`.svg`/`.webp`/`.ico`/`.bmp` | `"image"` | ImageViewer | No (read-only) | Phase 1c |
+| `.mp4`/`.webm`/`.mov`/`.avi`/`.mkv`/`.ogv` | `"video"` | VideoViewer | No (read-only) | Phase 1c |
 
 ## Common pitfalls
 

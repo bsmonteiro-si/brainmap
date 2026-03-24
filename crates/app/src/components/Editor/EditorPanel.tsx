@@ -11,6 +11,7 @@ import { PdfViewer } from "./PdfViewer";
 import { ExcalidrawEditor } from "./ExcalidrawEditor";
 import { CanvasEditor } from "./CanvasEditor";
 import { ImageViewer } from "./ImageViewer";
+import { VideoViewer } from "./VideoViewer";
 import { DocumentOutline } from "./DocumentOutline";
 import { getNodeColor } from "../GraphView/graphStyles";
 import type { EditorView } from "@codemirror/view";
@@ -98,6 +99,14 @@ export function EditorPanel() {
     return (
       <div className="editor-panel-container">
         <ImageViewer path={activeTab.path} />
+      </div>
+    );
+  }
+
+  if (activeTab?.kind === "video") {
+    return (
+      <div className="editor-panel-container">
+        <VideoViewer path={activeTab.path} />
       </div>
     );
   }

@@ -673,6 +673,14 @@ pub fn resolve_image_path(
 }
 
 #[tauri::command]
+pub fn resolve_video_path(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<VideoMetaDto, String> {
+    state.with_active(|ws| handlers::handle_resolve_video_path(ws, &path))
+}
+
+#[tauri::command]
 pub fn resolve_pdf_path(state: State<'_, AppState>, path: String) -> Result<PdfMetaDto, String> {
     state.with_active(|ws| handlers::handle_resolve_pdf_path(ws, &path))
 }

@@ -120,7 +120,7 @@ export function TabBar() {
     if (tab.kind === "untitled") {
       useGraphStore.getState().selectNode(null);
       useEditorStore.getState().activateUntitledTab(path);
-    } else if (tab.kind === "pdf" || tab.kind === "excalidraw" || tab.kind === "canvas" || tab.kind === "image") {
+    } else if (tab.kind === "pdf" || tab.kind === "excalidraw" || tab.kind === "canvas" || tab.kind === "image" || tab.kind === "video") {
       useGraphStore.getState().selectNode(null);
       useTabStore.getState().activateTab(path);
       useEditorStore.getState().clearForCustomTab();
@@ -164,7 +164,7 @@ export function TabBar() {
 
     // PDF tabs are never dirty — just close
     // Excalidraw tabs save via unmount cleanup in ExcalidrawEditor
-    if (tab && (tab.kind === "pdf" || tab.kind === "excalidraw" || tab.kind === "canvas" || tab.kind === "image")) {
+    if (tab && (tab.kind === "pdf" || tab.kind === "excalidraw" || tab.kind === "canvas" || tab.kind === "image" || tab.kind === "video")) {
       closeTabAndNavigateNext(id);
       return;
     }
@@ -250,7 +250,7 @@ export function TabBar() {
           {tab.kind === "excalidraw" && <span className="tab-ext-badge tab-ext-badge--excalidraw">.excalidraw</span>}
           {tab.kind === "pdf" && <span className="tab-ext-badge tab-ext-badge--pdf">.pdf</span>}
           {tab.kind === "image" && <span className="tab-ext-badge tab-ext-badge--image">{tab.title.match(/\.[^.]+$/)?.[0] ?? ""}</span>}
-          {(tab.id === activeTabId && tab.kind !== "excalidraw" && tab.kind !== "pdf" && tab.kind !== "canvas" && tab.kind !== "image" ? editorIsDirty : tab.isDirty) && <span className="tab-dirty-dot" />}
+          {(tab.id === activeTabId && tab.kind !== "excalidraw" && tab.kind !== "pdf" && tab.kind !== "canvas" && tab.kind !== "image" && tab.kind !== "video" ? editorIsDirty : tab.isDirty) && <span className="tab-dirty-dot" />}
           <button
             className="tab-close"
             onClick={(e) => handleClose(e, tab.id)}

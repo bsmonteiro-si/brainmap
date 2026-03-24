@@ -338,6 +338,9 @@ pub struct PdfMetaDto {
 /// Type alias for clarity — image resolution returns the same shape as PDF.
 pub type ImageMetaDto = PdfMetaDto;
 
+/// Type alias for clarity — video resolution returns the same shape as PDF.
+pub type VideoMetaDto = PdfMetaDto;
+
 // ── PDF Highlight DTOs ───────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

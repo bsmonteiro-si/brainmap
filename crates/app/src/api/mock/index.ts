@@ -319,6 +319,10 @@ export class MockBridge implements BrainMapAPI {
     return { path, absolute_path: `/mock/seed/${path}`, size_bytes: 0 };
   }
 
+  async resolveVideoPath(path: string): Promise<PdfFileMeta> {
+    return { path, absolute_path: `/mock/seed/${path}`, size_bytes: 0 };
+  }
+
   async resolvePdfPath(path: string): Promise<PdfFileMeta> {
     return { path, absolute_path: `/mock/seed/${path}`, size_bytes: 0 };
   }

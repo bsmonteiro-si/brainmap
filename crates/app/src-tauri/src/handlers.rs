@@ -460,6 +460,39 @@ pub fn handle_resolve_image_path(ws: &Workspace, path: &str) -> Result<ImageMeta
     })
 }
 
+/// Resolve a video file path and return metadata for asset protocol loading.
+/// Does NOT read file content — the frontend loads via Tauri's asset:// URL.
+pub fn handle_resolve_video_path(ws: &Workspace, path: &str) -> Result<VideoMetaDto, String> {
+    // Keep in sync with VIDEO_EXTS in FileTreePanel.tsx
+    const VIDEO_EXTS: &[&str] = &["mp4", "webm", "mov", "avi", "mkv", "ogv"];
+    let abs = validate_relative_path(&ws.root, path)?;
+    if !abs.exists() {
+        return Err(format!("File not found: {}", path));
+    }
+    let ext = abs.extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase());
+    let ext_str = ext.as_deref().unwrap_or("");
+    if !VIDEO_EXTS.contains(&ext_str) {
+        return Err(format!("Not a video file: {}", path));
+    }
+    let meta = std::fs::metadata(&abs)
+        .map_err(|e| format!("Failed to read file metadata: {}", e))?;
+    let size = meta.len();
+    const MAX_VIDEO_SIZE: u64 = 2 * 1024 * 1024 * 1024; // 2 GB
+    if size > MAX_VIDEO_SIZE {
+        return Err(format!(
+            "Video file too large ({:.1} MB). Maximum supported size is 2 GB.",
+            size as f64 / (1024.0 * 1024.0)
+        ));
+    }
+    Ok(VideoMetaDto {
+        path: path.to_string(),
+        absolute_path: abs.to_string_lossy().to_string(),
+        size_bytes: size,
+    })
+}
+
 /// Resolve a PDF file path and return metadata for asset protocol loading.
 /// Does NOT read file content — the frontend loads via Tauri's asset:// URL.
 pub fn handle_resolve_pdf_path(ws: &Workspace, path: &str) -> Result<PdfMetaDto, String> {

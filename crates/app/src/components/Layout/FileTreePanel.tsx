@@ -787,12 +787,20 @@ function FileTreeNode({
 
   // Keep in sync with IMAGE_EXTS in handlers.rs::handle_resolve_image_path
   const IMAGE_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", ".bmp"];
+  // Keep in sync with VIDEO_EXTS in handlers.rs::handle_resolve_video_path
+  const VIDEO_EXTS = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".ogv"];
 
   const handleClick = () => {
     const lowerPath = node.fullPath.toLowerCase();
     if (IMAGE_EXTS.some((ext) => lowerPath.endsWith(ext))) {
       const fileName = node.fullPath.split("/").pop() ?? node.fullPath;
       useTabStore.getState().openTab(node.fullPath, "image", fileName, null);
+      useEditorStore.getState().clearForCustomTab();
+      return;
+    }
+    if (VIDEO_EXTS.some((ext) => lowerPath.endsWith(ext))) {
+      const fileName = node.fullPath.split("/").pop() ?? node.fullPath;
+      useTabStore.getState().openTab(node.fullPath, "video", fileName, null);
       useEditorStore.getState().clearForCustomTab();
       return;
     }
