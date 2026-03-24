@@ -6313,6 +6313,7 @@ body {
   align-items: center;
   justify-content: center;
   background: var(--bg-primary);
+  outline: none;
 }
 
 .video-viewer-video {

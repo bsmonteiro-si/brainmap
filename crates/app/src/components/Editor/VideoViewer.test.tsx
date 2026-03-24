@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { useTabStore } from "../../stores/tabStore";
 import { formatSize, VideoViewer } from "./VideoViewer";
 
@@ -135,6 +135,83 @@ describe("VideoViewer render", () => {
       const options = select!.querySelectorAll("option");
       expect(options).toHaveLength(7); // 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2
     });
+  });
+});
+
+describe("VideoViewer keyboard controls", () => {
+  beforeEach(() => {
+    mockResolveVideoPath.mockReset();
+  });
+
+  async function renderWithVideo() {
+    mockResolveVideoPath.mockResolvedValue({
+      path: "clip.mp4",
+      absolute_path: "/mock/clip.mp4",
+      size_bytes: 0,
+    });
+    const result = render(<VideoViewer path="clip.mp4" />);
+    await waitFor(() => {
+      expect(result.container.querySelector("video")).not.toBeNull();
+    });
+    return result;
+  }
+
+  it("ArrowLeft seeks backward by 5 seconds", async () => {
+    const { container } = await renderWithVideo();
+    const video = container.querySelector("video")!;
+    Object.defineProperty(video, "currentTime", { value: 30, writable: true });
+    Object.defineProperty(video, "duration", { value: 120 });
+
+    const content = container.querySelector(".video-viewer-content")!;
+    fireEvent.keyDown(content, { key: "ArrowLeft" });
+    expect(video.currentTime).toBe(25);
+  });
+
+  it("ArrowRight seeks forward by 5 seconds", async () => {
+    const { container } = await renderWithVideo();
+    const video = container.querySelector("video")!;
+    Object.defineProperty(video, "currentTime", { value: 30, writable: true });
+    Object.defineProperty(video, "duration", { value: 120 });
+
+    const content = container.querySelector(".video-viewer-content")!;
+    fireEvent.keyDown(content, { key: "ArrowRight" });
+    expect(video.currentTime).toBe(35);
+  });
+
+  it("ArrowLeft does not go below 0", async () => {
+    const { container } = await renderWithVideo();
+    const video = container.querySelector("video")!;
+    Object.defineProperty(video, "currentTime", { value: 2, writable: true });
+    Object.defineProperty(video, "duration", { value: 120 });
+
+    const content = container.querySelector(".video-viewer-content")!;
+    fireEvent.keyDown(content, { key: "ArrowLeft" });
+    expect(video.currentTime).toBe(0);
+  });
+
+  it("ArrowRight does not exceed duration", async () => {
+    const { container } = await renderWithVideo();
+    const video = container.querySelector("video")!;
+    Object.defineProperty(video, "currentTime", { value: 118, writable: true });
+    Object.defineProperty(video, "duration", { value: 120 });
+
+    const content = container.querySelector(".video-viewer-content")!;
+    fireEvent.keyDown(content, { key: "ArrowRight" });
+    expect(video.currentTime).toBe(120);
+  });
+
+  it("Space toggles play/pause", async () => {
+    const { container } = await renderWithVideo();
+    const video = container.querySelector("video")!;
+    const playSpy = vi.fn();
+    const pauseSpy = vi.fn();
+    video.play = playSpy;
+    video.pause = pauseSpy;
+    Object.defineProperty(video, "paused", { value: true, writable: true });
+
+    const content = container.querySelector(".video-viewer-content")!;
+    fireEvent.keyDown(content, { key: " " });
+    expect(playSpy).toHaveBeenCalled();
   });
 });
 

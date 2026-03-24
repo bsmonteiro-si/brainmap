@@ -6,6 +6,7 @@ interface Props {
 }
 
 const SPEED_OPTIONS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
+const SEEK_STEP = 5; // seconds
 
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -79,6 +80,28 @@ export function VideoViewer({ path }: Props) {
     setSrc(null);
   }, []);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      video.currentTime = Math.max(0, video.currentTime - SEEK_STEP);
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      video.currentTime = Math.min(video.duration || 0, video.currentTime + SEEK_STEP);
+    } else if (e.key === " ") {
+      e.preventDefault();
+      if (video.paused) {
+        video.play();
+      } else {
+        video.pause();
+      }
+    }
+  }, []);
+
   const fileName = path.split("/").pop() ?? path;
 
   if (loading) {
@@ -124,7 +147,13 @@ export function VideoViewer({ path }: Props) {
           </label>
         </div>
       </div>
-      <div className="video-viewer-content">
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+      <div
+        ref={containerRef}
+        className="video-viewer-content"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+      >
         {src && (
           <video
             ref={videoRef}
