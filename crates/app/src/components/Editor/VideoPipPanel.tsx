@@ -61,7 +61,11 @@ export function VideoPipPanel() {
     const handleMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX;
       const dy = ev.clientY - startY;
-      setPos({ x: startPos.x + dx, y: startPos.y + dy });
+      // Clamp so at least 100px of the panel stays visible within the WebView
+      setPos({
+        x: Math.max(-sizeRef.current.w + 100, Math.min(window.innerWidth - 100, startPos.x + dx)),
+        y: Math.max(0, Math.min(window.innerHeight - 40, startPos.y + dy)),
+      });
     };
     const handleUp = () => {
       document.removeEventListener("mousemove", handleMove);

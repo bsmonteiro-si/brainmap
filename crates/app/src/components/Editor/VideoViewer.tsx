@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { getAPI } from "../../api/bridge";
 import { Maximize, Minimize, X } from "lucide-react";
 
@@ -138,7 +139,7 @@ export function VideoViewer({ path, onClose }: Props) {
     );
   }
 
-  return (
+  const viewerContent = (
     <div className={`video-viewer${isFullscreen ? " video-viewer--fullscreen" : ""}`}>
       <div className="video-viewer-toolbar">
         <span className="video-viewer-info">
@@ -168,6 +169,16 @@ export function VideoViewer({ path, onClose }: Props) {
           >
             {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
           </button>
+          {isFullscreen && onClose && (
+            <button
+              className="video-viewer-btn"
+              onClick={onClose}
+              title="Close"
+              type="button"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
       </div>
       {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
@@ -188,16 +199,13 @@ export function VideoViewer({ path, onClose }: Props) {
           />
         )}
       </div>
-      {isFullscreen && onClose && (
-        <button
-          className="video-viewer-fullscreen-close"
-          onClick={onClose}
-          title="Close"
-          type="button"
-        >
-          <X size={16} />
-        </button>
-      )}
     </div>
   );
+
+  // Portal fullscreen to document.body so it escapes any parent overflow/stacking contexts
+  if (isFullscreen) {
+    return createPortal(viewerContent, document.body);
+  }
+
+  return viewerContent;
 }

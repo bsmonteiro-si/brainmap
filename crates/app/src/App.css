@@ -6365,33 +6365,6 @@ body {
   color: var(--text-danger, #e74c3c);
 }
 
-/* ── Video Fullscreen Close Button ──────────────────────────── */
-
-.video-viewer-fullscreen-close {
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  z-index: 10000;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  cursor: pointer;
-  opacity: 0.7;
-  transition: opacity 0.15s;
-}
-
-.video-viewer-fullscreen-close:hover {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.8);
-}
-
 /* ── Video PiP Panel ────────────────────────────────────────── */
 
 .video-pip-panel {
@@ -6478,3 +6451,4 @@ body {
   border-bottom: 2px solid var(--text-secondary);
   opacity: 0.4;
 }
+

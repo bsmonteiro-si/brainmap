@@ -234,37 +234,40 @@ describe("VideoViewer keyboard controls", () => {
     expect(pauseSpy).toHaveBeenCalled();
   });
 
-  it("F key toggles fullscreen", async () => {
-    const { container } = await renderWithVideo();
-    const content = container.querySelector(".video-viewer-content")!;
-    const viewer = container.querySelector(".video-viewer")!;
+  it("F key toggles fullscreen (portaled to body)", async () => {
+    await renderWithVideo();
+    const content = document.querySelector(".video-viewer-content")!;
 
-    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(false);
+    // Not fullscreen initially
+    expect(document.querySelector(".video-viewer--fullscreen")).toBeNull();
     fireEvent.keyDown(content, { key: "f" });
-    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(true);
-    fireEvent.keyDown(content, { key: "f" });
-    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(false);
+    // Fullscreen portaled to body
+    expect(document.querySelector(".video-viewer--fullscreen")).not.toBeNull();
+
+    // Find the content inside the portal to toggle back
+    const fsContent = document.querySelector(".video-viewer--fullscreen .video-viewer-content")!;
+    fireEvent.keyDown(fsContent, { key: "f" });
+    expect(document.querySelector(".video-viewer--fullscreen")).toBeNull();
   });
 
   it("Escape exits fullscreen", async () => {
-    const { container } = await renderWithVideo();
-    const content = container.querySelector(".video-viewer-content")!;
-    const viewer = container.querySelector(".video-viewer")!;
+    await renderWithVideo();
+    const content = document.querySelector(".video-viewer-content")!;
 
     fireEvent.keyDown(content, { key: "f" });
-    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(true);
+    expect(document.querySelector(".video-viewer--fullscreen")).not.toBeNull();
 
-    fireEvent.keyDown(content, { key: "Escape" });
-    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(false);
+    const fsContent = document.querySelector(".video-viewer--fullscreen .video-viewer-content")!;
+    fireEvent.keyDown(fsContent, { key: "Escape" });
+    expect(document.querySelector(".video-viewer--fullscreen")).toBeNull();
   });
 
   it("Escape does nothing when not in fullscreen", async () => {
-    const { container } = await renderWithVideo();
-    const content = container.querySelector(".video-viewer-content")!;
-    const viewer = container.querySelector(".video-viewer")!;
+    await renderWithVideo();
+    const content = document.querySelector(".video-viewer-content")!;
 
     fireEvent.keyDown(content, { key: "Escape" });
-    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(false);
+    expect(document.querySelector(".video-viewer--fullscreen")).toBeNull();
   });
 });
 
@@ -280,23 +283,23 @@ describe("VideoViewer onClose in fullscreen", () => {
       size_bytes: 0,
     });
     const onClose = vi.fn();
-    const { container } = render(<VideoViewer path="clip.mp4" onClose={onClose} />);
+    render(<VideoViewer path="clip.mp4" onClose={onClose} />);
     await waitFor(() => {
-      expect(container.querySelector("video")).not.toBeNull();
+      expect(document.querySelector("video")).not.toBeNull();
     });
 
     // No close button before fullscreen
-    expect(container.querySelector(".video-viewer-fullscreen-close")).toBeNull();
+    expect(screen.queryByTitle("Close")).toBeNull();
 
     // Enter fullscreen
-    const content = container.querySelector(".video-viewer-content")!;
+    const content = document.querySelector(".video-viewer-content")!;
     fireEvent.keyDown(content, { key: "f" });
 
-    // Close button appears
-    const closeBtn = container.querySelector(".video-viewer-fullscreen-close");
-    expect(closeBtn).not.toBeNull();
+    // Close button appears in toolbar
+    const closeBtn = screen.getByTitle("Close");
+    expect(closeBtn).toBeDefined();
 
-    fireEvent.click(closeBtn!);
+    fireEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -306,15 +309,15 @@ describe("VideoViewer onClose in fullscreen", () => {
       absolute_path: "/mock/clip.mp4",
       size_bytes: 0,
     });
-    const { container } = render(<VideoViewer path="clip.mp4" />);
+    render(<VideoViewer path="clip.mp4" />);
     await waitFor(() => {
-      expect(container.querySelector("video")).not.toBeNull();
+      expect(document.querySelector("video")).not.toBeNull();
     });
 
-    const content = container.querySelector(".video-viewer-content")!;
+    const content = document.querySelector(".video-viewer-content")!;
     fireEvent.keyDown(content, { key: "f" });
 
-    expect(container.querySelector(".video-viewer-fullscreen-close")).toBeNull();
+    expect(screen.queryByTitle("Close")).toBeNull();
   });
 });
 
@@ -329,20 +332,20 @@ describe("VideoViewer fullscreen button", () => {
       absolute_path: "/mock/clip.mp4",
       size_bytes: 0,
     });
-    const { container } = render(<VideoViewer path="clip.mp4" />);
+    render(<VideoViewer path="clip.mp4" />);
     await waitFor(() => {
-      expect(container.querySelector("video")).not.toBeNull();
+      expect(document.querySelector("video")).not.toBeNull();
     });
 
     const btn = screen.getByTitle("Fullscreen (F)");
-    const viewer = container.querySelector(".video-viewer")!;
 
     fireEvent.click(btn);
-    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(true);
+    // Fullscreen portaled to body
+    expect(document.querySelector(".video-viewer--fullscreen")).not.toBeNull();
     expect(screen.getByTitle("Exit fullscreen (Esc)")).toBeDefined();
 
     fireEvent.click(screen.getByTitle("Exit fullscreen (Esc)"));
-    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(false);
+    expect(document.querySelector(".video-viewer--fullscreen")).toBeNull();
   });
 });
 
