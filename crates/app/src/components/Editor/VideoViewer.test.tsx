@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import { useTabStore } from "../../stores/tabStore";
-import { formatSize, formatTime, VideoViewer } from "./VideoViewer";
+import { formatSize, VideoViewer } from "./VideoViewer";
 
 // Mock API bridge
 const mockResolveVideoPath = vi.fn();
@@ -151,22 +151,16 @@ describe("VideoViewer render", () => {
 describe("VideoViewer keyboard controls", () => {
   beforeEach(() => {
     mockResolveVideoPath.mockReset();
-    vi.useFakeTimers();
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  async function renderWithVideo() {
+  async function renderWithVideo(props?: { onClose?: () => void }) {
     mockResolveVideoPath.mockResolvedValue({
       path: "clip.mp4",
       absolute_path: "/mock/clip.mp4",
       size_bytes: 0,
     });
-    const result = render(<VideoViewer path="clip.mp4" />);
-    // Flush the async load
-    await vi.waitFor(() => {
+    const result = render(<VideoViewer path="clip.mp4" {...props} />);
+    await waitFor(() => {
       expect(result.container.querySelector("video")).not.toBeNull();
     });
     return result;
@@ -240,50 +234,6 @@ describe("VideoViewer keyboard controls", () => {
     expect(pauseSpy).toHaveBeenCalled();
   });
 
-  it("shows status bar on seek and hides after 5 seconds", async () => {
-    const { container } = await renderWithVideo();
-    const video = container.querySelector("video")!;
-    Object.defineProperty(video, "currentTime", { value: 30, writable: true });
-    Object.defineProperty(video, "duration", { value: 120 });
-
-    const content = container.querySelector(".video-viewer-content")!;
-
-    // No status bar initially
-    expect(container.querySelector(".video-status-bar")).toBeNull();
-
-    // Seek triggers status bar
-    fireEvent.keyDown(content, { key: "ArrowRight" });
-    expect(container.querySelector(".video-status-bar")).not.toBeNull();
-
-    // Still visible before timeout
-    act(() => { vi.advanceTimersByTime(4000); });
-    expect(container.querySelector(".video-status-bar")).not.toBeNull();
-
-    // Disappears after 5 seconds
-    act(() => { vi.advanceTimersByTime(1500); });
-    expect(container.querySelector(".video-status-bar")).toBeNull();
-  });
-
-  it("resets status bar timer on repeated interaction", async () => {
-    const { container } = await renderWithVideo();
-    const video = container.querySelector("video")!;
-    Object.defineProperty(video, "currentTime", { value: 30, writable: true });
-    Object.defineProperty(video, "duration", { value: 120 });
-
-    const content = container.querySelector(".video-viewer-content")!;
-
-    fireEvent.keyDown(content, { key: "ArrowRight" });
-    act(() => { vi.advanceTimersByTime(3000); });
-    // Another seek resets the timer
-    fireEvent.keyDown(content, { key: "ArrowRight" });
-    act(() => { vi.advanceTimersByTime(3000); });
-    // Still visible (only 3s since last interaction)
-    expect(container.querySelector(".video-status-bar")).not.toBeNull();
-
-    act(() => { vi.advanceTimersByTime(2500); });
-    expect(container.querySelector(".video-status-bar")).toBeNull();
-  });
-
   it("F key toggles fullscreen", async () => {
     const { container } = await renderWithVideo();
     const content = container.querySelector(".video-viewer-content")!;
@@ -301,7 +251,6 @@ describe("VideoViewer keyboard controls", () => {
     const content = container.querySelector(".video-viewer-content")!;
     const viewer = container.querySelector(".video-viewer")!;
 
-    // Enter fullscreen first
     fireEvent.keyDown(content, { key: "f" });
     expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(true);
 
@@ -316,6 +265,56 @@ describe("VideoViewer keyboard controls", () => {
 
     fireEvent.keyDown(content, { key: "Escape" });
     expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(false);
+  });
+});
+
+describe("VideoViewer onClose in fullscreen", () => {
+  beforeEach(() => {
+    mockResolveVideoPath.mockReset();
+  });
+
+  it("shows close button in fullscreen when onClose is provided", async () => {
+    mockResolveVideoPath.mockResolvedValue({
+      path: "clip.mp4",
+      absolute_path: "/mock/clip.mp4",
+      size_bytes: 0,
+    });
+    const onClose = vi.fn();
+    const { container } = render(<VideoViewer path="clip.mp4" onClose={onClose} />);
+    await waitFor(() => {
+      expect(container.querySelector("video")).not.toBeNull();
+    });
+
+    // No close button before fullscreen
+    expect(container.querySelector(".video-viewer-fullscreen-close")).toBeNull();
+
+    // Enter fullscreen
+    const content = container.querySelector(".video-viewer-content")!;
+    fireEvent.keyDown(content, { key: "f" });
+
+    // Close button appears
+    const closeBtn = container.querySelector(".video-viewer-fullscreen-close");
+    expect(closeBtn).not.toBeNull();
+
+    fireEvent.click(closeBtn!);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("does not show close button in fullscreen without onClose", async () => {
+    mockResolveVideoPath.mockResolvedValue({
+      path: "clip.mp4",
+      absolute_path: "/mock/clip.mp4",
+      size_bytes: 0,
+    });
+    const { container } = render(<VideoViewer path="clip.mp4" />);
+    await waitFor(() => {
+      expect(container.querySelector("video")).not.toBeNull();
+    });
+
+    const content = container.querySelector(".video-viewer-content")!;
+    fireEvent.keyDown(content, { key: "f" });
+
+    expect(container.querySelector(".video-viewer-fullscreen-close")).toBeNull();
   });
 });
 
@@ -344,32 +343,6 @@ describe("VideoViewer fullscreen button", () => {
 
     fireEvent.click(screen.getByTitle("Exit fullscreen (Esc)"));
     expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(false);
-  });
-});
-
-describe("VideoViewer formatTime", () => {
-  it("formats seconds only", () => {
-    expect(formatTime(45)).toBe("0:45");
-  });
-
-  it("formats minutes and seconds", () => {
-    expect(formatTime(125)).toBe("2:05");
-  });
-
-  it("formats hours", () => {
-    expect(formatTime(3661)).toBe("1:01:01");
-  });
-
-  it("handles 0", () => {
-    expect(formatTime(0)).toBe("0:00");
-  });
-
-  it("handles NaN", () => {
-    expect(formatTime(NaN)).toBe("0:00");
-  });
-
-  it("handles negative", () => {
-    expect(formatTime(-5)).toBe("0:00");
   });
 });
 

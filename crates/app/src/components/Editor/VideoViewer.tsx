@@ -1,23 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getAPI } from "../../api/bridge";
-import { Maximize, Minimize } from "lucide-react";
+import { Maximize, Minimize, X } from "lucide-react";
 
 interface Props {
   path: string;
+  onClose?: () => void;
 }
 
 const SPEED_OPTIONS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
 const SEEK_STEP = 5; // seconds
-const STATUS_BAR_TIMEOUT = 5000; // ms
-
-export function formatTime(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
-}
 
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -26,19 +17,15 @@ export function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-export function VideoViewer({ path }: Props) {
+export function VideoViewer({ path, onClose }: Props) {
   const [src, setSrc] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sizeBytes, setSizeBytes] = useState(0);
   const [speed, setSpeed] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [statusVisible, setStatusVisible] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,9 +36,6 @@ export function VideoViewer({ path }: Props) {
       setSrc(null);
       setSpeed(1);
       setIsFullscreen(false);
-      setStatusVisible(false);
-      setCurrentTime(0);
-      setDuration(0);
 
       try {
         const api = await getAPI();
@@ -82,30 +66,6 @@ export function VideoViewer({ path }: Props) {
     return () => { cancelled = true; };
   }, [path]);
 
-  // Clean up timer on unmount
-  useEffect(() => {
-    return () => {
-      if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
-    };
-  }, []);
-
-  const showStatusBar = useCallback(() => {
-    setStatusVisible(true);
-    if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
-    statusTimerRef.current = setTimeout(() => {
-      setStatusVisible(false);
-      statusTimerRef.current = null;
-    }, STATUS_BAR_TIMEOUT);
-  }, []);
-
-  const syncTime = useCallback(() => {
-    const video = videoRef.current;
-    if (video) {
-      setCurrentTime(video.currentTime);
-      if (Number.isFinite(video.duration)) setDuration(video.duration);
-    }
-  }, []);
-
   const handleSpeedChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     const newSpeed = parseFloat(e.target.value);
     setSpeed(newSpeed);
@@ -117,9 +77,6 @@ export function VideoViewer({ path }: Props) {
   const handleVideoLoaded = useCallback(() => {
     if (videoRef.current) {
       videoRef.current.playbackRate = speed;
-      if (Number.isFinite(videoRef.current.duration)) {
-        setDuration(videoRef.current.duration);
-      }
     }
   }, [speed]);
 
@@ -139,14 +96,10 @@ export function VideoViewer({ path }: Props) {
     if (e.key === "ArrowLeft") {
       e.preventDefault();
       video.currentTime = Math.max(0, video.currentTime - SEEK_STEP);
-      syncTime();
-      showStatusBar();
     } else if (e.key === "ArrowRight") {
       e.preventDefault();
       const end = Number.isFinite(video.duration) ? video.duration : Infinity;
       video.currentTime = Math.min(end, video.currentTime + SEEK_STEP);
-      syncTime();
-      showStatusBar();
     } else if (e.key === " ") {
       e.preventDefault();
       if (video.paused) {
@@ -154,8 +107,6 @@ export function VideoViewer({ path }: Props) {
       } else {
         video.pause();
       }
-      syncTime();
-      showStatusBar();
     } else if (e.key === "f") {
       e.preventDefault();
       toggleFullscreen();
@@ -164,10 +115,9 @@ export function VideoViewer({ path }: Props) {
       e.stopPropagation();
       setIsFullscreen(false);
     }
-  }, [isFullscreen, syncTime, showStatusBar, toggleFullscreen]);
+  }, [isFullscreen, toggleFullscreen]);
 
   const fileName = path.split("/").pop() ?? path;
-  const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   if (loading) {
     return (
@@ -237,20 +187,17 @@ export function VideoViewer({ path }: Props) {
             onError={handleVideoError}
           />
         )}
-        {statusVisible && (
-          <div className="video-status-bar">
-            <div className="video-status-bar-progress">
-              <div
-                className="video-status-bar-fill"
-                style={{ width: `${progressPct}%` }}
-              />
-            </div>
-            <span className="video-status-bar-time">
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </span>
-          </div>
-        )}
       </div>
+      {isFullscreen && onClose && (
+        <button
+          className="video-viewer-fullscreen-close"
+          onClick={onClose}
+          title="Close"
+          type="button"
+        >
+          <X size={16} />
+        </button>
+      )}
     </div>
   );
 }

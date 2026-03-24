@@ -9,22 +9,15 @@ const DEFAULT_HEIGHT = 320;
 const MIN_WIDTH = 320;
 const MIN_HEIGHT = 240;
 
-function clampPos(x: number, y: number): { x: number; y: number } {
-  return {
-    x: Math.max(0, Math.min(window.innerWidth - 100, x)),
-    y: Math.max(0, Math.min(window.innerHeight - 40, y)),
-  };
-}
-
 export function VideoPipPanel() {
   const path = useUIStore((s) => s.videoPipPath);
   const close = useUIStore((s) => s.closeVideoPip);
 
   const panelRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState(() => clampPos(
-    window.innerWidth - DEFAULT_WIDTH - 24,
-    window.innerHeight - DEFAULT_HEIGHT - 48,
-  ));
+  const [pos, setPos] = useState(() => ({
+    x: window.innerWidth - DEFAULT_WIDTH - 24,
+    y: window.innerHeight - DEFAULT_HEIGHT - 48,
+  }));
   const [size, setSize] = useState({ w: DEFAULT_WIDTH, h: DEFAULT_HEIGHT });
 
   // Refs for current values so drag/resize closures never go stale
@@ -39,23 +32,13 @@ export function VideoPipPanel() {
   // Reset position when a new video is opened
   useEffect(() => {
     if (path) {
-      const newPos = clampPos(
-        window.innerWidth - DEFAULT_WIDTH - 24,
-        window.innerHeight - DEFAULT_HEIGHT - 48,
-      );
-      setPos(newPos);
+      setPos({
+        x: window.innerWidth - DEFAULT_WIDTH - 24,
+        y: window.innerHeight - DEFAULT_HEIGHT - 48,
+      });
       setSize({ w: DEFAULT_WIDTH, h: DEFAULT_HEIGHT });
     }
   }, [path]);
-
-  // Clamp position on window resize
-  useEffect(() => {
-    const handler = () => {
-      setPos((p) => clampPos(p.x, p.y));
-    };
-    window.addEventListener("resize", handler);
-    return () => window.removeEventListener("resize", handler);
-  }, []);
 
   // Clean up any active drag/resize listeners on unmount
   useEffect(() => {
@@ -67,7 +50,7 @@ export function VideoPipPanel() {
     };
   }, []);
 
-  // ── Drag handlers ──
+  // ── Drag handlers (no clamping — allows dragging to other monitors) ──
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest(".video-pip-close")) return;
     e.preventDefault();
@@ -78,14 +61,13 @@ export function VideoPipPanel() {
     const handleMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX;
       const dy = ev.clientY - startY;
-      setPos(clampPos(startPos.x + dx, startPos.y + dy));
+      setPos({ x: startPos.x + dx, y: startPos.y + dy });
     };
     const handleUp = () => {
       document.removeEventListener("mousemove", handleMove);
       document.removeEventListener("mouseup", handleUp);
       cleanupRef.current = null;
     };
-    // Store cleanup in case component unmounts mid-drag
     cleanupRef.current = handleUp;
     document.addEventListener("mousemove", handleMove);
     document.addEventListener("mouseup", handleUp);
@@ -135,7 +117,7 @@ export function VideoPipPanel() {
         </button>
       </div>
       <div className="video-pip-body">
-        <VideoViewer path={path} />
+        <VideoViewer path={path} onClose={close} />
       </div>
       {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
       <div className="video-pip-resize-handle" onMouseDown={handleResizeStart} />
