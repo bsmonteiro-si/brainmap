@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import { useTabStore } from "../../stores/tabStore";
-import { formatSize, VideoViewer } from "./VideoViewer";
+import { formatSize, formatTime, VideoViewer } from "./VideoViewer";
 
 // Mock API bridge
 const mockResolveVideoPath = vi.fn();
@@ -62,9 +62,7 @@ describe("VideoViewer tab routing", () => {
     const clearSpy = vi.spyOn(useEditorStore.getState(), "clearForCustomTab");
 
     useTabStore.getState().openTab("clip.mp4", "video", "clip.mp4", null);
-    // Simulate tab navigation
     const { closeTabAndNavigateNext } = await import("../../stores/tabActions");
-    // Open a second tab so closing the first navigates to it
     useTabStore.getState().openTab("other.mp4", "video", "other.mp4", null);
     useTabStore.getState().activateTab("clip.mp4");
     closeTabAndNavigateNext("clip.mp4");
@@ -80,7 +78,7 @@ describe("VideoViewer render", () => {
   });
 
   it("shows loading state initially", () => {
-    mockResolveVideoPath.mockReturnValue(new Promise(() => {})); // never resolves
+    mockResolveVideoPath.mockReturnValue(new Promise(() => {}));
     render(<VideoViewer path="clip.mp4" />);
     expect(screen.getByText("Loading video...")).toBeDefined();
   });
@@ -133,7 +131,19 @@ describe("VideoViewer render", () => {
       const select = container.querySelector("select");
       expect(select).not.toBeNull();
       const options = select!.querySelectorAll("option");
-      expect(options).toHaveLength(7); // 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2
+      expect(options).toHaveLength(7);
+    });
+  });
+
+  it("renders fullscreen toggle button", async () => {
+    mockResolveVideoPath.mockResolvedValue({
+      path: "clip.mp4",
+      absolute_path: "/mock/clip.mp4",
+      size_bytes: 0,
+    });
+    render(<VideoViewer path="clip.mp4" />);
+    await waitFor(() => {
+      expect(screen.getByTitle("Fullscreen (F)")).toBeDefined();
     });
   });
 });
@@ -141,6 +151,11 @@ describe("VideoViewer render", () => {
 describe("VideoViewer keyboard controls", () => {
   beforeEach(() => {
     mockResolveVideoPath.mockReset();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   async function renderWithVideo() {
@@ -150,7 +165,8 @@ describe("VideoViewer keyboard controls", () => {
       size_bytes: 0,
     });
     const result = render(<VideoViewer path="clip.mp4" />);
-    await waitFor(() => {
+    // Flush the async load
+    await vi.waitFor(() => {
       expect(result.container.querySelector("video")).not.toBeNull();
     });
     return result;
@@ -222,6 +238,138 @@ describe("VideoViewer keyboard controls", () => {
     const content = container.querySelector(".video-viewer-content")!;
     fireEvent.keyDown(content, { key: " " });
     expect(pauseSpy).toHaveBeenCalled();
+  });
+
+  it("shows status bar on seek and hides after 5 seconds", async () => {
+    const { container } = await renderWithVideo();
+    const video = container.querySelector("video")!;
+    Object.defineProperty(video, "currentTime", { value: 30, writable: true });
+    Object.defineProperty(video, "duration", { value: 120 });
+
+    const content = container.querySelector(".video-viewer-content")!;
+
+    // No status bar initially
+    expect(container.querySelector(".video-status-bar")).toBeNull();
+
+    // Seek triggers status bar
+    fireEvent.keyDown(content, { key: "ArrowRight" });
+    expect(container.querySelector(".video-status-bar")).not.toBeNull();
+
+    // Still visible before timeout
+    act(() => { vi.advanceTimersByTime(4000); });
+    expect(container.querySelector(".video-status-bar")).not.toBeNull();
+
+    // Disappears after 5 seconds
+    act(() => { vi.advanceTimersByTime(1500); });
+    expect(container.querySelector(".video-status-bar")).toBeNull();
+  });
+
+  it("resets status bar timer on repeated interaction", async () => {
+    const { container } = await renderWithVideo();
+    const video = container.querySelector("video")!;
+    Object.defineProperty(video, "currentTime", { value: 30, writable: true });
+    Object.defineProperty(video, "duration", { value: 120 });
+
+    const content = container.querySelector(".video-viewer-content")!;
+
+    fireEvent.keyDown(content, { key: "ArrowRight" });
+    act(() => { vi.advanceTimersByTime(3000); });
+    // Another seek resets the timer
+    fireEvent.keyDown(content, { key: "ArrowRight" });
+    act(() => { vi.advanceTimersByTime(3000); });
+    // Still visible (only 3s since last interaction)
+    expect(container.querySelector(".video-status-bar")).not.toBeNull();
+
+    act(() => { vi.advanceTimersByTime(2500); });
+    expect(container.querySelector(".video-status-bar")).toBeNull();
+  });
+
+  it("F key toggles fullscreen", async () => {
+    const { container } = await renderWithVideo();
+    const content = container.querySelector(".video-viewer-content")!;
+    const viewer = container.querySelector(".video-viewer")!;
+
+    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(false);
+    fireEvent.keyDown(content, { key: "f" });
+    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(true);
+    fireEvent.keyDown(content, { key: "f" });
+    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(false);
+  });
+
+  it("Escape exits fullscreen", async () => {
+    const { container } = await renderWithVideo();
+    const content = container.querySelector(".video-viewer-content")!;
+    const viewer = container.querySelector(".video-viewer")!;
+
+    // Enter fullscreen first
+    fireEvent.keyDown(content, { key: "f" });
+    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(true);
+
+    fireEvent.keyDown(content, { key: "Escape" });
+    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(false);
+  });
+
+  it("Escape does nothing when not in fullscreen", async () => {
+    const { container } = await renderWithVideo();
+    const content = container.querySelector(".video-viewer-content")!;
+    const viewer = container.querySelector(".video-viewer")!;
+
+    fireEvent.keyDown(content, { key: "Escape" });
+    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(false);
+  });
+});
+
+describe("VideoViewer fullscreen button", () => {
+  beforeEach(() => {
+    mockResolveVideoPath.mockReset();
+  });
+
+  it("clicking fullscreen button toggles fullscreen class", async () => {
+    mockResolveVideoPath.mockResolvedValue({
+      path: "clip.mp4",
+      absolute_path: "/mock/clip.mp4",
+      size_bytes: 0,
+    });
+    const { container } = render(<VideoViewer path="clip.mp4" />);
+    await waitFor(() => {
+      expect(container.querySelector("video")).not.toBeNull();
+    });
+
+    const btn = screen.getByTitle("Fullscreen (F)");
+    const viewer = container.querySelector(".video-viewer")!;
+
+    fireEvent.click(btn);
+    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(true);
+    expect(screen.getByTitle("Exit fullscreen (Esc)")).toBeDefined();
+
+    fireEvent.click(screen.getByTitle("Exit fullscreen (Esc)"));
+    expect(viewer.classList.contains("video-viewer--fullscreen")).toBe(false);
+  });
+});
+
+describe("VideoViewer formatTime", () => {
+  it("formats seconds only", () => {
+    expect(formatTime(45)).toBe("0:45");
+  });
+
+  it("formats minutes and seconds", () => {
+    expect(formatTime(125)).toBe("2:05");
+  });
+
+  it("formats hours", () => {
+    expect(formatTime(3661)).toBe("1:01:01");
+  });
+
+  it("handles 0", () => {
+    expect(formatTime(0)).toBe("0:00");
+  });
+
+  it("handles NaN", () => {
+    expect(formatTime(NaN)).toBe("0:00");
+  });
+
+  it("handles negative", () => {
+    expect(formatTime(-5)).toBe("0:00");
   });
 });
 
