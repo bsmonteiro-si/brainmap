@@ -200,18 +200,28 @@ describe("VideoViewer keyboard controls", () => {
     expect(video.currentTime).toBe(120);
   });
 
-  it("Space toggles play/pause", async () => {
+  it("Space plays when paused", async () => {
     const { container } = await renderWithVideo();
     const video = container.querySelector("video")!;
-    const playSpy = vi.fn();
-    const pauseSpy = vi.fn();
+    const playSpy = vi.fn().mockResolvedValue(undefined);
     video.play = playSpy;
-    video.pause = pauseSpy;
-    Object.defineProperty(video, "paused", { value: true, writable: true });
+    Object.defineProperty(video, "paused", { value: true });
 
     const content = container.querySelector(".video-viewer-content")!;
     fireEvent.keyDown(content, { key: " " });
     expect(playSpy).toHaveBeenCalled();
+  });
+
+  it("Space pauses when playing", async () => {
+    const { container } = await renderWithVideo();
+    const video = container.querySelector("video")!;
+    const pauseSpy = vi.fn();
+    video.pause = pauseSpy;
+    Object.defineProperty(video, "paused", { value: false });
+
+    const content = container.querySelector(".video-viewer-content")!;
+    fireEvent.keyDown(content, { key: " " });
+    expect(pauseSpy).toHaveBeenCalled();
   });
 });
 

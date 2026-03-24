@@ -91,11 +91,12 @@ export function VideoViewer({ path }: Props) {
       video.currentTime = Math.max(0, video.currentTime - SEEK_STEP);
     } else if (e.key === "ArrowRight") {
       e.preventDefault();
-      video.currentTime = Math.min(video.duration || 0, video.currentTime + SEEK_STEP);
+      const end = Number.isFinite(video.duration) ? video.duration : Infinity;
+      video.currentTime = Math.min(end, video.currentTime + SEEK_STEP);
     } else if (e.key === " ") {
       e.preventDefault();
       if (video.paused) {
-        video.play();
+        video.play().catch(() => {});
       } else {
         video.pause();
       }
