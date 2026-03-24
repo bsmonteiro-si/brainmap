@@ -12,6 +12,7 @@ import { IconSidebar } from "./IconSidebar";
 import { CanvasPanel } from "../Canvas/CanvasPanel";
 import { VideoPipPanel } from "../Editor/VideoPipPanel";
 import { TabBar } from "../Editor/TabBar";
+import { CanvasEditor } from "../Editor/CanvasEditor";
 
 const PANEL_IDS = {
   content: "content",
@@ -23,6 +24,7 @@ export function AppLayout() {
   const editorPanelRef = usePanelRef();
   const activeLeftTab = useUIStore((s) => s.activeLeftTab);
   const leftPanelCollapsed = useUIStore((s) => s.leftPanelCollapsed);
+  const canvasFullscreen = useUIStore((s) => s.canvasFullscreen);
   const filesTheme = useUIStore((s) => s.filesTheme);
   const effectiveFilesTheme = useUIStore((s) => s.effectiveFilesTheme);
   const editorTheme = useUIStore((s) => s.editorTheme);
@@ -33,14 +35,15 @@ export function AppLayout() {
 
   const tabSizes = getTabSizes(panelSizes, activeLeftTab);
 
-  // Sync leftPanelCollapsed → panel collapse/expand
+  // Sync leftPanelCollapsed → panel collapse/expand (only when not fullscreen)
   useEffect(() => {
+    if (canvasFullscreen) return;
     if (leftPanelCollapsed) {
       contentPanelRef.current?.collapse();
     } else {
       contentPanelRef.current?.expand();
     }
-  }, [leftPanelCollapsed, contentPanelRef]);
+  }, [leftPanelCollapsed, contentPanelRef, canvasFullscreen]);
 
   // When activeLeftTab or panelSizes change, imperatively resize panels to the
   // stored sizes for that tab. Skip the first mount (defaultSize handles that).
@@ -49,20 +52,33 @@ export function AppLayout() {
       isFirstMount.current = false;
       return;
     }
-    if (!leftPanelCollapsed) {
+    if (!leftPanelCollapsed && !canvasFullscreen) {
       contentPanelRef.current?.resize(`${tabSizes.content}%`);
       editorPanelRef.current?.resize(`${tabSizes.editor}%`);
     }
-  }, [activeLeftTab, leftPanelCollapsed, tabSizes.content, tabSizes.editor, contentPanelRef, editorPanelRef]);
+  }, [activeLeftTab, leftPanelCollapsed, canvasFullscreen, tabSizes.content, tabSizes.editor, contentPanelRef, editorPanelRef]);
 
   const handleLayout = useCallback(
     (layout: Layout) => {
       if (useUIStore.getState().leftPanelCollapsed) return;
+      if (useUIStore.getState().canvasFullscreen) return;
       const tab = useUIStore.getState().activeLeftTab;
       savePanelSizes(tab, { content: layout[PANEL_IDS.content], editor: layout[PANEL_IDS.editor] });
     },
     [savePanelSizes]
   );
+
+  // Fullscreen mode: render only the canvas, no chrome
+  if (canvasFullscreen) {
+    return (
+      <>
+        <div className="app-layout-root" style={{ width: "100%", height: "100vh" }}>
+          <CanvasEditor path={canvasFullscreen} />
+        </div>
+        <VideoPipPanel />
+      </>
+    );
+  }
 
   return (
     <>

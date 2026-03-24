@@ -309,6 +309,7 @@ interface UIState {
   showLegend: boolean;
   graphLayout: GraphLayout;
   focusMode: boolean;
+  canvasFullscreen: string | null;
   activeLeftTab: LeftTab;
   activeCanvasPath: string | null;
   videoPipPath: string | null;
@@ -463,6 +464,7 @@ interface UIState {
   toggleLegend: () => void;
   setGraphLayout: (layout: GraphLayout) => void;
   toggleFocusMode: () => void;
+  toggleCanvasFullscreen: (path?: string) => void;
   setActiveLeftTab: (tab: LeftTab) => void;
   openCanvasInPanel: (path: string) => void;
   openVideoPip: (path: string) => void;
@@ -689,6 +691,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   showLegend: false,
   graphLayout: "force",
   focusMode: false,
+  canvasFullscreen: null,
   activeLeftTab: "files",
   activeCanvasPath: null,
   videoPipPath: null,
@@ -1010,6 +1013,9 @@ export const useUIStore = create<UIState>((set, get) => ({
     const next = !s.focusMode;
     return { focusMode: next, leftPanelCollapsed: next };
   }),
+  toggleCanvasFullscreen: (path?: string) => set((s) => ({
+    canvasFullscreen: s.canvasFullscreen ? null : (path ?? null),
+  })),
   setActiveLeftTab: (tab: LeftTab) => set({ activeLeftTab: tab, leftPanelCollapsed: false }),
   openCanvasInPanel: (path: string) => set({ activeCanvasPath: path, activeLeftTab: "canvas", leftPanelCollapsed: false }),
   openVideoPip: (path: string) => set({ videoPipPath: path }),

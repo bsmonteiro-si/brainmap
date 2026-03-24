@@ -272,6 +272,8 @@ function App() {
           // Do nothing — UnsavedChangesDialog handles its own Escape
         } else if (ui.settingsOpen) {
           ui.closeSettings();
+        } else if (ui.canvasFullscreen) {
+          ui.toggleCanvasFullscreen();
         } else if (ui.focusMode) {
           ui.toggleFocusMode();
         } else if (ui.commandPaletteOpen) {

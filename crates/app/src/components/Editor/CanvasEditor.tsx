@@ -23,7 +23,7 @@ import { useUIStore } from "../../stores/uiStore";
 import { log } from "../../utils/logger";
 import { canvasToFlow, flowToCanvas } from "./canvasTranslation";
 import type { JsonCanvas } from "./canvasTranslation";
-import { StickyNote, FileText, FilePlus, Layers, ChevronDown, ChevronRight, MousePointer2, Hand, Group, Trash2, Copy, Ungroup, PanelRightOpen, Search, GripVertical, Folder, FolderOpen, HelpCircle, Link2 } from "lucide-react";
+import { StickyNote, FileText, FilePlus, Layers, ChevronDown, ChevronRight, MousePointer2, Hand, Group, Trash2, Copy, Ungroup, PanelRightOpen, Search, GripVertical, Folder, FolderOpen, HelpCircle, Link2, Maximize2, Minimize2 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES } from "./canvasShapes";
 import { CARD_KIND_META } from "./canvasNodes";
@@ -217,6 +217,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const canvasBackgroundVariant = useUIStore((s) => s.canvasBackgroundVariant);
   const canvasNodeShadow = useUIStore((s) => s.canvasNodeShadow);
   const uiZoom = useUIStore((s) => s.uiZoom);
+  const canvasFullscreen = useUIStore((s) => s.canvasFullscreen);
+  const toggleCanvasFullscreen = useUIStore((s) => s.toggleCanvasFullscreen);
   const colorMode: ColorMode = canvasTheme;
   const containerClass = `canvas-container${canvasTheme === "light" ? " canvas-light" : ""}${canvasNodeShadow > 0 ? " canvas-node-shadows" : ""}`;
   const shapeVars = {
@@ -1503,6 +1505,13 @@ export function CanvasEditorInner({ path }: { path: string }) {
             onClick={() => setShowShortcuts(!showShortcuts)}
           >
             <HelpCircle size={18} />
+          </button>
+          <button
+            className={`canvas-toolbar-btn canvas-toolbar-btn--small${canvasFullscreen ? " canvas-toolbar-btn--active" : ""}`}
+            title={canvasFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+            onClick={() => toggleCanvasFullscreen(path)}
+          >
+            {canvasFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
           </button>
         </Panel>
       </ReactFlow>
