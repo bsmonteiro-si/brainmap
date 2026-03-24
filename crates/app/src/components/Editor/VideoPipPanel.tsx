@@ -1,6 +1,6 @@
 import { useRef, useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { X, Maximize, Minimize } from "lucide-react";
 import { useUIStore } from "../../stores/uiStore";
 import { VideoViewer } from "./VideoViewer";
 
@@ -19,6 +19,7 @@ export function VideoPipPanel() {
     y: window.innerHeight - DEFAULT_HEIGHT - 48,
   }));
   const [size, setSize] = useState({ w: DEFAULT_WIDTH, h: DEFAULT_HEIGHT });
+  const [isMaximized, setIsMaximized] = useState(false);
 
   // Refs for current values so drag/resize closures never go stale
   const posRef = useRef(pos);
@@ -37,6 +38,7 @@ export function VideoPipPanel() {
         y: window.innerHeight - DEFAULT_HEIGHT - 48,
       });
       setSize({ w: DEFAULT_WIDTH, h: DEFAULT_HEIGHT });
+      setIsMaximized(false);
     }
   }, [path]);
 
@@ -50,9 +52,13 @@ export function VideoPipPanel() {
     };
   }, []);
 
-  // ── Drag handlers (no clamping — allows dragging to other monitors) ──
+  const toggleMaximize = useCallback(() => {
+    setIsMaximized((m) => !m);
+  }, []);
+
+  // ── Drag handlers ──
   const handleDragStart = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest(".video-pip-close")) return;
+    if ((e.target as HTMLElement).closest(".video-pip-close, .video-pip-maximize")) return;
     e.preventDefault();
     const startX = e.clientX;
     const startY = e.clientY;
@@ -61,11 +67,12 @@ export function VideoPipPanel() {
     const handleMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX;
       const dy = ev.clientY - startY;
-      // Clamp so at least 100px of the panel stays visible within the WebView
       setPos({
         x: Math.max(-sizeRef.current.w + 100, Math.min(window.innerWidth - 100, startPos.x + dx)),
         y: Math.max(0, Math.min(window.innerHeight - 40, startPos.y + dy)),
       });
+      // Un-maximize on drag
+      setIsMaximized(false);
     };
     const handleUp = () => {
       document.removeEventListener("mousemove", handleMove);
@@ -110,21 +117,28 @@ export function VideoPipPanel() {
   return createPortal(
     <div
       ref={panelRef}
-      className="video-pip-panel"
-      style={{ left: pos.x, top: pos.y, width: size.w, height: size.h }}
+      className={`video-pip-panel${isMaximized ? " video-pip-panel--maximized" : ""}`}
+      style={isMaximized ? undefined : { left: pos.x, top: pos.y, width: size.w, height: size.h }}
     >
       {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
-      <div className="video-pip-titlebar" onMouseDown={handleDragStart}>
+      <div className="video-pip-titlebar" onMouseDown={isMaximized ? undefined : handleDragStart}>
         <span className="video-pip-title">{fileName}</span>
-        <button className="video-pip-close" onClick={close} title="Close" type="button">
-          <X size={14} />
-        </button>
+        <div className="video-pip-titlebar-buttons">
+          <button className="video-pip-maximize" onClick={toggleMaximize} title={isMaximized ? "Restore" : "Maximize"} type="button">
+            {isMaximized ? <Minimize size={14} /> : <Maximize size={14} />}
+          </button>
+          <button className="video-pip-close" onClick={close} title="Close" type="button">
+            <X size={14} />
+          </button>
+        </div>
       </div>
       <div className="video-pip-body">
         <VideoViewer path={path} onClose={close} />
       </div>
-      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
-      <div className="video-pip-resize-handle" onMouseDown={handleResizeStart} />
+      {!isMaximized && (
+        /* eslint-disable-next-line jsx-a11y/no-static-element-interactions */
+        <div className="video-pip-resize-handle" onMouseDown={handleResizeStart} />
+      )}
     </div>,
     document.body
   );
