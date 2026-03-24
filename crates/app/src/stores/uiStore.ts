@@ -311,6 +311,7 @@ interface UIState {
   focusMode: boolean;
   activeLeftTab: LeftTab;
   activeCanvasPath: string | null;
+  videoPipPath: string | null;
   leftPanelCollapsed: boolean;
   treeExpandedFolders: Set<string>;
   fileSortOrder: FileSortOrder;
@@ -464,6 +465,8 @@ interface UIState {
   toggleFocusMode: () => void;
   setActiveLeftTab: (tab: LeftTab) => void;
   openCanvasInPanel: (path: string) => void;
+  openVideoPip: (path: string) => void;
+  closeVideoPip: () => void;
   toggleLeftPanel: () => void;
   toggleFolder: (fullPath: string) => void;
   collapseAllFolders: () => void;
@@ -688,6 +691,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   focusMode: false,
   activeLeftTab: "files",
   activeCanvasPath: null,
+  videoPipPath: null,
   leftPanelCollapsed: false,
   treeExpandedFolders: new Set<string>(),
   fileSortOrder: storedPrefs.fileSortOrder ?? "name-asc" as FileSortOrder,
@@ -1008,6 +1012,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   }),
   setActiveLeftTab: (tab: LeftTab) => set({ activeLeftTab: tab, leftPanelCollapsed: false }),
   openCanvasInPanel: (path: string) => set({ activeCanvasPath: path, activeLeftTab: "canvas", leftPanelCollapsed: false }),
+  openVideoPip: (path: string) => set({ videoPipPath: path }),
+  closeVideoPip: () => set({ videoPipPath: null }),
   toggleLeftPanel: () => set((s) => ({ leftPanelCollapsed: !s.leftPanelCollapsed })),
 
   toggleFolder: (fullPath: string) =>

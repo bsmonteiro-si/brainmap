@@ -10,6 +10,7 @@ import { StatusBar } from "../StatusBar/StatusBar";
 import { FileTreePanel } from "./FileTreePanel";
 import { IconSidebar } from "./IconSidebar";
 import { CanvasPanel } from "../Canvas/CanvasPanel";
+import { VideoPipPanel } from "../Editor/VideoPipPanel";
 import { TabBar } from "../Editor/TabBar";
 
 const PANEL_IDS = {
@@ -119,6 +120,7 @@ export function AppLayout() {
           </Panel>
         </Group>
       </div>
+      <VideoPipPanel />
     </>
   );
 }

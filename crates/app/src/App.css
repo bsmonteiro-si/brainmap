@@ -6408,3 +6408,90 @@ body {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Video PiP Panel ────────────────────────────────────────── */
+
+.video-pip-panel {
+  position: fixed;
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.video-pip-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+  cursor: grab;
+  flex-shrink: 0;
+  gap: 8px;
+  user-select: none;
+}
+
+.video-pip-titlebar:active {
+  cursor: grabbing;
+}
+
+.video-pip-title {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.video-pip-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.video-pip-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.video-pip-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.video-pip-resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+}
+
+.video-pip-resize-handle::after {
+  content: "";
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--text-secondary);
+  border-bottom: 2px solid var(--text-secondary);
+  opacity: 0.4;
+}

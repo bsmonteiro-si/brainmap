@@ -216,6 +216,8 @@ export function fuzzyFilterTree(nodes: TreeNode[], query: string): TreeNode[] {
 // ── Context Menu ─────────────────────────────────────────────────────────────
 
 const MENU_WIDTH = 200;
+// Keep in sync with VIDEO_EXTS in handlers.rs::handle_resolve_video_path
+const VIDEO_EXTS = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".ogv"];
 
 interface ContextMenuState {
   x: number;
@@ -535,6 +537,17 @@ function ContextMenu({
               Convert to Note
             </div>
           )}
+          {VIDEO_EXTS.some((ext) => state.node!.fullPath.toLowerCase().endsWith(ext)) && (
+            <div
+              className="context-menu-item"
+              onClick={() => {
+                useUIStore.getState().openVideoPip(state.node!.fullPath);
+                onClose();
+              }}
+            >
+              Open in Own Panel
+            </div>
+          )}
           <div className="context-menu-item" onClick={handleRename}>
             Rename
           </div>
@@ -787,8 +800,7 @@ function FileTreeNode({
 
   // Keep in sync with IMAGE_EXTS in handlers.rs::handle_resolve_image_path
   const IMAGE_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", ".bmp"];
-  // Keep in sync with VIDEO_EXTS in handlers.rs::handle_resolve_video_path
-  const VIDEO_EXTS = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".ogv"];
+  // VIDEO_EXTS is defined at module level
 
   const handleClick = () => {
     const lowerPath = node.fullPath.toLowerCase();
