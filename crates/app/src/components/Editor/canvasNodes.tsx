@@ -5,7 +5,7 @@ import {
   BaseEdge, EdgeLabelRenderer, getBezierPath, getStraightPath, getSmoothStepPath, useReactFlow, useStore,
 } from "@xyflow/react";
 import type { NodeProps, EdgeProps, ReactFlowState } from "@xyflow/react";
-import { Trash2, Palette, Paintbrush, PenLine, Shapes, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Spline, Minus, CornerDownRight, ChevronDown, ChevronRight, FileText, FileImage, FileVideo, FileAudio, FileSpreadsheet, FileArchive, Presentation, LayoutDashboard, PenTool } from "lucide-react";
+import { Trash2, Palette, Paintbrush, PenLine, Shapes, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Spline, Minus, CornerDownRight, ChevronDown, ChevronRight, FileText, FileImage, FileVideo, FileAudio, FileSpreadsheet, FileArchive, Presentation, LayoutDashboard, PenTool, ALargeSmall } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES, getShapeDefinition } from "./canvasShapes";
 import type { CanvasShapeId } from "./canvasShapes";
@@ -13,7 +13,7 @@ import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { useTabStore } from "../../stores/tabStore";
 import { useUIStore } from "../../stores/uiStore";
-import { useCanvasPanelMode, useCanvasSave } from "./CanvasEditor";
+import { useCanvasPanelMode, useCanvasSave, useCanvasSnapshot } from "./CanvasEditor";
 
 import { getNodeColor } from "../GraphView/graphStyles";
 
@@ -872,8 +872,11 @@ function CanvasEdgeInner({
 }: EdgeProps) {
   const { setEdges } = useReactFlow();
   const scheduleSave = useCanvasSave();
+  const pushSnapshot = useCanvasSnapshot();
   const totalSelectedCount = useStore(selectTotalSelectedCount);
   const [showColors, setShowColors] = useState(false);
+  const [showLabelFormat, setShowLabelFormat] = useState(false);
+  const labelFormatRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(String(label ?? ""));
   const inputRef = useRef<HTMLInputElement>(null);
@@ -888,6 +891,17 @@ function CanvasEdgeInner({
       inputRef.current.select();
     }
   }, [editing, promptLabel]);
+
+  useEffect(() => {
+    if (!showLabelFormat) return;
+    const handler = (e: PointerEvent) => {
+      if (labelFormatRef.current && !labelFormatRef.current.contains(e.target as Node)) {
+        setShowLabelFormat(false);
+      }
+    };
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [showLabelFormat]);
 
   const edgeType = (data as Record<string, unknown> | undefined)?.edgeType as string | undefined;
   const canvasDefaultEdgeType = useUIStore((s) => s.canvasDefaultEdgeType);
@@ -977,6 +991,16 @@ function CanvasEdgeInner({
     scheduleSave();
   };
 
+  const handleLabelFont = (patch: { labelFontSize?: number; labelFontFamily?: string }) => {
+    pushSnapshot();
+    setEdges((eds) =>
+      eds.map((ed) =>
+        ed.id !== id ? ed : { ...ed, data: { ...(ed.data as object ?? {}), ...patch } },
+      ),
+    );
+    scheduleSave();
+  };
+
   const startEditing = (e: React.MouseEvent) => {
     e.stopPropagation();
     setEditValue(String(label ?? ""));
@@ -984,6 +1008,13 @@ function CanvasEdgeInner({
   };
 
   const showInput = editing || promptLabel;
+  const edgeData = data as Record<string, unknown> | undefined;
+  const labelFontSize = (edgeData?.labelFontSize as number | undefined) ?? 11;
+  const labelFontFamily = (edgeData?.labelFontFamily as string | undefined) ?? undefined;
+  const labelStyle: React.CSSProperties = {
+    fontSize: labelFontSize,
+    ...(labelFontFamily ? { fontFamily: labelFontFamily } : {}),
+  };
 
   return (
     <>
@@ -1005,12 +1036,13 @@ function CanvasEdgeInner({
               onKeyDown={handleLabelKeyDown}
               onBlur={() => commitLabel(editValue)}
               placeholder="Label (Enter to set, Esc to skip)"
+              style={labelStyle}
             />
           </div>
         ) : label ? (
           <div
             className="canvas-edge-label"
-            style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)` }}
+            style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`, ...labelStyle }}
             onDoubleClick={startEditing}
           >
             {label}
@@ -1063,6 +1095,48 @@ function CanvasEdgeInner({
               >
                 <CornerDownRight size={14} />
               </button>
+            </div>
+            <div ref={labelFormatRef} style={{ position: "relative" }}>
+              <button
+                className={`canvas-node-toolbar-btn${showLabelFormat ? " canvas-node-toolbar-btn--active" : ""}`}
+                title="Label format"
+                onClick={(e) => { e.stopPropagation(); setShowColors(false); setShowLabelFormat(!showLabelFormat); }}
+              >
+                <ALargeSmall size={14} />
+              </button>
+              {showLabelFormat && (
+                <div className="canvas-edge-label-format-picker nodrag nopan">
+                  <div className="canvas-text-format-section">
+                    <div className="canvas-text-format-section-label">Size</div>
+                    <div className="canvas-text-format-row">
+                      {FONT_SIZES.map((size) => (
+                        <button
+                          key={size}
+                          className={`canvas-text-format-btn${labelFontSize === size ? " canvas-text-format-btn--active" : ""}`}
+                          onClick={() => handleLabelFont({ labelFontSize: size })}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="canvas-text-format-section">
+                    <div className="canvas-text-format-section-label">Font</div>
+                    <div className="canvas-text-format-row">
+                      {FONT_FAMILIES.map((f) => (
+                        <button
+                          key={f.id}
+                          className={`canvas-text-format-btn${labelFontFamily === f.id ? " canvas-text-format-btn--active" : ""}`}
+                          style={{ fontFamily: f.id }}
+                          onClick={() => handleLabelFont({ labelFontFamily: f.id })}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

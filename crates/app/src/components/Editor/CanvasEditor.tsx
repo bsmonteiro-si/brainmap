@@ -47,6 +47,12 @@ const noop = () => {};
 export const CanvasSaveContext = createContext<() => void>(noop);
 export function useCanvasSave() { return useContext(CanvasSaveContext); }
 
+// ── Snapshot context ───────────────────────────────────────────────────────────
+// Provides pushSnapshot to child toolbar components so direct setEdges/setNodes
+// mutations (color, font, edge type) are undoable via Cmd+Z.
+export const CanvasSnapshotContext = createContext<() => void>(noop);
+export function useCanvasSnapshot() { return useContext(CanvasSnapshotContext); }
+
 // ── Error boundary ────────────────────────────────────────────────────────────
 
 class CanvasErrorBoundary extends Component<{ children: ReactNode; path: string }, { error: string | null }> {
@@ -322,6 +328,48 @@ export function CanvasEditorInner({ path }: { path: string }) {
     return () => { cancelled = true; };
   }, [path, setNodes, setEdges]);
 
+  // Reload from disk when an external change is detected (via tabReloadKeys bump)
+  const reloadKey = useUIStore((s) => s.tabReloadKeys.get(path) ?? 0);
+  useEffect(() => {
+    if (reloadKey === 0) return; // skip initial mount (handled by [path] effect above)
+
+    // If dirty, show conflict state on the tab instead of silently reloading
+    if (dirtyRef.current) {
+      const tabId = useTabStore.getState().activeTabId;
+      if (tabId) {
+        useTabStore.getState().updateTabState(tabId, { conflictState: "external-change" });
+      }
+      return;
+    }
+
+    // Not dirty — reload from disk
+    let cancelled = false;
+    getAPI()
+      .then((api) => api.readPlainFile(path))
+      .then((file) => {
+        if (cancelled || file.binary) return;
+        try {
+          const parsed: JsonCanvas = JSON.parse(file.body);
+          const { nodes: rfNodes, edges: rfEdges } = canvasToFlow(parsed);
+          setNodes(rfNodes);
+          setEdges(rfEdges);
+          try {
+            lastSavedRef.current = JSON.stringify(flowToCanvas(rfNodes, rfEdges));
+          } catch {
+            lastSavedRef.current = "";
+          }
+          dirtyRef.current = false;
+        } catch {
+          log.warn("canvas::editor", "external reload: failed to parse canvas file", { path });
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) log.warn("canvas::editor", "external reload failed", { path, error: String(e) });
+      });
+
+    return () => { cancelled = true; };
+  }, [reloadKey, path, setNodes, setEdges]);
+
   // Save function
   const doSave = useCallback(async () => {
     if (savingRef.current) return;
@@ -430,6 +478,11 @@ export function CanvasEditorInner({ path }: { path: string }) {
     if (undoStackRef.current.length > MAX_CANVAS_UNDO) undoStackRef.current.shift();
     redoStackRef.current = [];
   }, []);
+
+  // Stable snapshot trigger for child toolbar components (via CanvasSnapshotContext).
+  const pushSnapshotRef = useRef(pushSnapshot);
+  pushSnapshotRef.current = pushSnapshot;
+  const stablePushSnapshot = useCallback(() => pushSnapshotRef.current(), []);
 
   const canvasUndo = useCallback(() => {
     if (undoStackRef.current.length === 0) return;
@@ -1301,6 +1354,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   }
 
   return (
+    <CanvasSnapshotContext.Provider value={stablePushSnapshot}>
     <CanvasSaveContext.Provider value={stableScheduleSave}>
     <div className={containerClass} style={{ ...shapeVars, ...counterZoomStyle }}>
       <ReactFlow
@@ -1879,6 +1933,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
       )}
     </div>
     </CanvasSaveContext.Provider>
+    </CanvasSnapshotContext.Provider>
   );
 }
 

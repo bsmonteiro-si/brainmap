@@ -538,3 +538,47 @@ describe("flowToCanvas node.width/height priority", () => {
     expect(n.height).toBe(100);
   });
 });
+
+describe("edge labelFontSize and labelFontFamily", () => {
+  const baseEdge = {
+    id: "e1",
+    source: "a",
+    target: "b",
+    markerEnd: "brainmap-arrow",
+  };
+
+  it("flowToCanvas omits labelFontSize when absent", () => {
+    const canvas = flowToCanvas([], [{ ...baseEdge, data: {} }]);
+    expect(canvas.edges![0]).not.toHaveProperty("labelFontSize");
+  });
+
+  it("flowToCanvas omits labelFontSize when equal to default (11)", () => {
+    const canvas = flowToCanvas([], [{ ...baseEdge, data: { labelFontSize: 11 } }]);
+    expect(canvas.edges![0]).not.toHaveProperty("labelFontSize");
+  });
+
+  it("flowToCanvas emits labelFontSize and labelFontFamily when non-default", () => {
+    const canvas = flowToCanvas([], [{
+      ...baseEdge,
+      data: { labelFontSize: 16, labelFontFamily: "serif" },
+    }]);
+    expect(canvas.edges![0].labelFontSize).toBe(16);
+    expect(canvas.edges![0].labelFontFamily).toBe("serif");
+  });
+
+  it("canvasToFlow round-trips labelFontSize and labelFontFamily through edge data", () => {
+    const canvas: JsonCanvas = {
+      edges: [{
+        id: "e1",
+        fromNode: "a",
+        toNode: "b",
+        labelFontSize: 20,
+        labelFontFamily: "monospace",
+      }],
+    };
+    const { edges } = canvasToFlow(canvas);
+    const edgeData = edges[0].data as Record<string, unknown>;
+    expect(edgeData.labelFontSize).toBe(20);
+    expect(edgeData.labelFontFamily).toBe("monospace");
+  });
+});

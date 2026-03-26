@@ -5293,7 +5293,7 @@ body {
 
 .canvas-edge-label {
   position: absolute;
-  font-size: 11px;
+  font-size: 11px; /* default; overridden by inline style when labelFontSize is set */
   color: var(--text-secondary);
   background: var(--bg-primary);
   padding: 2px 6px;
@@ -6110,6 +6110,31 @@ body {
 }
 
 .canvas-container.canvas-light .canvas-text-format-picker {
+  background: #fff;
+  border-color: #ddd;
+}
+
+/* ── Edge label format picker ──────────────────────────────────────────────── */
+
+.canvas-edge-label-format-picker {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 4px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 1010;
+  min-width: 160px;
+  pointer-events: all;
+}
+
+.canvas-container.canvas-light .canvas-edge-label-format-picker {
   background: #fff;
   border-color: #ddd;
 }

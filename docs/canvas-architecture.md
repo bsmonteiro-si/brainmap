@@ -54,6 +54,14 @@ CanvasPanel (right sidebar)
   -> writePlainFile(path)    [debounced 1500ms]
 ```
 
+### External Change Reload
+
+When a `.canvas` file is modified outside the app (external editor, git pull, etc.),
+the file watcher emits a `files-changed` event. `App.tsx` bumps `uiStore.tabReloadKeys`
+for the affected path. `CanvasEditorInner` subscribes to its reload key and re-reads
+the file from disk. If the editor has unsaved changes (`dirtyRef`), it sets the tab's
+`conflictState` to `"external-change"` instead of silently reloading.
+
 ## Translation Layer (canvasTranslation.ts)
 
 ### Type Maps
@@ -77,7 +85,7 @@ RF_TO_CANVAS_TYPE:  canvasText -> text,  canvasFile -> file,  canvasLink -> link
 - **Position**: Converts parent-relative back to absolute.
 - **Width resolution**: `n.width > style.width > measured.width > 250` (fallback chain).
 - **Height**: `max(measured.height, n.height ?? style.height ?? style.minHeight ?? 100)`.
-- **Default stripping**: Only emits optional fields when non-default (shape != "rectangle", fontSize != 13, textAlign != "center", textVAlign != "center").
+- **Default stripping**: Only emits optional fields when non-default (shape != "rectangle", fontSize != 13, textAlign != "center", textVAlign != "center", labelFontSize != 11, labelFontFamily not empty).
 - **Edge markers**: Detects arrows from both object markers and string marker IDs (e.g., `"brainmap-arrow"`).
 - **Target handle suffix**: Strips `-target` suffix from `targetHandle` when converting back to `toSide`.
 
@@ -108,6 +116,13 @@ RF_TO_CANVAS_TYPE:  canvasText -> text,  canvasFile -> file,  canvasLink -> link
 |----------|------|---------|
 | `pendingSaves` | `Map<string, {nodes, edges}>` | Pending writes per path (checked on unmount) |
 | `savedViewports` | `Map<string, Viewport>` | Viewport cache backed by localStorage key `brainmap:canvasViewports` |
+
+### Contexts
+
+| Context | Hook | Value | Purpose |
+|---------|------|-------|---------|
+| `CanvasSaveContext` | `useCanvasSave()` | `() => void` | Stable `scheduleSave` callback for child components |
+| `CanvasSnapshotContext` | `useCanvasSnapshot()` | `() => void` | Stable `pushSnapshot` callback so toolbar mutations (color, font, edge type) are undoable |
 
 ### React Flow Hooks
 
@@ -205,8 +220,8 @@ Fixed-size shapes use `style.height` instead of `style.minHeight`. Adding a new 
 Custom `CanvasEdge` component replaces the default React Flow edge.
 
 - **Path**: Bezier (default), Straight, or Step. Determined by `data.edgeType` per-edge or `canvasDefaultEdgeType` setting as fallback. Uses `getBezierPath()`, `getStraightPath()`, or `getSmoothStepPath()`.
-- **Label**: Displayed at midpoint. Double-click to edit. New edges (`data.isNew = true`) auto-prompt for label input.
-- **Toolbar**: Shown when selected (not during label edit). Contains: Edit label, Delete, Color picker, Edge type picker (bezier/straight/step).
+- **Label**: Displayed at midpoint. Double-click to edit. New edges (`data.isNew = true`) auto-prompt for label input. Label font size (`data.labelFontSize`, default 11) and font family (`data.labelFontFamily`) are applied as inline styles to both the display span and the edit input.
+- **Toolbar**: Shown when selected (not during label edit). Contains: Edit label, Delete, Color picker, Edge type picker (bezier/straight/step), Label format picker (font size + font family).
 - **Color sync**: Color changes update both `style.stroke` AND marker IDs (`brainmap-arrow-{color}`) so the arrow matches the line.
 - **Custom SVG markers**: Defined inline in the ReactFlow component. One default marker (`brainmap-arrow`) + one per unique edge color. Size controlled by `canvasArrowSize` setting. `refX=8` pulls arrow tip slightly back from the path endpoint to avoid overlapping nodes.
 - **Interaction width**: `BaseEdge` uses `interactionWidth={20}` for a 20px invisible hit area, making edges easy to click regardless of visible stroke width.

@@ -65,6 +65,8 @@ interface JsonCanvasEdge {
   color?: string;
   label?: string;
   edgeType?: string;
+  labelFontSize?: number;
+  labelFontFamily?: string;
 }
 
 export interface JsonCanvas {
@@ -190,7 +192,14 @@ export function canvasToFlow(canvas: JsonCanvas): { nodes: Node[]; edges: Edge[]
 
     if (ce.label) edge.label = ce.label;
     if (ce.color) edge.style = { stroke: ce.color };
-    if (ce.edgeType) edge.data = { ...(edge.data as object ?? {}), edgeType: ce.edgeType };
+    if (ce.edgeType || ce.labelFontSize != null || ce.labelFontFamily != null) {
+      edge.data = {
+        ...(edge.data as object ?? {}),
+        ...(ce.edgeType ? { edgeType: ce.edgeType } : {}),
+        ...(ce.labelFontSize != null ? { labelFontSize: ce.labelFontSize } : {}),
+        ...(ce.labelFontFamily != null ? { labelFontFamily: ce.labelFontFamily } : {}),
+      };
+    }
 
     return edge;
   });
@@ -308,6 +317,12 @@ export function flowToCanvas(nodes: Node[], edges: Edge[]): JsonCanvas {
     const edgeData = e.data as Record<string, unknown> | undefined;
     if (edgeData?.edgeType && edgeData.edgeType !== "bezier") {
       ce.edgeType = String(edgeData.edgeType);
+    }
+    if (edgeData?.labelFontSize != null && edgeData.labelFontSize !== 11) {
+      ce.labelFontSize = Number(edgeData.labelFontSize);
+    }
+    if (edgeData?.labelFontFamily != null && edgeData.labelFontFamily !== "") {
+      ce.labelFontFamily = String(edgeData.labelFontFamily);
     }
 
     return ce;
