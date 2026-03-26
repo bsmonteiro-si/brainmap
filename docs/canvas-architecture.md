@@ -175,7 +175,7 @@ All 4 node types share these components:
 
 | Type | Component | Key Behavior |
 |------|-----------|--------------|
-| **File** | `CanvasFileNode` | Reads `graphStore.nodes.get(filePath)` for title/type/tags. Double-click opens note (via `openNote`/`openPlainFile`/`openTab` depending on file type). Supports `.canvas` and `.excalidraw` files (opens in dedicated editors). Shows "missing reference" badge for broken links. Border color defaults to note type color. |
+| **File** | `CanvasFileNode` | Reads `graphStore.nodes.get(filePath)` for title/type/tags/summary. Shows summary below title (3-line clamp). Double-click opens note (via `openNote`/`openPlainFile`/`openTab` depending on file type). Supports `.canvas` and `.excalidraw` files (opens in dedicated editors). Shows "missing reference" badge for broken links. Border color defaults to note type color. |
 | **Text** | `CanvasTextNode` | Double-click enters editing mode (textarea). Escape cancels, blur commits. Shape-aware via `data-shape` attribute. Vertical alignment via flexbox `alignItems`. Sticky notes read `canvasStickyPin`/`canvasStickyTape`/`canvasStickyLines` from uiStore. Supports **card kinds** (see below). |
 | **Link** | `CanvasLinkNode` | Shows favicon, optional title, hostname, and "Open in browser" button. Favicon loaded from Google favicon service. |
 | **Group** | `CanvasGroupNode` | `zIndex: -1`. Double-click label to edit (input). Enter commits, Escape cancels (uses `cancelledRef` to prevent blur from committing after Escape). Background color defaults to `var(--bg-tertiary)`. Collapse/expand toggle: chevron button hides children and shrinks to label-only; persisted via `data.collapsed`. |

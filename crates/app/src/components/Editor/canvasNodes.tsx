@@ -283,80 +283,82 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
             )}
           </div>
         )}
-        {shape !== undefined && (
-          <div className="canvas-node-toolbar-color-wrapper">
-            <button
-              className="canvas-node-toolbar-btn"
-              title="Text formatting"
-              onClick={() => { const next = !showTextFormat; closeAllDropdowns(); setShowTextFormat(next); }}
-            >
-              <Type size={16} />
-            </button>
-            {showTextFormat && (
-              <div className="canvas-text-format-picker">
-                <div className="canvas-text-format-section">
-                  <span className="canvas-text-format-section-label">Size</span>
-                  <div className="canvas-text-format-row">
-                    {FONT_SIZES.map((s) => (
-                      <button
-                        key={s}
-                        className={`canvas-text-format-btn${(fontSize ?? 13) === s ? " canvas-text-format-btn--active" : ""}`}
-                        onClick={() => { setNodeData({ fontSize: s }); }}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="canvas-text-format-section">
-                  <span className="canvas-text-format-section-label">Font</span>
-                  <div className="canvas-text-format-row">
-                    {FONT_FAMILIES.map((f) => (
-                      <button
-                        key={f.id}
-                        className={`canvas-text-format-btn${(fontFamily ?? "") === f.id ? " canvas-text-format-btn--active" : ""}`}
-                        style={{ fontFamily: f.id }}
-                        onClick={() => { setNodeData({ fontFamily: fontFamily === f.id ? undefined : f.id }); }}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="canvas-text-format-section">
-                  <span className="canvas-text-format-section-label">Align</span>
-                  <div className="canvas-text-format-row">
-                    {TEXT_ALIGNMENTS.map((a) => (
-                      <button
-                        key={a.id}
-                        className={`canvas-text-format-btn${(textAlign ?? "center") === a.id ? " canvas-text-format-btn--active" : ""}`}
-                        title={a.label}
-                        onClick={() => { setNodeData({ textAlign: a.id }); }}
-                      >
-                        <a.icon size={14} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="canvas-text-format-section">
-                  <span className="canvas-text-format-section-label">Vertical</span>
-                  <div className="canvas-text-format-row">
-                    {VERTICAL_ALIGNMENTS.map((a) => (
-                      <button
-                        key={a.id}
-                        className={`canvas-text-format-btn${(textVAlign ?? "center") === a.id ? " canvas-text-format-btn--active" : ""}`}
-                        title={a.label}
-                        onClick={() => { setNodeData({ textVAlign: a.id }); }}
-                      >
-                        <a.icon size={14} />
-                      </button>
-                    ))}
-                  </div>
+        <div className="canvas-node-toolbar-color-wrapper">
+          <button
+            className="canvas-node-toolbar-btn"
+            title="Text formatting"
+            onClick={() => { const next = !showTextFormat; closeAllDropdowns(); setShowTextFormat(next); }}
+          >
+            <Type size={16} />
+          </button>
+          {showTextFormat && (
+            <div className="canvas-text-format-picker">
+              <div className="canvas-text-format-section">
+                <span className="canvas-text-format-section-label">Size</span>
+                <div className="canvas-text-format-row">
+                  {FONT_SIZES.map((s) => (
+                    <button
+                      key={s}
+                      className={`canvas-text-format-btn${(fontSize ?? 13) === s ? " canvas-text-format-btn--active" : ""}`}
+                      onClick={() => { setNodeData({ fontSize: s }); }}
+                    >
+                      {s}
+                    </button>
+                  ))}
                 </div>
               </div>
-            )}
-          </div>
-        )}
+              <div className="canvas-text-format-section">
+                <span className="canvas-text-format-section-label">Font</span>
+                <div className="canvas-text-format-row">
+                  {FONT_FAMILIES.map((f) => (
+                    <button
+                      key={f.id}
+                      className={`canvas-text-format-btn${(fontFamily ?? "") === f.id ? " canvas-text-format-btn--active" : ""}`}
+                      style={{ fontFamily: f.id }}
+                      onClick={() => { setNodeData({ fontFamily: fontFamily === f.id ? undefined : f.id }); }}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {shape !== undefined && (
+                <>
+                  <div className="canvas-text-format-section">
+                    <span className="canvas-text-format-section-label">Align</span>
+                    <div className="canvas-text-format-row">
+                      {TEXT_ALIGNMENTS.map((a) => (
+                        <button
+                          key={a.id}
+                          className={`canvas-text-format-btn${(textAlign ?? "center") === a.id ? " canvas-text-format-btn--active" : ""}`}
+                          title={a.label}
+                          onClick={() => { setNodeData({ textAlign: a.id }); }}
+                        >
+                          <a.icon size={14} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="canvas-text-format-section">
+                    <span className="canvas-text-format-section-label">Vertical</span>
+                    <div className="canvas-text-format-row">
+                      {VERTICAL_ALIGNMENTS.map((a) => (
+                        <button
+                          key={a.id}
+                          className={`canvas-text-format-btn${(textVAlign ?? "center") === a.id ? " canvas-text-format-btn--active" : ""}`}
+                          title={a.label}
+                          onClick={() => { setNodeData({ textVAlign: a.id }); }}
+                        >
+                          <a.icon size={14} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
         {titleVAlign !== undefined && (
           <div className="canvas-node-toolbar-color-wrapper">
             <button
@@ -469,7 +471,7 @@ function getFileTypeInfo(filePath: string): { icon: React.ComponentType<{ size?:
 // ── File Node ─────────────────────────────────────────────────────────────────
 
 function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
-  const d = data as { file?: string; subpath?: string; color?: string; bgColor?: string; titleVAlign?: string };
+  const d = data as { file?: string; subpath?: string; color?: string; bgColor?: string; titleVAlign?: string; fontSize?: number; fontFamily?: string };
   const filePath = d.file ?? "";
   const node = useGraphStore((s) => s.nodes.get(filePath));
   const fileExists = useGraphStore((s) => s.workspaceFiles.includes(filePath));
@@ -502,6 +504,7 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
   const title = node?.title ?? filePath.split("/").pop() ?? filePath;
   const noteType = node?.note_type;
   const tags = node?.tags ?? [];
+  const summary = node?.summary;
   const fileTypeInfo = getFileTypeInfo(filePath);
   const borderColor = d.color ?? (noteType ? getNodeColor(noteType) : fileTypeInfo?.color ?? "var(--border-color)");
 
@@ -513,7 +516,7 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
       onDoubleClick={openFile}
     >
       <Resizer id={id} selected={selected} minWidth={150} minHeight={50} autoHeight />
-      <CanvasNodeToolbar id={id} selected={selected} titleVAlign={d.titleVAlign ?? "center"} />
+      <CanvasNodeToolbar id={id} selected={selected} fontSize={d.fontSize} fontFamily={d.fontFamily} titleVAlign={d.titleVAlign ?? "center"} />
       {noteType && (
         <span
           className="canvas-file-node-badge"
@@ -534,8 +537,11 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
         {!noteType && fileTypeInfo && (
           <fileTypeInfo.icon size={16} className="canvas-file-node-icon" style={{ color: fileTypeInfo.color }} />
         )}
-        <span className="canvas-file-node-title">{title}</span>
+        <span className="canvas-file-node-title" style={{ ...(d.fontSize ? { fontSize: d.fontSize } : {}), ...(d.fontFamily ? { fontFamily: d.fontFamily } : {}) }}>{title}</span>
       </div>
+      {summary && (
+        <div className="canvas-file-node-summary">{summary}</div>
+      )}
       {tags.length > 0 && (
         <div className="canvas-file-node-tags">
           {tags.slice(0, 3).map((t) => (
@@ -679,7 +685,7 @@ export const CanvasTextNode = memo(CanvasTextNodeInner);
 // ── Link Node ─────────────────────────────────────────────────────────────────
 
 function CanvasLinkNodeInner({ id, data, selected }: NodeProps) {
-  const d = data as { url?: string; title?: string; color?: string; bgColor?: string };
+  const d = data as { url?: string; title?: string; color?: string; bgColor?: string; fontSize?: number; fontFamily?: string };
   const url = d.url ?? "";
 
   let hostname: string;
@@ -702,10 +708,10 @@ function CanvasLinkNodeInner({ id, data, selected }: NodeProps) {
   return (
     <div className="canvas-link-node" style={{ ...(d.color ? { borderColor: d.color } : {}), ...(d.bgColor ? { backgroundColor: d.bgColor } : {}) }}>
       <Resizer id={id} selected={selected} autoHeight />
-      <CanvasNodeToolbar id={id} selected={selected} />
+      <CanvasNodeToolbar id={id} selected={selected} fontSize={d.fontSize} fontFamily={d.fontFamily} />
       <div className="canvas-link-node-content">
         {faviconUrl && <img src={faviconUrl} alt="" className="canvas-link-node-favicon" />}
-        <div className="canvas-link-node-info">
+        <div className="canvas-link-node-info" style={{ ...(d.fontSize ? { fontSize: d.fontSize } : {}), ...(d.fontFamily ? { fontFamily: d.fontFamily } : {}) }}>
           {d.title && <span className="canvas-link-node-title">{d.title}</span>}
           <span className="canvas-link-node-url" title={url}>{hostname}</span>
         </div>
@@ -723,7 +729,7 @@ export const CanvasLinkNode = memo(CanvasLinkNodeInner);
 // ── Group Node ────────────────────────────────────────────────────────────────
 
 function CanvasGroupNodeInner({ id, data, selected }: NodeProps) {
-  const d = data as { label?: string; color?: string; collapsed?: boolean; expandedWidth?: number; expandedHeight?: number };
+  const d = data as { label?: string; color?: string; collapsed?: boolean; expandedWidth?: number; expandedHeight?: number; fontSize?: number; fontFamily?: string };
   const groupBorderOpacity = useUIStore((s) => s.canvasGroupBorderOpacity);
   const groupBorderStyle = useUIStore((s) => s.canvasGroupBorderStyle);
   const groupFillOpacity = useUIStore((s) => s.canvasGroupFillOpacity);
@@ -827,8 +833,8 @@ function CanvasGroupNodeInner({ id, data, selected }: NodeProps) {
       }}
     >
       {!collapsed && <Resizer id={id} selected={selected} minWidth={200} minHeight={150} />}
-      <CanvasNodeToolbar id={id} selected={selected} />
-      <div className="canvas-group-node-label" style={d.color ? { color: d.color } : undefined} onDoubleClick={startEditing}>
+      <CanvasNodeToolbar id={id} selected={selected} fontSize={d.fontSize} fontFamily={d.fontFamily} />
+      <div className="canvas-group-node-label" style={{ ...(d.color ? { color: d.color } : {}), ...(d.fontSize ? { fontSize: d.fontSize } : {}), ...(d.fontFamily ? { fontFamily: d.fontFamily } : {}) }} onDoubleClick={startEditing}>
         <button className="canvas-group-collapse-btn nodrag" onClick={toggleCollapse} title={collapsed ? "Expand group" : "Collapse group"}>
           {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
         </button>

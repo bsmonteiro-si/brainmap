@@ -12,6 +12,8 @@ interface JsonCanvasNodeBase {
   color?: string;
   bgColor?: string;
   parentId?: string;
+  fontSize?: number;
+  fontFamily?: string;
 }
 
 export type CanvasCardKind = "summary" | "question" | "transition";
@@ -20,8 +22,6 @@ interface JsonCanvasTextNode extends JsonCanvasNodeBase {
   type: "text";
   text: string;
   shape?: string;
-  fontSize?: number;
-  fontFamily?: string;
   textAlign?: string;
   textVAlign?: string;
   cardKind?: CanvasCardKind;
@@ -99,13 +99,13 @@ export function canvasToFlow(canvas: JsonCanvas): { nodes: Node[]; edges: Edge[]
     const data: Record<string, unknown> = {};
     if (cn.color) data.color = cn.color;
     if (cn.bgColor) data.bgColor = cn.bgColor;
+    if (cn.fontSize) data.fontSize = cn.fontSize;
+    if (cn.fontFamily) data.fontFamily = cn.fontFamily;
 
     switch (cn.type) {
       case "text":
         data.text = cn.text;
         if (cn.shape) data.shape = cn.shape;
-        if (cn.fontSize) data.fontSize = cn.fontSize;
-        if (cn.fontFamily) data.fontFamily = cn.fontFamily;
         if (cn.textAlign) data.textAlign = cn.textAlign;
         if (cn.textVAlign) data.textVAlign = cn.textVAlign;
         if (cn.cardKind) data.cardKind = cn.cardKind;
@@ -255,13 +255,13 @@ export function flowToCanvas(nodes: Node[], edges: Edge[]): JsonCanvas {
     if (data.color) base.color = String(data.color);
     if (data.bgColor) base.bgColor = String(data.bgColor);
     if (n.parentId) base.parentId = n.parentId;
+    if (data.fontSize && data.fontSize !== 13) base.fontSize = Number(data.fontSize);
+    if (data.fontFamily) base.fontFamily = String(data.fontFamily);
 
     switch (canvasType) {
       case "text": {
         const node: JsonCanvasTextNode = { ...base, type: "text" as const, text: String(data.text ?? "") };
         if (data.shape && data.shape !== "rectangle") node.shape = String(data.shape);
-        if (data.fontSize && data.fontSize !== 13) node.fontSize = Number(data.fontSize);
-        if (data.fontFamily) node.fontFamily = String(data.fontFamily);
         if (data.textAlign && data.textAlign !== "center") node.textAlign = String(data.textAlign);
         if (data.textVAlign && data.textVAlign !== "center") node.textVAlign = String(data.textVAlign);
         if (data.cardKind) node.cardKind = String(data.cardKind) as CanvasCardKind;

@@ -582,3 +582,61 @@ describe("edge labelFontSize and labelFontFamily", () => {
     expect(edgeData.labelFontFamily).toBe("monospace");
   });
 });
+
+describe("node fontSize/fontFamily on all node types", () => {
+  it("canvasToFlow copies fontSize/fontFamily for file node", () => {
+    const canvas: JsonCanvas = {
+      nodes: [{ id: "f1", type: "file", file: "test.md", x: 0, y: 0, width: 250, height: 100, fontSize: 20, fontFamily: "serif" }],
+    };
+    const { nodes } = canvasToFlow(canvas);
+    const data = nodes[0].data as Record<string, unknown>;
+    expect(data.fontSize).toBe(20);
+    expect(data.fontFamily).toBe("serif");
+  });
+
+  it("canvasToFlow copies fontSize/fontFamily for link node", () => {
+    const canvas: JsonCanvas = {
+      nodes: [{ id: "l1", type: "link", url: "https://example.com", x: 0, y: 0, width: 250, height: 100, fontSize: 16, fontFamily: "monospace" }],
+    };
+    const { nodes } = canvasToFlow(canvas);
+    const data = nodes[0].data as Record<string, unknown>;
+    expect(data.fontSize).toBe(16);
+    expect(data.fontFamily).toBe("monospace");
+  });
+
+  it("canvasToFlow copies fontSize/fontFamily for group node", () => {
+    const canvas: JsonCanvas = {
+      nodes: [{ id: "g1", type: "group", x: 0, y: 0, width: 400, height: 300, fontSize: 24, fontFamily: "'Chalkboard SE', cursive" }],
+    };
+    const { nodes } = canvasToFlow(canvas);
+    const data = nodes[0].data as Record<string, unknown>;
+    expect(data.fontSize).toBe(24);
+    expect(data.fontFamily).toBe("'Chalkboard SE', cursive");
+  });
+
+  it("flowToCanvas emits fontSize for file node when non-default", () => {
+    const canvas = flowToCanvas(
+      [{ id: "f1", type: "canvasFile", position: { x: 0, y: 0 }, data: { file: "test.md", fontSize: 20 }, style: { width: 250, minHeight: 100 } }],
+      [],
+    );
+    expect(canvas.nodes![0].fontSize).toBe(20);
+  });
+
+  it("flowToCanvas omits fontSize when default (13) for non-text node", () => {
+    const canvas = flowToCanvas(
+      [{ id: "f1", type: "canvasFile", position: { x: 0, y: 0 }, data: { file: "test.md", fontSize: 13 }, style: { width: 250, minHeight: 100 } }],
+      [],
+    );
+    expect(canvas.nodes![0]).not.toHaveProperty("fontSize");
+  });
+
+  it("file node without fontSize loads and round-trips cleanly (backward compat)", () => {
+    const canvas: JsonCanvas = {
+      nodes: [{ id: "f1", type: "file", file: "test.md", x: 0, y: 0, width: 250, height: 100 }],
+    };
+    const flow = canvasToFlow(canvas);
+    const back = flowToCanvas(flow.nodes, flow.edges);
+    expect(back.nodes![0]).not.toHaveProperty("fontSize");
+    expect(back.nodes![0]).not.toHaveProperty("fontFamily");
+  });
+});
