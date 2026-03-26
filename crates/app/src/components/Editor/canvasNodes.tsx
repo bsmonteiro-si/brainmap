@@ -505,6 +505,7 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
   const noteType = node?.note_type;
   const tags = node?.tags ?? [];
   const summary = node?.summary;
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
   const fileTypeInfo = getFileTypeInfo(filePath);
   const borderColor = d.color ?? (noteType ? getNodeColor(noteType) : fileTypeInfo?.color ?? "var(--border-color)");
 
@@ -540,7 +541,15 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
         <span className="canvas-file-node-title" style={{ ...(d.fontSize ? { fontSize: d.fontSize } : {}), ...(d.fontFamily ? { fontFamily: d.fontFamily } : {}) }}>{title}</span>
       </div>
       {summary && (
-        <div className="canvas-file-node-summary">{summary}</div>
+        <div
+          className={`canvas-file-node-summary${summaryExpanded ? " canvas-file-node-summary--expanded" : ""}`}
+          style={{ ...(d.fontSize ? { fontSize: Math.round(d.fontSize * 11 / 13) } : {}), ...(d.fontFamily ? { fontFamily: d.fontFamily } : {}) }}
+        >
+          <button className="canvas-file-node-summary-toggle nodrag" onClick={() => setSummaryExpanded(!summaryExpanded)}>
+            {summaryExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          </button>
+          <span className="canvas-file-node-summary-text">{summary}</span>
+        </div>
       )}
       {tags.length > 0 && (
         <div className="canvas-file-node-tags">

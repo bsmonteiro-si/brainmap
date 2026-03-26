@@ -5376,10 +5376,34 @@ body {
   color: var(--text-muted);
   margin-top: 4px;
   line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.canvas-file-node-summary-text {
   overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.canvas-file-node-summary--expanded .canvas-file-node-summary-text {
+  white-space: normal;
+  overflow: visible;
+}
+
+.canvas-file-node-summary-toggle {
+  all: unset;
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.canvas-file-node-summary-toggle:hover {
+  color: var(--text-primary);
 }
 
 .canvas-file-node-badge {
