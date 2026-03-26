@@ -17,6 +17,8 @@ import { RangeSetBuilder, StateField, type Text, type Extension } from "@codemir
 import { syntaxTree } from "@codemirror/language";
 import type { EditorState } from "@codemirror/state";
 import { formatTable, isTableFormatted, parseCells, parseAlignment, DELIM_CELL_RE, type Alignment } from "./tableFormatter";
+import { scanCallouts } from "./cmCalloutDecorations";
+import { CALLOUT_TYPES, CALLOUT_FALLBACK } from "./calloutTypes";
 import katex from "katex";
 
 // ---------------------------------------------------------------------------
@@ -183,18 +185,33 @@ export function renderInlineMarkdown(text: string): string {
     .replace(/\*([^*]+)\*/g, "<em>$1</em>");
 }
 
-class TableWidget extends WidgetType {
-  constructor(readonly data: TableData) {
+export class TableWidget extends WidgetType {
+  constructor(
+    readonly data: TableData,
+    readonly calloutColor: string | null,
+  ) {
     super();
   }
 
   eq(other: TableWidget): boolean {
-    return this.data.sourceText === other.data.sourceText;
+    return (
+      this.data.sourceText === other.data.sourceText &&
+      this.calloutColor === other.calloutColor
+    );
   }
 
   toDOM(): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = "cm-table-widget-wrapper";
+
+    // Apply callout border/background when inside a callout
+    if (this.calloutColor) {
+      wrapper.style.borderLeft = `3px solid ${this.calloutColor}`;
+      wrapper.style.borderRight = `1px solid color-mix(in srgb, ${this.calloutColor} 15%, transparent)`;
+      wrapper.style.background = `color-mix(in srgb, ${this.calloutColor} 5%, transparent)`;
+      wrapper.style.paddingLeft = "14px";
+      wrapper.style.marginLeft = "6px";
+    }
 
     const table = document.createElement("table");
     table.className = "cm-table-widget";
@@ -364,6 +381,7 @@ const tableRowEvenDeco = Decoration.line({ class: "cm-table-line cm-table-row cm
 function buildDecorations(state: EditorState, cls: LineClassification, cursorLine: number): DecorationSet {
   const doc = state.doc;
   const builder = new RangeSetBuilder<Decoration>();
+  const callouts = scanCallouts(doc);
 
   // We need to collect all decorations and sort by position since
   // line decos, mark decos from tree walk must be in document order.
@@ -463,10 +481,16 @@ function buildDecorations(state: EditorState, cls: LineClassification, cursorLin
           if (tableData) {
             const from = doc.line(tableStartLine).from;
             const to = doc.line(tableEndLine).to;
+            const enclosing = callouts.find(
+              (c) => from >= c.headerTo && to <= (c.closed ? c.closingLineFrom : c.closingLineTo),
+            );
+            const calloutColor = enclosing
+              ? (CALLOUT_TYPES[enclosing.type]?.color ?? CALLOUT_FALLBACK.color)
+              : null;
             decos.push({
               from,
               to,
-              deco: Decoration.replace({ widget: new TableWidget(tableData), block: true }),
+              deco: Decoration.replace({ widget: new TableWidget(tableData, calloutColor), block: true }),
             });
           }
         }

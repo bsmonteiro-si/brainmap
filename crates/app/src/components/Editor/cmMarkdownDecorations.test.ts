@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Text } from "@codemirror/state";
-import { scanFencedBlocks, classifyLines, parseMarkdownTable, renderInlineMarkdown } from "./cmMarkdownDecorations";
+import { scanFencedBlocks, classifyLines, parseMarkdownTable, renderInlineMarkdown, TableWidget } from "./cmMarkdownDecorations";
 
 function doc(s: string): Text {
   return Text.of(s.split("\n"));
@@ -353,5 +353,60 @@ describe("scanFencedBlocks lang extraction for badge", () => {
   it("trims whitespace from lang", () => {
     const d = doc("```  rust  \nfn main() {}\n```");
     expect(scanFencedBlocks(d)[0].lang).toBe("rust");
+  });
+});
+
+describe("TableWidget callout styling", () => {
+  const sampleData = {
+    headerCells: ["A", "B"],
+    alignments: ["left" as const, "left" as const],
+    rows: [["1", "2"]],
+    sourceText: "| A | B |\n|---|---|\n| 1 | 2 |",
+    isFormatted: true,
+  };
+
+  it("applies no callout styles when calloutColor is null", () => {
+    const w = new TableWidget(sampleData, null);
+    const dom = w.toDOM();
+    expect(dom.style.borderLeft).toBe("");
+    expect(dom.style.paddingLeft).toBe("");
+    expect(dom.style.marginLeft).toBe("");
+    expect(dom.style.background).toBe("");
+  });
+
+  it("applies callout border/background when calloutColor is set", () => {
+    const w = new TableWidget(sampleData, "#17a2b8");
+    const dom = w.toDOM();
+    // JSDOM normalizes hex to rgb; check for "3px solid" and the normalized color
+    expect(dom.style.borderLeft).toContain("3px solid");
+    expect(dom.style.borderLeft).toContain("rgb(23, 162, 184)");
+    expect(dom.style.paddingLeft).toBe("14px");
+    expect(dom.style.marginLeft).toBe("6px");
+    expect(dom.style.borderRight).not.toBe("");
+    expect(dom.style.background).not.toBe("");
+  });
+
+  it("eq returns true when sourceText and calloutColor both match", () => {
+    const a = new TableWidget(sampleData, "#17a2b8");
+    const b = new TableWidget(sampleData, "#17a2b8");
+    expect(a.eq(b)).toBe(true);
+  });
+
+  it("eq returns true when both calloutColors are null", () => {
+    const a = new TableWidget(sampleData, null);
+    const b = new TableWidget(sampleData, null);
+    expect(a.eq(b)).toBe(true);
+  });
+
+  it("eq returns false when calloutColor differs (null vs color)", () => {
+    const a = new TableWidget(sampleData, null);
+    const b = new TableWidget(sampleData, "#17a2b8");
+    expect(a.eq(b)).toBe(false);
+  });
+
+  it("eq returns false when calloutColor differs (color vs different color)", () => {
+    const a = new TableWidget(sampleData, "#17a2b8");
+    const b = new TableWidget(sampleData, "#e74c3c");
+    expect(a.eq(b)).toBe(false);
   });
 });
