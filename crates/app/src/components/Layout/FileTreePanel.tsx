@@ -666,6 +666,7 @@ function FileTreeNode({
   renamingPath,
   onRenameConfirm,
   onRenameCancel,
+  filterActive,
 }: {
   node: TreeNode;
   depth: number;
@@ -685,6 +686,7 @@ function FileTreeNode({
   renamingPath: string | null;
   onRenameConfirm: (oldPath: string, newName: string, isFolder: boolean) => void;
   onRenameCancel: () => void;
+  filterActive: boolean;
 }) {
   const selectedNodePath = useGraphStore((s) => s.selectedNodePath);
   const treeExpandedFolders = useUIStore((s) => s.treeExpandedFolders);
@@ -699,10 +701,11 @@ function FileTreeNode({
   };
 
   if (node.isFolder) {
-    const isExpanded = treeExpandedFolders.has(node.fullPath);
-    const shouldRenderChildren = hasBeenExpanded.has(node.fullPath) || isExpanded;
+    const isExpanded = filterActive || treeExpandedFolders.has(node.fullPath);
+    const shouldRenderChildren = filterActive || hasBeenExpanded.has(node.fullPath) || isExpanded;
 
     const handleToggle = () => {
+      if (filterActive) return;
       if (!hasBeenExpanded.has(node.fullPath)) {
         onExpand(node.fullPath);
       }
@@ -783,6 +786,7 @@ function FileTreeNode({
                   renamingPath={renamingPath}
                   onRenameConfirm={onRenameConfirm}
                   onRenameCancel={onRenameCancel}
+                  filterActive={filterActive}
                 />
               ))}
           </div>
@@ -1714,6 +1718,7 @@ export function FileTreePanel() {
             renamingPath={renamingPath}
             onRenameConfirm={executeRenameItem}
             onRenameCancel={handleRenameCancel}
+            filterActive={filter.trim().length > 0}
           />
         ))}
       </div>
