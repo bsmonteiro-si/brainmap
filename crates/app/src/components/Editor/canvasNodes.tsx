@@ -505,7 +505,7 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
   const noteType = node?.note_type;
   const tags = node?.tags ?? [];
   const summary = node?.summary;
-  const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [summaryExpanded, setSummaryExpanded] = useState(true);
   const fileTypeInfo = getFileTypeInfo(filePath);
   const borderColor = d.color ?? (noteType ? getNodeColor(noteType) : fileTypeInfo?.color ?? "var(--border-color)");
 
