@@ -5,7 +5,7 @@ use notify_debouncer_mini::{new_debouncer, notify::RecursiveMode, DebouncedEvent
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::mpsc;
-use tracing::{error, warn};
+use tracing::{debug, error, warn};
 
 use brainmap_core::model::{Edge, EdgeKind, NodeData, RelativePath};
 
@@ -60,6 +60,33 @@ pub(crate) fn emit_topology_event(
     };
     if let Err(e) = app.emit("brainmap://workspace-event", payload) {
         error!(error = %e, root = %workspace_root, "failed to emit topology event");
+    }
+}
+
+/// Emit a node-updated event to the frontend when a single node is modified.
+/// Used by the file watcher when an existing .md file changes on disk.
+pub(crate) fn emit_node_updated_event(
+    app: &AppHandle,
+    workspace_root: &str,
+    path: &str,
+    node: NodeDtoPayload,
+) {
+    #[derive(Serialize, Clone)]
+    struct NodeUpdatedPayload {
+        #[serde(rename = "type")]
+        event_type: &'static str,
+        workspace_root: String,
+        path: String,
+        node: NodeDtoPayload,
+    }
+    let payload = NodeUpdatedPayload {
+        event_type: "node-updated",
+        workspace_root: workspace_root.to_string(),
+        path: path.to_string(),
+        node,
+    };
+    if let Err(e) = app.emit("brainmap://workspace-event", payload) {
+        error!(error = %e, root = %workspace_root, "failed to emit node-updated event");
     }
 }
 
@@ -146,10 +173,14 @@ pub fn start_watcher(
                     continue;
                 }
                 if event.path.extension().and_then(|e| e.to_str()) == Some("md") {
+                    debug!(path = %event.path.display(), "watcher: md file event");
                     let _ = tx.send(WatchedFile::Markdown(event.path.clone()));
                 } else if event.path.is_file() || !event.path.exists() {
                     // File exists → added/modified; doesn't exist → may be removed
+                    debug!(path = %event.path.display(), "watcher: plain file event");
                     let _ = tx.send(WatchedFile::Plain(event.path.clone()));
+                } else {
+                    debug!(path = %event.path.display(), is_file = event.path.is_file(), exists = event.path.exists(), "watcher: skipped non-file event");
                 }
             }
         }
@@ -238,11 +269,28 @@ async fn process_md_change(app: &AppHandle, root_key: &str, path: PathBuf) {
         diff.added_edges.iter().map(edge_to_payload).collect(),
         diff.removed_edges.iter().map(edge_to_payload).collect(),
     );
+
+    // For modifications (not adds/removes), reload_file returns empty added_nodes.
+    // Emit a separate node-updated event so the frontend graph updates node metadata
+    // (title, type, tags) and the editor gets notified via markExternalChange().
+    if path_exists && path_is_known {
+        let updated_node = state
+            .with_slot(root_key, |slot| {
+                let rp = RelativePath::new(&rel_path_str);
+                Ok(slot.workspace.graph.get_node(&rp).map(node_to_payload))
+            })
+            .ok()
+            .flatten();
+        if let Some(node) = updated_node {
+            emit_node_updated_event(app, root_key, &rel_path_str, node);
+        }
+    }
 }
 
 /// Process a non-markdown file change event (additions/removals only).
 async fn process_plain_change(app: &AppHandle, root_key: &str, path: PathBuf) {
     let state = app.state::<AppState>();
+    debug!(path = %path.display(), root = %root_key, "watcher: process_plain_change entered");
 
     let workspace_root = match state.with_slot(root_key, |slot| Ok(slot.workspace.root.clone())) {
         Ok(root) => root,
@@ -256,12 +304,15 @@ async fn process_plain_change(app: &AppHandle, root_key: &str, path: PathBuf) {
 
     // Expected writes are scoped per slot.
     if state.consume_expected_write(root_key, &path) {
+        debug!(path = %rel_path, root = %root_key, "watcher: consumed expected write, skipping");
         return;
     }
 
     if path.exists() {
+        debug!(path = %rel_path, root = %root_key, "watcher: emitting files-changed (added)");
         emit_files_changed_event(app, root_key, vec![rel_path], vec![]);
     } else {
+        debug!(path = %rel_path, root = %root_key, "watcher: emitting files-changed (removed)");
         emit_files_changed_event(app, root_key, vec![], vec![rel_path]);
     }
 }

@@ -333,6 +333,8 @@ export function CanvasEditorInner({ path }: { path: string }) {
   useEffect(() => {
     if (reloadKey === 0) return; // skip initial mount (handled by [path] effect above)
 
+    log.debug("canvas::editor", "external change detected, reloading", { reloadKey, path, dirty: dirtyRef.current });
+
     // If dirty, show conflict state on the tab instead of silently reloading
     if (dirtyRef.current) {
       const tabId = useTabStore.getState().activeTabId;

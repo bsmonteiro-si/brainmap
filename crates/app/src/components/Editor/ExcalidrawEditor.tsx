@@ -153,6 +153,57 @@ function ExcalidrawEditorInner({ path }: { path: string }) {
     };
   }, [path]);
 
+  // Reload from disk when an external change is detected (via tabReloadKeys bump)
+  const reloadKey = useUIStore((s) => s.tabReloadKeys.get(path) ?? 0);
+  useEffect(() => {
+    if (reloadKey === 0) return; // skip initial mount
+
+    // If dirty, show conflict state on the tab instead of silently reloading
+    if (dirtyRef.current) {
+      const tabId = useTabStore.getState().activeTabId;
+      if (tabId) {
+        useTabStore.getState().updateTabState(tabId, { conflictState: "external-change" });
+      }
+      return;
+    }
+
+    // Not dirty — reload from disk
+    let cancelled = false;
+    Promise.all([
+      getAPI().then((api) => api.readPlainFile(path)),
+      ensureExcalidraw(),
+    ])
+      .then(([file, loadedMod]) => {
+        if (cancelled || file.binary) return;
+        try {
+          const parsed = JSON.parse(file.body);
+          const data: ExcalidrawData = {
+            elements: parsed.elements ?? [],
+            appState: parsed.appState ?? {},
+            files: parsed.files ?? {},
+          };
+          try {
+            lastSavedRef.current = JSON.stringify({
+              elements: data.elements,
+              files: data.files,
+            });
+          } catch {
+            lastSavedRef.current = "";
+          }
+          dirtyRef.current = false;
+          setInitialData(data);
+          setMod(loadedMod);
+        } catch {
+          log.warn("excalidraw", "external reload: failed to parse drawing file", { path });
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) log.warn("excalidraw", "external reload failed", { path, error: String(e) });
+      });
+
+    return () => { cancelled = true; };
+  }, [reloadKey, path]);
+
   // Save function
   const doSave = useCallback(
     async (data: ExcalidrawData) => {

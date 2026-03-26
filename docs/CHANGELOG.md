@@ -2,6 +2,13 @@
 
 Feature history moved from CLAUDE.md. Organized by phase and feature area.
 
+## External File Change Detection
+
+- **Live reload for `.md` files**: When a markdown note is modified outside the app, the graph view updates node metadata (title, type, tags) immediately and the editor auto-reloads content (or shows a conflict banner if the note has unsaved edits). Backend watcher now emits a `node-updated` event alongside `topology-changed` for file modifications.
+- **Live reload for canvas/excalidraw files**: External changes to `.canvas` and `.excalidraw` files trigger an automatic reload in both the left-panel canvas viewer and editor tabs. Uses a `tabReloadKeys` counter in uiStore that the editor components subscribe to.
+- **Refresh button now reloads editor content**: The "Reload Filesystem" button in the status bar (Cmd+Shift+R) now also refreshes the active editor/canvas content, not just the graph topology.
+- **Dirty file protection**: If the editor has unsaved changes when an external modification arrives, a conflict banner is shown instead of silently overwriting. Applies to markdown notes, canvas, and excalidraw editors.
+
 ## Video Viewer
 
 - **Dedicated video viewer**: Video files (`.mp4`, `.webm`, `.mov`, `.avi`, `.mkv`, `.ogv`) now open in a built-in viewer with native playback controls (play/pause, seeking, volume, fullscreen).

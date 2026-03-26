@@ -450,3 +450,38 @@ describe("tooltip font size settings", () => {
     expect(s.tooltipPillSize).toBe(DEFAULT_TOOLTIP_PILL_SIZE);
   });
 });
+
+describe("tabReloadKeys", () => {
+  beforeEach(() => {
+    useUIStore.setState({ tabReloadKeys: new Map<string, number>() });
+  });
+
+  it("returns 0 for unknown paths", () => {
+    expect(useUIStore.getState().tabReloadKeys.get("unknown.canvas")).toBeUndefined();
+  });
+
+  it("increments from 0 to 1 on first bump", () => {
+    useUIStore.getState().bumpTabReloadKey("test.canvas");
+    expect(useUIStore.getState().tabReloadKeys.get("test.canvas")).toBe(1);
+  });
+
+  it("increments from 1 to 2 on second bump", () => {
+    useUIStore.getState().bumpTabReloadKey("test.canvas");
+    useUIStore.getState().bumpTabReloadKey("test.canvas");
+    expect(useUIStore.getState().tabReloadKeys.get("test.canvas")).toBe(2);
+  });
+
+  it("tracks different paths independently", () => {
+    useUIStore.getState().bumpTabReloadKey("a.canvas");
+    useUIStore.getState().bumpTabReloadKey("b.excalidraw");
+    useUIStore.getState().bumpTabReloadKey("a.canvas");
+    expect(useUIStore.getState().tabReloadKeys.get("a.canvas")).toBe(2);
+    expect(useUIStore.getState().tabReloadKeys.get("b.excalidraw")).toBe(1);
+  });
+
+  it("is cleared by resetWorkspaceState", () => {
+    useUIStore.getState().bumpTabReloadKey("test.canvas");
+    useUIStore.getState().resetWorkspaceState();
+    expect(useUIStore.getState().tabReloadKeys.size).toBe(0);
+  });
+});

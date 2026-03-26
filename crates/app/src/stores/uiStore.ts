@@ -397,7 +397,10 @@ interface UIState {
   codeTheme: string;
   homeNotePath: string | null;
   customFileOrder: Record<string, string[]>;
+  /** Ephemeral reload counters for canvas/excalidraw tabs (not persisted). */
+  tabReloadKeys: Map<string, number>;
 
+  bumpTabReloadKey: (path: string) => void;
   setCustomFileOrder: (folderPath: string, orderedPaths: string[]) => void;
   saveCustomFileOrder: (segmentPath: string) => void;
   loadCustomFileOrder: (segmentPath: string) => void;
@@ -741,6 +744,15 @@ export const useUIStore = create<UIState>((set, get) => ({
   emptyFolders: new Set<string>(),
   homeNotePath: null,
   customFileOrder: {},
+  tabReloadKeys: new Map<string, number>(),
+
+  bumpTabReloadKey: (path: string) => {
+    set((s) => {
+      const next = new Map(s.tabReloadKeys);
+      next.set(path, (next.get(path) ?? 0) + 1);
+      return { tabReloadKeys: next };
+    });
+  },
 
   setCustomFileOrder: (folderPath: string, orderedPaths: string[]) => {
     set((s) => ({
@@ -1253,6 +1265,7 @@ export const useUIStore = create<UIState>((set, get) => ({
     leftPanelCollapsed: false,
     homeNotePath: null,
     customFileOrder: {},
+    tabReloadKeys: new Map<string, number>(),
   }),
 
   resetFontPrefs: () => {

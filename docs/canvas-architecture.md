@@ -85,7 +85,7 @@ RF_TO_CANVAS_TYPE:  canvasText -> text,  canvasFile -> file,  canvasLink -> link
 - **Position**: Converts parent-relative back to absolute.
 - **Width resolution**: `n.width > style.width > measured.width > 250` (fallback chain).
 - **Height**: `max(measured.height, n.height ?? style.height ?? style.minHeight ?? 100)`.
-- **Default stripping**: Only emits optional fields when non-default (shape != "rectangle", fontSize != 13, textAlign != "center", textVAlign != "center", labelFontSize != 11, labelFontFamily not empty).
+- **Default stripping**: Only emits optional fields when non-default (shape != "rectangle", fontSize != 13, textAlign != "center", textVAlign != "center", labelFontSize != 11, labelFontFamily not empty). `fontSize` and `fontFamily` are on `JsonCanvasNodeBase` (BrainMap extensions to the JSON Canvas spec) — all node types support them.
 - **Edge markers**: Detects arrows from both object markers and string marker IDs (e.g., `"brainmap-arrow"`).
 - **Target handle suffix**: Strips `-target` suffix from `targetHandle` when converting back to `toSide`.
 
@@ -169,7 +169,7 @@ All 4 node types share these components:
 
 - **`FourHandles`**: 8 handles total (4 source + 4 target). Source IDs: `top`, `right`, `bottom`, `left`. Target IDs: `top-target`, `right-target`, `bottom-target`, `left-target`.
 - **`Resizer`**: Wraps `NodeResizer`. For `autoHeight` nodes: converts `style.minHeight` -> `style.height` on resize start (so user can shrink), converts back on resize end (so auto-expand works).
-- **`CanvasNodeToolbar`**: Shown when single node selected (`selectedCount <= 1`). Contains: Delete, Border color picker, Background color picker. Text nodes add: Shape picker, Text format picker (font size, font family, text align, vertical align).
+- **`CanvasNodeToolbar`**: Shown when single node selected (`selectedCount <= 1`). Contains: Delete, Border color picker, Background color picker, Text format picker (font size, font family — all node types; text align, vertical align — text nodes only). Text nodes additionally get: Shape picker.
 
 ### Per-Type Details
 

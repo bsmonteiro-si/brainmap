@@ -83,7 +83,8 @@ function App() {
 
         // Active segment event — apply normally
         applyEvent(event);
-        // If the event affects a note
+
+        // If the event affects a note (node-updated has a `path` field)
         if (
           (event.type === "node-updated" || event.type === "topology-changed") &&
           "path" in event
@@ -105,6 +106,29 @@ function App() {
                 // Clean background tab — silently re-read would happen on tab switch
                 // Mark as needing refresh (the note content will be re-fetched when activated)
               }
+            }
+          }
+        }
+
+        // Handle external changes for plain files (canvas, excalidraw, etc.)
+        if (event.type === "files-changed") {
+          const editorState = useEditorStore.getState();
+          const tabStore = useTabStore.getState();
+          // Plain file editor (non-canvas/excalidraw)
+          const activePlainPath = editorState.activePlainFile?.path;
+          if (activePlainPath && event.added_files.includes(activePlainPath)) {
+            editorState.markExternalChange();
+          }
+          // Canvas/excalidraw tabs (active or background) — bump reload key
+          const activeCanvasPath = useUIStore.getState().activeCanvasPath;
+          for (const filePath of event.added_files) {
+            const tab = tabStore.getTab(filePath);
+            if (tab && (tab.kind === "canvas" || tab.kind === "excalidraw")) {
+              useUIStore.getState().bumpTabReloadKey(filePath);
+            }
+            // Also check the left-panel canvas (opened via openCanvasInPanel, not as a tab)
+            if (filePath === activeCanvasPath) {
+              useUIStore.getState().bumpTabReloadKey(filePath);
             }
           }
         }

@@ -701,6 +701,7 @@ pub fn write_plain_file(state: State<'_, AppState>, path: String, body: String) 
     let abs_path = state.with_slot(&root, |slot| {
         handlers::validate_relative_path(&slot.workspace.root, &path)
     })?;
+    debug!(path = %path, abs_path = %abs_path.display(), "write_plain_file: registering expected write");
     state.register_expected_write(&root, abs_path);
     state.with_slot(&root, |slot| handlers::handle_write_plain_file(&slot.workspace, &path, &body))
 }

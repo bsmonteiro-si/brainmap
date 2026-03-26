@@ -278,6 +278,27 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       const stats = await api.getStats();
       set({ info: newInfo, stats, isLoading: false });
       await useGraphStore.getState().loadTopology();
+
+      // Reload active editor content to match the refreshed backend.
+      // markExternalChange() silently re-reads if clean, shows conflict if dirty.
+      useEditorStore.getState().markExternalChange();
+
+      // For canvas/excalidraw tabs, bump reload key to trigger re-read
+      const activeTab = useTabStore.getState().tabs.find(
+        (t) => t.id === useTabStore.getState().activeTabId,
+      );
+      if (
+        activeTab &&
+        (activeTab.kind === "canvas" || activeTab.kind === "excalidraw")
+      ) {
+        useUIStore.getState().bumpTabReloadKey(activeTab.path);
+      }
+      // Also handle left-panel canvas (opened via openCanvasInPanel, not as a tab)
+      const activeCanvasPath = useUIStore.getState().activeCanvasPath;
+      if (activeCanvasPath) {
+        useUIStore.getState().bumpTabReloadKey(activeCanvasPath);
+      }
+
       log.info("stores::workspace", "segment refreshed", {
         node_count: newInfo.node_count,
         edge_count: newInfo.edge_count,

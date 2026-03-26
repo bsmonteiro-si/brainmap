@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useWorkspaceStore } from "./workspaceStore";
 import { useGraphStore } from "./graphStore";
+import { useEditorStore } from "./editorStore";
 
 // Mock getAPI to return controllable stubs
 const mockApi = {
@@ -91,5 +92,23 @@ describe("refreshSegment", () => {
     await useWorkspaceStore.getState().refreshSegment();
 
     expect(mockApi.refreshWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("calls markExternalChange after loadTopology to refresh editor content", async () => {
+    mockApi.refreshWorkspace.mockResolvedValue({
+      name: "Test", root: "/test", node_count: 10, edge_count: 7,
+    });
+    mockApi.getStats.mockResolvedValue({
+      node_count: 10, edge_count: 7, tag_count: 2, type_counts: {},
+    });
+    mockApi.getGraphTopology.mockResolvedValue({ nodes: [], edges: [] });
+    mockApi.listWorkspaceFiles.mockResolvedValue([]);
+
+    const spy = vi.spyOn(useEditorStore.getState(), "markExternalChange").mockResolvedValue();
+
+    await useWorkspaceStore.getState().refreshSegment();
+
+    expect(spy).toHaveBeenCalledOnce();
+    spy.mockRestore();
   });
 });
