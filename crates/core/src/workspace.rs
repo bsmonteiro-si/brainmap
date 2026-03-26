@@ -149,6 +149,7 @@ impl Workspace {
                     tags: note.frontmatter.tags.clone(),
                     path: path.clone(),
                     modified: Some(note.frontmatter.modified),
+                    summary: note.frontmatter.summary.clone(),
                 },
             );
         }
@@ -195,6 +196,7 @@ impl Workspace {
                         tags: n.frontmatter.tags.clone(),
                         path: p.clone(),
                         modified: Some(n.frontmatter.modified),
+                        summary: n.frontmatter.summary.clone(),
                     },
                 )
             })
@@ -373,6 +375,7 @@ impl Workspace {
                 tags: note.frontmatter.tags.clone(),
                 path: path.clone(),
                 modified: Some(note.frontmatter.modified),
+                summary: note.frontmatter.summary.clone(),
             },
         );
 
@@ -523,6 +526,7 @@ impl Workspace {
                 tags: note_ref.frontmatter.tags.clone(),
                 path: path.clone(),
                 modified: Some(note_ref.frontmatter.modified),
+                summary: note_ref.frontmatter.summary.clone(),
             },
         );
 
@@ -775,6 +779,7 @@ impl Workspace {
                 tags: new_note.frontmatter.tags.clone(),
                 path: path.clone(),
                 modified: Some(new_note.frontmatter.modified),
+                summary: new_note.frontmatter.summary.clone(),
             },
         );
 
@@ -823,6 +828,7 @@ impl Workspace {
             tags: note.frontmatter.tags.clone(),
             path: path.clone(),
             modified: Some(note.frontmatter.modified),
+            summary: note.frontmatter.summary.clone(),
         };
         self.graph.add_node(path.clone(), node_data.clone());
 
@@ -1014,6 +1020,7 @@ impl Workspace {
                 tags: note.frontmatter.tags.clone(),
                 path: new_rp.clone(),
                 modified: Some(note.frontmatter.modified),
+                summary: note.frontmatter.summary.clone(),
             },
         );
         self.index.add_note(&note, mtime)?;
@@ -1238,6 +1245,7 @@ impl Workspace {
                     tags: note.frontmatter.tags.clone(),
                     path: new_rp.clone(),
                     modified: Some(note.frontmatter.modified),
+                    summary: note.frontmatter.summary.clone(),
                 },
             );
             self.index.add_note(&note, mtime)?;
@@ -1439,6 +1447,7 @@ impl Workspace {
                 tags: vec![],
                 path: dir.clone(),
                 modified: None,
+                summary: None,
             };
             self.graph.add_node(dir.clone(), folder_node.clone());
             added_nodes.push(folder_node);

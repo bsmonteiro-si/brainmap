@@ -112,6 +112,8 @@ pub struct NodeDto {
     pub tags: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub modified: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
 }
 
 impl From<&NodeData> for NodeDto {
@@ -120,8 +122,9 @@ impl From<&NodeData> for NodeDto {
             path: nd.path.as_str().to_string(),
             title: nd.title.clone(),
             note_type: nd.note_type.clone(),
-            tags: None,
+            tags: if nd.tags.is_empty() { None } else { Some(nd.tags.clone()) },
             modified: nd.modified.map(|d| d.to_string()),
+            summary: nd.summary.clone(),
         }
     }
 }

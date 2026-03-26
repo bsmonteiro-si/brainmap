@@ -5371,6 +5371,17 @@ body {
   min-width: 0;
 }
 
+.canvas-file-node-summary {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
 .canvas-file-node-badge {
   position: absolute;
   top: -10px;

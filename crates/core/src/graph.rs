@@ -466,6 +466,7 @@ pub fn compute_folder_hierarchy(
             tags: vec![],
             path: RelativePath::new(dir),
             modified: None,
+            summary: None,
         });
     }
 
@@ -514,6 +515,7 @@ mod tests {
             tags: vec![],
             path: p.clone(),
             modified: None,
+            summary: None,
         };
         (p, data)
     }
