@@ -311,6 +311,12 @@ interface UIState {
   createAndLinkSource: CreateAndLinkSource | null;
   createNoteSaveAsBody: string | null;
   createNoteSaveAsTabId: string | null;
+  convertToNoteOpen: boolean;
+  convertToNoteTitle: string;
+  convertToNoteBody: string;
+  convertToNoteType: string;
+  convertToNotePath: string;
+  convertToNoteCallback: ((createdPath: string) => void) | null;
   unsavedChangesDialogOpen: boolean;
   unsavedChangesTabId: string | null;
   createFolderDialogOpen: boolean;
@@ -471,6 +477,8 @@ interface UIState {
   closeCommandPalette: () => void;
   openCreateNoteDialog: (pathOrOpts?: string | CreateNoteDialogOpts) => void;
   closeCreateNoteDialog: () => void;
+  openConvertToNote: (opts: { title: string; body: string; noteType: string; folderPath: string; callback: (createdPath: string) => void }) => void;
+  closeConvertToNote: () => void;
   openUnsavedChangesDialog: (tabId: string) => void;
   closeUnsavedChangesDialog: () => void;
   openCreateFolderDialog: (initialPath?: string) => void;
@@ -702,6 +710,12 @@ export const useUIStore = create<UIState>((set, get) => ({
   createAndLinkSource: null,
   createNoteSaveAsBody: null,
   createNoteSaveAsTabId: null,
+  convertToNoteOpen: false,
+  convertToNoteTitle: "",
+  convertToNoteBody: "",
+  convertToNoteType: "concept",
+  convertToNotePath: "",
+  convertToNoteCallback: null,
   unsavedChangesDialogOpen: false,
   unsavedChangesTabId: null,
   createFolderDialogOpen: false,
@@ -1035,6 +1049,22 @@ export const useUIStore = create<UIState>((set, get) => ({
     }
   },
   closeCreateNoteDialog: () => set({ createNoteDialogOpen: false, createNoteOnCreatedCallback: null, createNoteInitialPath: null, createNoteInitialTitle: null, createNoteMode: "default", createFileKind: "note", createAndLinkSource: null, createNoteSaveAsBody: null, createNoteSaveAsTabId: null }),
+  openConvertToNote: ({ title, body, noteType, folderPath, callback }) => set({
+    convertToNoteOpen: true,
+    convertToNoteTitle: title,
+    convertToNoteBody: body,
+    convertToNoteType: noteType,
+    convertToNotePath: folderPath,
+    convertToNoteCallback: callback,
+  }),
+  closeConvertToNote: () => set({
+    convertToNoteOpen: false,
+    convertToNoteTitle: "",
+    convertToNoteBody: "",
+    convertToNoteType: "concept",
+    convertToNotePath: "",
+    convertToNoteCallback: null,
+  }),
   openUnsavedChangesDialog: (tabId: string) => set({ unsavedChangesDialogOpen: true, unsavedChangesTabId: tabId }),
   closeUnsavedChangesDialog: () => set({ unsavedChangesDialogOpen: false, unsavedChangesTabId: null }),
   openCreateFolderDialog: (initialPath?: string) => set({ createFolderDialogOpen: true, createFolderInitialPath: initialPath ?? null }),

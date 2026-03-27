@@ -20,6 +20,7 @@ import { SegmentPicker } from "./components/Layout/SegmentPicker";
 import { AppLayout } from "./components/Layout/AppLayout";
 import { CommandPalette } from "./components/CommandPalette/CommandPalette";
 import { CreateNoteDialog } from "./components/Editor/CreateNoteDialog";
+import { ConvertToNoteDialog } from "./components/Editor/ConvertToNoteDialog";
 import { CreateFolderDialog } from "./components/Layout/CreateFolderDialog";
 import { MoveToDialog } from "./components/Layout/MoveToDialog";
 import { SettingsModal } from "./components/Settings/SettingsModal";
@@ -34,6 +35,7 @@ function App() {
   const applyEvent = useGraphStore((s) => s.applyEvent);
   const commandPaletteOpen = useUIStore((s) => s.commandPaletteOpen);
   const createNoteDialogOpen = useUIStore((s) => s.createNoteDialogOpen);
+  const convertToNoteOpen = useUIStore((s) => s.convertToNoteOpen);
   const createFolderDialogOpen = useUIStore((s) => s.createFolderDialogOpen);
   const settingsOpen = useUIStore((s) => s.settingsOpen);
   const unsavedChangesDialogOpen = useUIStore((s) => s.unsavedChangesDialogOpen);
@@ -296,6 +298,8 @@ function App() {
         const ui = useUIStore.getState();
         if (ui.unsavedChangesDialogOpen) {
           // Do nothing — UnsavedChangesDialog handles its own Escape
+        } else if (ui.convertToNoteOpen) {
+          ui.closeConvertToNote();
         } else if (ui.settingsOpen) {
           ui.closeSettings();
         } else if (ui.canvasFullscreen) {
@@ -439,6 +443,7 @@ function App() {
       <AppLayout />
       {commandPaletteOpen && <CommandPalette />}
       {createNoteDialogOpen && <CreateNoteDialog />}
+      {convertToNoteOpen && <ConvertToNoteDialog />}
       {createFolderDialogOpen && <CreateFolderDialog />}
       {settingsOpen && <SettingsModal />}
       {unsavedChangesDialogOpen && <UnsavedChangesDialog />}

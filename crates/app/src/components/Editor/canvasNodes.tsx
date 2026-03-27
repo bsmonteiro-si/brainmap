@@ -5,7 +5,7 @@ import {
   BaseEdge, EdgeLabelRenderer, getBezierPath, getStraightPath, getSmoothStepPath, useReactFlow, useStore,
 } from "@xyflow/react";
 import type { NodeProps, EdgeProps, ReactFlowState } from "@xyflow/react";
-import { Trash2, Palette, Paintbrush, PenLine, Shapes, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Spline, Minus, CornerDownRight, ChevronDown, ChevronRight, FileText, FileImage, FileVideo, FileAudio, FileSpreadsheet, FileArchive, Presentation, LayoutDashboard, PenTool, ALargeSmall } from "lucide-react";
+import { Trash2, Palette, Paintbrush, PenLine, Shapes, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Spline, Minus, CornerDownRight, ChevronDown, ChevronRight, FileText, FileImage, FileVideo, FileAudio, FileSpreadsheet, FileArchive, Presentation, LayoutDashboard, PenTool, ALargeSmall, FileOutput, ArrowRightLeft, MoveHorizontal } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CANVAS_SHAPES, getShapeDefinition } from "./canvasShapes";
 import type { CanvasShapeId } from "./canvasShapes";
@@ -13,9 +13,11 @@ import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
 import { useTabStore } from "../../stores/tabStore";
 import { useUIStore } from "../../stores/uiStore";
-import { useCanvasPanelMode, useCanvasSave, useCanvasSnapshot } from "./CanvasEditor";
+import { useCanvasPanelMode, useCanvasSave, useCanvasSnapshot, useCanvasPath } from "./CanvasEditor";
+import { extractTitleBody } from "../../utils/extractTitleBody";
 
 import { getNodeColor } from "../GraphView/graphStyles";
+import { IMAGE_EXTS, VIDEO_EXTS } from "../../utils/fileExtensions";
 
 // JSON Canvas preset colors
 const CANVAS_COLORS = [
@@ -138,9 +140,10 @@ const selectTotalSelectedCount = (s: ReactFlowState) =>
   Array.from(s.nodeLookup.values()).filter((n) => n.selected).length +
   Array.from(s.edgeLookup.values()).filter((e) => e.selected).length;
 
-function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlign, textVAlign, titleVAlign }: {
+function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlign, textVAlign, titleVAlign, onConvertToNote }: {
   id: string; selected: boolean; shape?: string;
   fontSize?: number; fontFamily?: string; textAlign?: string; textVAlign?: string; titleVAlign?: string;
+  onConvertToNote?: () => void;
 }) {
   const { setNodes, setEdges } = useReactFlow();
   const scheduleSave = useCanvasSave();
@@ -212,6 +215,15 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
         >
           <Trash2 size={16} />
         </button>
+        {onConvertToNote && (
+          <button
+            className="canvas-node-toolbar-btn"
+            title="Convert to note"
+            onClick={onConvertToNote}
+          >
+            <FileOutput size={16} />
+          </button>
+        )}
         <div className="canvas-node-toolbar-color-wrapper">
           <button
             className="canvas-node-toolbar-btn"
@@ -495,6 +507,14 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
       const fileName = filePath.split("/").pop() ?? filePath;
       useTabStore.getState().openTab(filePath, "excalidraw", fileName, null);
       useEditorStore.getState().clearForCustomTab();
+    } else if (IMAGE_EXTS.some((ext) => lp.endsWith(ext))) {
+      const fileName = filePath.split("/").pop() ?? filePath;
+      useTabStore.getState().openTab(filePath, "image", fileName, null);
+      useEditorStore.getState().clearForCustomTab();
+    } else if (VIDEO_EXTS.some((ext) => lp.endsWith(ext))) {
+      const fileName = filePath.split("/").pop() ?? filePath;
+      useTabStore.getState().openTab(filePath, "video", fileName, null);
+      useEditorStore.getState().clearForCustomTab();
     } else {
       useGraphStore.getState().selectNode(null);
       useEditorStore.getState().openPlainFile(filePath);
@@ -569,6 +589,8 @@ export const CanvasFileNode = memo(CanvasFileNodeInner);
 
 // ── Text Node ─────────────────────────────────────────────────────────────────
 
+const CARD_KIND_TO_NOTE_TYPE: Record<string, string> = { question: "question" };
+
 function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
   const d = data as { text?: string; color?: string; bgColor?: string; shape?: string; fontSize?: number; fontFamily?: string; textAlign?: string; textVAlign?: string; cardKind?: string };
   const text = d.text ?? "";
@@ -588,6 +610,32 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
 
   const { setNodes } = useReactFlow();
   const scheduleSave = useCanvasSave();
+  const pushSnapshot = useCanvasSnapshot();
+  const canvasPath = useCanvasPath();
+
+  const handleConvertToNote = useCallback(() => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const { title, body } = extractTitleBody(trimmed);
+    if (!title) return;
+    const noteType = (d.cardKind && CARD_KIND_TO_NOTE_TYPE[d.cardKind]) || "concept";
+    const canvasFolder = canvasPath.includes("/") ? canvasPath.slice(0, canvasPath.lastIndexOf("/")) : "";
+    useUIStore.getState().openConvertToNote({
+      title,
+      body,
+      noteType,
+      folderPath: canvasFolder,
+      callback: (createdPath: string) => {
+        pushSnapshot();
+        setNodes((nds) => nds.map((n) => {
+          if (n.id !== id) return n;
+          return { ...n, type: "canvasFile", data: { file: createdPath } };
+        }));
+        scheduleSave();
+      },
+    });
+  }, [text, d.cardKind, canvasPath, id, setNodes, scheduleSave, pushSnapshot]);
+
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(text);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -655,7 +703,7 @@ function CanvasTextNodeInner({ id, data, selected }: NodeProps) {
       onDoubleClick={() => { setEditValue(text); setEditing(true); }}
     >
       <Resizer id={id} selected={selected} autoHeight={!isFixedShape} />
-      <CanvasNodeToolbar id={id} selected={selected} shape={d.shape ?? "rectangle"} fontSize={d.fontSize} fontFamily={d.fontFamily} textAlign={d.textAlign} textVAlign={d.textVAlign} />
+      <CanvasNodeToolbar id={id} selected={selected} shape={d.shape ?? "rectangle"} fontSize={d.fontSize} fontFamily={d.fontFamily} textAlign={d.textAlign} textVAlign={d.textVAlign} onConvertToNote={text.trim() ? handleConvertToNote : undefined} />
       {cardKindMeta && (() => {
         const headerFontSize = Math.round((d.fontSize ?? 13) * 0.75);
         const BadgeIcon = (LucideIcons as Record<string, React.ComponentType<{ size?: number }>>)[cardKindMeta.icon];
@@ -1016,6 +1064,60 @@ function CanvasEdgeInner({
     scheduleSave();
   };
 
+  const handleInvert = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    pushSnapshot();
+    setEdges((eds) =>
+      eds.map((ed) => {
+        if (ed.id !== id) return ed;
+        // Strip marker keys first so swapping doesn't leave stale undefined values
+        const { markerStart: _, markerEnd: __, sourceHandle: _sh, targetHandle: _th, ...base } = ed;
+        const inverted = {
+          ...base,
+          source: ed.target,
+          target: ed.source,
+          ...(ed.targetHandle
+            ? { sourceHandle: ed.targetHandle.replace(/-target$/, "") }
+            : {}),
+          ...(ed.sourceHandle
+            ? { targetHandle: `${ed.sourceHandle}-target` }
+            : {}),
+          ...(ed.markerEnd ? { markerStart: ed.markerEnd } : {}),
+          ...(ed.markerStart ? { markerEnd: ed.markerStart } : {}),
+        };
+        return inverted;
+      }),
+    );
+    scheduleSave();
+  };
+
+  const handleToggleBidirectional = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    pushSnapshot();
+    setEdges((eds) =>
+      eds.map((ed) => {
+        if (ed.id !== id) return ed;
+        const isBidirectional = !!ed.markerStart && !!ed.markerEnd;
+        if (isBidirectional) {
+          // Remove markerStart entirely (not just undefined) so React Flow
+          // properly clears the SVG marker-start attribute on re-render.
+          const { markerStart: _, ...rest } = ed;
+          return rest;
+        }
+        const stroke = (ed.style as Record<string, unknown> | undefined)?.stroke;
+        const markerId = typeof stroke === "string"
+          ? `brainmap-arrow-${stroke}`
+          : "brainmap-arrow";
+        return {
+          ...ed,
+          markerStart: ed.markerStart || markerId,
+          markerEnd: ed.markerEnd || markerId,
+        };
+      }),
+    );
+    scheduleSave();
+  };
+
   const startEditing = (e: React.MouseEvent) => {
     e.stopPropagation();
     setEditValue(String(label ?? ""));
@@ -1033,7 +1135,7 @@ function CanvasEdgeInner({
 
   return (
     <>
-      <BaseEdge path={edgePath} markerEnd={markerEnd} markerStart={markerStart} style={style} interactionWidth={20} />
+      <BaseEdge key={`${markerStart ?? ""}-${markerEnd ?? ""}`} path={edgePath} markerEnd={markerEnd} markerStart={markerStart} style={style} interactionWidth={20} />
       <EdgeLabelRenderer>
         {/* Label display or input */}
         {showInput ? (
@@ -1111,6 +1213,20 @@ function CanvasEdgeInner({
                 <CornerDownRight size={14} />
               </button>
             </div>
+            <button
+              className="canvas-node-toolbar-btn"
+              title="Invert direction"
+              onClick={handleInvert}
+            >
+              <ArrowRightLeft size={14} />
+            </button>
+            <button
+              className={`canvas-node-toolbar-btn${(!!markerStart && !!markerEnd) ? " canvas-node-toolbar-btn--active" : ""}`}
+              title="Toggle bidirectional"
+              onClick={handleToggleBidirectional}
+            >
+              <MoveHorizontal size={14} />
+            </button>
             <div ref={labelFormatRef} style={{ position: "relative" }}>
               <button
                 className={`canvas-node-toolbar-btn${showLabelFormat ? " canvas-node-toolbar-btn--active" : ""}`}

@@ -7,6 +7,7 @@ import {
   MiniMap,
   Panel,
   addEdge,
+  reconnectEdge,
   useNodesState,
   useEdgesState,
   useReactFlow,
@@ -14,13 +15,14 @@ import {
   SelectionMode,
   useNodesInitialized,
 } from "@xyflow/react";
-import type { OnConnect, ColorMode, Viewport, BackgroundVariant } from "@xyflow/react";
+import type { OnConnect, ColorMode, Viewport, BackgroundVariant, Edge, Connection } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import { getAPI } from "../../api/bridge";
 import { useTabStore } from "../../stores/tabStore";
 import { useUIStore } from "../../stores/uiStore";
 import { log } from "../../utils/logger";
+import { extractTitleBody } from "../../utils/extractTitleBody";
 import { canvasToFlow, flowToCanvas } from "./canvasTranslation";
 import type { JsonCanvas } from "./canvasTranslation";
 import { StickyNote, FileText, FilePlus, Layers, ChevronDown, ChevronRight, MousePointer2, Hand, Group, Trash2, Copy, Ungroup, PanelRightOpen, Search, GripVertical, Folder, FolderOpen, HelpCircle, Link2, Maximize2, Minimize2 } from "lucide-react";
@@ -52,6 +54,12 @@ export function useCanvasSave() { return useContext(CanvasSaveContext); }
 // mutations (color, font, edge type) are undoable via Cmd+Z.
 export const CanvasSnapshotContext = createContext<() => void>(noop);
 export function useCanvasSnapshot() { return useContext(CanvasSnapshotContext); }
+
+// ── Path context ──────────────────────────────────────────────────────────────
+// Provides the canvas file path to child node components (e.g. for deriving
+// the default folder when converting a text card to a note).
+export const CanvasPathContext = createContext<string>("");
+export function useCanvasPath() { return useContext(CanvasPathContext); }
 
 // ── Error boundary ────────────────────────────────────────────────────────────
 
@@ -614,6 +622,15 @@ export function CanvasEditorInner({ path }: { path: string }) {
         ),
       );
       requestAnimationFrame(() => scheduleSave());
+    },
+    [setEdges, scheduleSave, pushSnapshot],
+  );
+
+  const handleReconnect = useCallback(
+    (oldEdge: Edge, newConnection: Connection) => {
+      pushSnapshot();
+      setEdges((eds) => reconnectEdge(oldEdge, newConnection, eds, { shouldReplaceId: false }));
+      scheduleSave();
     },
     [setEdges, scheduleSave, pushSnapshot],
   );
@@ -1356,6 +1373,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   }
 
   return (
+    <CanvasPathContext.Provider value={path}>
     <CanvasSnapshotContext.Provider value={stablePushSnapshot}>
     <CanvasSaveContext.Provider value={stableScheduleSave}>
     <div className={containerClass} style={{ ...shapeVars, ...counterZoomStyle }}>
@@ -1366,6 +1384,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
+        onReconnect={handleReconnect}
         connectionMode="loose"
         onPaneClick={() => { setToolbarPicker(false); setToolbarShapePicker(false); setFileBrowserOpen(false); setLinkInputMode(null); }}
         onPaneContextMenu={handlePaneContextMenu}
@@ -1799,6 +1818,37 @@ export function CanvasEditorInner({ path }: { path: string }) {
                     Change Card Kind...
                   </div>
                 )}
+                {isTextNode && (() => {
+                  const textData = clickedNode.data as Record<string, unknown>;
+                  const cardText = ((textData.text as string) ?? "").trim();
+                  return cardText ? (
+                    <div className="context-menu-item" onClick={() => {
+                      const { title, body } = extractTitleBody(cardText);
+                      if (!title) { closeElemCtxMenu(); return; }
+                      const CARD_KIND_MAP: Record<string, string> = { question: "question" };
+                      const noteType = (textData.cardKind && CARD_KIND_MAP[textData.cardKind as string]) || "concept";
+                      const canvasFolder = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
+                      const nodeId = clickedNode.id;
+                      closeElemCtxMenu();
+                      useUIStore.getState().openConvertToNote({
+                        title,
+                        body,
+                        noteType,
+                        folderPath: canvasFolder,
+                        callback: (createdPath: string) => {
+                          pushSnapshot();
+                          setNodes((nds) => nds.map((n) => {
+                            if (n.id !== nodeId) return n;
+                            return { ...n, type: "canvasFile", data: { file: createdPath } };
+                          }));
+                          scheduleSave();
+                        },
+                      });
+                    }}>
+                      Convert to Note
+                    </div>
+                  ) : null;
+                })()}
                 {canGroup && (
                   <div className="context-menu-item" onClick={() => { groupSelected(); closeElemCtxMenu(); }}>
                     Group Selection
@@ -1936,6 +1986,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
     </div>
     </CanvasSaveContext.Provider>
     </CanvasSnapshotContext.Provider>
+    </CanvasPathContext.Provider>
   );
 }
 
