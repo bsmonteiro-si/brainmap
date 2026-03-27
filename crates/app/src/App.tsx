@@ -40,6 +40,8 @@ function App() {
   const effectiveTheme = useUIStore((s) => s.effectiveTheme);
   const uiFontFamily = useUIStore((s) => s.uiFontFamily);
   const uiFontSize = useUIStore((s) => s.uiFontSize);
+  const headerFontFamily = useUIStore((s) => s.headerFontFamily);
+  const headerFontSize = useUIStore((s) => s.headerFontSize);
   const editorFontFamily = useUIStore((s) => s.editorFontFamily);
   const editorFontSize = useUIStore((s) => s.editorFontSize);
   const tooltipFontSize = useUIStore((s) => s.tooltipFontSize);
@@ -383,7 +385,9 @@ function App() {
     root.style.setProperty("--tooltip-connections-size", `${tooltipConnectionsSize}px`);
     root.style.setProperty("--tooltip-summary-size", `${tooltipSummarySize}px`);
     root.style.setProperty("--tooltip-tag-size", `${tooltipTagSize}px`);
-  }, [uiFontFamily, uiFontSize, editorFontFamily, editorFontSize, tooltipFontSize, tooltipPillSize, tooltipConnectionsSize, tooltipSummarySize, tooltipTagSize]);
+    root.style.setProperty("--header-font-family", headerFontFamily);
+    root.style.setProperty("--header-font-size", `${headerFontSize}px`);
+  }, [uiFontFamily, uiFontSize, headerFontFamily, headerFontSize, editorFontFamily, editorFontSize, tooltipFontSize, tooltipPillSize, tooltipConnectionsSize, tooltipSummarySize, tooltipTagSize]);
 
   // Apply bold/italic CSS variables
   useEffect(() => {

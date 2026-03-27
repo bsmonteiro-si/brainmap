@@ -60,6 +60,13 @@ export const ARROW_COLOR_OPTIONS: { value: ArrowColorStyle; label: string }[] = 
   { value: "inherit",  label: "Inherit (body text)" },
 ];
 
+export type HeaderLayout = "elevated" | "merged" | "sidebar";
+export const HEADER_LAYOUT_OPTIONS: { value: HeaderLayout; label: string }[] = [
+  { value: "elevated", label: "Elevated Bar" },
+  { value: "merged",   label: "Merged with Tabs" },
+  { value: "sidebar",  label: "Sidebar Header" },
+];
+
 export type ArrowType = "->" | "<-" | "<->" | "=>" | "<=>";
 export const ARROW_TYPE_LABELS: Record<ArrowType, string> = {
   "->":  "→  (right arrow)",
@@ -185,6 +192,9 @@ export function getTabSizes(panelSizes: PanelSizes, tab: LeftTab): Required<TabP
 }
 
 interface PersistedPrefs {
+  headerLayout?: HeaderLayout;
+  headerFontFamily?: string;
+  headerFontSize?: number;
   theme?: Theme;
   uiFontFamily?: string;
   uiFontSize?: number;
@@ -281,6 +291,9 @@ interface CreateNoteDialogOpts {
 }
 
 interface UIState {
+  headerLayout: HeaderLayout;
+  headerFontFamily: string;
+  headerFontSize: number;
   theme: Theme;
   effectiveTheme: ThemeName;
   filesTheme: ComponentTheme;
@@ -409,6 +422,9 @@ interface UIState {
   clearHomeNote: () => void;
   toggleLineNumbers: () => void;
   setEditorLineNumbersDefault: (v: boolean) => void;
+  setHeaderLayout: (layout: HeaderLayout) => void;
+  setHeaderFontFamily: (v: string) => void;
+  setHeaderFontSize: (v: number) => void;
   setTheme: (theme: Theme) => void;
   setFilesTheme: (theme: ComponentTheme) => void;
   setEditorTheme: (theme: ComponentTheme) => void;
@@ -628,6 +644,9 @@ const storedSizes = loadStoredSizes();
 const storedPrefs = loadStoredPrefs();
 
 export const useUIStore = create<UIState>((set, get) => ({
+  headerLayout: (storedPrefs.headerLayout as HeaderLayout) ?? "elevated",
+  headerFontFamily: storedPrefs.headerFontFamily ?? DEFAULT_UI_FONT,
+  headerFontSize: storedPrefs.headerFontSize ?? 13,
   theme: storedPrefs.theme ?? "system",
   effectiveTheme: resolveTheme(storedPrefs.theme ?? "system"),
   filesTheme: storedPrefs.filesTheme ?? "inherit",
@@ -804,6 +823,18 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ showLineNumbers: v });
     const s = get();
     savePrefs({ theme: s.theme, uiFontFamily: s.uiFontFamily, uiFontSize: s.uiFontSize, editorFontFamily: s.editorFontFamily, editorFontSize: s.editorFontSize, editorLineNumbers: v, uiZoom: s.uiZoom });
+  },
+  setHeaderLayout: (headerLayout: HeaderLayout) => {
+    set({ headerLayout });
+    savePrefs({ headerLayout });
+  },
+  setHeaderFontFamily: (headerFontFamily: string) => {
+    set({ headerFontFamily });
+    savePrefs({ headerFontFamily });
+  },
+  setHeaderFontSize: (headerFontSize: number) => {
+    set({ headerFontSize });
+    savePrefs({ headerFontSize });
   },
   setTheme: (theme: Theme) => {
     const effective = resolveTheme(theme);

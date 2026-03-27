@@ -277,6 +277,7 @@ body {
 }
 
 /* ── Status Bar ──────────────────────────────────────────────── */
+/* ── Status Bar (base) ──────────────────────────────────────────────────── */
 .status-bar {
   display: flex;
   align-items: center;
@@ -328,6 +329,160 @@ body {
 }
 .status-bar-btn:hover {
   color: var(--text-primary);
+}
+
+/* ── Elevated mode ─────────────────────────────────────────────────────── */
+.status-bar--elevated {
+  padding: 10px 16px;
+  gap: 0;
+  justify-content: space-between;
+  border-bottom: none;
+  font-family: var(--header-font-family);
+  font-size: var(--header-font-size);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 8%, var(--bg-secondary)) 0%,
+    var(--bg-secondary) 100%
+  );
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.status-bar--elevated .segment-switcher-btn {
+  font-family: inherit;
+  font-size: calc(var(--header-font-size) * 1.2);
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.status-bar--elevated .segment-switcher {
+  gap: 6px;
+}
+.status-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.status-bar-monogram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #000));
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  flex-shrink: 0;
+  letter-spacing: 0;
+}
+.status-bar-note-count {
+  font-size: calc(var(--header-font-size) * 0.85);
+  color: var(--text-muted);
+}
+.status-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.status-bar-path {
+  font-size: calc(var(--header-font-size) * 0.85);
+  color: var(--text-muted);
+}
+.status-bar-word-count {
+  font-size: calc(var(--header-font-size) * 0.85);
+  color: var(--text-muted);
+}
+.status-bar-gear {
+  all: unset;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 6px;
+}
+.status-bar-gear:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+/* ── Merged mode (segment pill in tab bar) ────────────────────────────── */
+.tab-bar-with-segment {
+  display: flex;
+  align-items: stretch;
+  min-height: 40px;
+  max-height: 40px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+.tab-bar-with-segment .segment-switcher--compact {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border-right: 1px solid var(--border-color);
+  gap: 4px;
+  flex-shrink: 0;
+}
+.tab-bar-with-segment .segment-switcher--compact .segment-switcher-btn {
+  font-family: var(--header-font-family);
+  font-size: calc(var(--header-font-size) * 0.9);
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  color: var(--text-primary);
+}
+.tab-bar-with-segment .segment-switcher--compact .segment-switcher-btn:hover {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.tab-bar-with-segment .segment-switcher--compact .status-bar-refresh {
+  padding: 2px;
+}
+.tab-bar-with-segment .tab-bar {
+  flex: 1;
+  min-width: 0;
+  border-bottom: none;
+}
+
+/* ── Sidebar mode (segment header above left panel) ───────────────────── */
+.segment-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 10px;
+  gap: 10px;
+  border-bottom: none;
+  flex-shrink: 0;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 6%, var(--bg-secondary)) 0%,
+    var(--bg-secondary) 100%
+  );
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.segment-header .segment-header-monogram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #000));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.segment-header .segment-switcher {
+  flex: 1;
+  min-width: 0;
+}
+.segment-header .segment-switcher-btn {
+  font-family: var(--header-font-family);
+  font-size: calc(var(--header-font-size) * 1.05);
+  font-weight: 700;
+  letter-spacing: -0.2px;
 }
 
 /* ── Graph View ──────────────────────────────────────────────── */
@@ -4109,6 +4264,9 @@ body {
 /* ── Segment Switcher ──────────────────────────────────────────── */
 .segment-switcher {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .segment-switcher-btn {

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from "react";
-import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES, THEME_OPTIONS, THEME_BASE, SOURCE_STYLE_OPTIONS, EXAMPLE_STYLE_OPTIONS, MATH_STYLE_OPTIONS, ATTENTION_STYLE_OPTIONS, BULLET_STYLE_OPTIONS, BOLD_WEIGHT_OPTIONS, ARROW_COLOR_OPTIONS, ARROW_TYPE_LABELS, ALL_ARROW_TYPES } from "../../stores/uiStore";
-import type { LeftTab, ComponentTheme, ThemeName, SourceStyle, ExampleStyle, MathStyle, AttentionStyle, BulletStyle, ArrowColorStyle, ArrowType } from "../../stores/uiStore";
+import { useUIStore, FONT_PRESETS, BUILTIN_TAB_SIZES, THEME_OPTIONS, THEME_BASE, SOURCE_STYLE_OPTIONS, EXAMPLE_STYLE_OPTIONS, MATH_STYLE_OPTIONS, ATTENTION_STYLE_OPTIONS, BULLET_STYLE_OPTIONS, BOLD_WEIGHT_OPTIONS, ARROW_COLOR_OPTIONS, ARROW_TYPE_LABELS, ALL_ARROW_TYPES, HEADER_LAYOUT_OPTIONS } from "../../stores/uiStore";
+import type { LeftTab, ComponentTheme, ThemeName, SourceStyle, ExampleStyle, MathStyle, AttentionStyle, BulletStyle, ArrowColorStyle, ArrowType, HeaderLayout } from "../../stores/uiStore";
 import { DARK_CODE_THEMES, LIGHT_CODE_THEMES, resolveCodeTheme } from "../Editor/cmCodeHighlight";
 
 const SECTIONS = [
@@ -59,6 +59,12 @@ function FontFamilySelect({ value, onChange }: { value: string; onChange: (v: st
 export function SettingsModal() {
   const [activeSection, setActiveSection] = useState<SectionId>("general");
 
+  const headerLayout = useUIStore((s) => s.headerLayout);
+  const setHeaderLayout = useUIStore((s) => s.setHeaderLayout);
+  const headerFontFamily = useUIStore((s) => s.headerFontFamily);
+  const setHeaderFontFamily = useUIStore((s) => s.setHeaderFontFamily);
+  const headerFontSize = useUIStore((s) => s.headerFontSize);
+  const setHeaderFontSize = useUIStore((s) => s.setHeaderFontSize);
   const theme = useUIStore((s) => s.theme);
   const setTheme = useUIStore((s) => s.setTheme);
   const closeSettings = useUIStore((s) => s.closeSettings);
@@ -396,6 +402,39 @@ export function SettingsModal() {
 
   const renderLayout = () => (
     <>
+      {/* ── Header Layout ── */}
+      <div className="settings-section">
+        <div className="settings-section-title">Header</div>
+        <div className="settings-row">
+          <span className="settings-label">Header layout</span>
+          <div className="settings-control">
+            <select value={headerLayout} onChange={(e) => setHeaderLayout(e.target.value as HeaderLayout)}>
+              {HEADER_LAYOUT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Header font</span>
+          <div className="settings-control">
+            <select value={headerFontFamily} onChange={(e) => setHeaderFontFamily(e.target.value)}>
+              {FONT_PRESETS.map((f) => (
+                <option key={f.value} value={f.value}>{f.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Header font size</span>
+          <div className="settings-control">
+            <div className="settings-size-row">
+              <input type="range" min={10} max={20} step={1} value={headerFontSize} onChange={(e) => setHeaderFontSize(Number(e.target.value))} />
+              <span className="settings-size-value">{headerFontSize}px</span>
+            </div>
+          </div>
+        </div>
+      </div>
       {/* ── Panel Layout ── */}
       <div className="settings-section">
         <div className="settings-section-title">Panel Layout</div>
