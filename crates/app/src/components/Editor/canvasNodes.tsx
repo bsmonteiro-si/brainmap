@@ -529,11 +529,15 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
   const [summaryExpanded, setSummaryExpanded] = useState(true);
   const isImage = IMAGE_EXTS.some((ext) => filePath.toLowerCase().endsWith(ext));
   const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
   const [imageExpanded, setImageExpanded] = useState(true);
+  const { setNodes } = useReactFlow();
 
   useEffect(() => {
     if (!isImage || !fileExists) return;
     let cancelled = false;
+    setImageSrc(null);
+    setImageError(false);
     (async () => {
       try {
         const api = await getAPI();
@@ -547,11 +551,54 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
         }
         if (!cancelled) setImageSrc(url);
       } catch {
-        // Silently ignore — node still shows title/badge
+        if (!cancelled) setImageError(true);
       }
     })();
     return () => { cancelled = true; };
   }, [isImage, fileExists, filePath]);
+
+  const scheduleSave = useCanvasSave();
+
+  // Reset node height constraints so React Flow re-measures from actual content.
+  // Clears three layers of height state:
+  //   1. style.height / style.minHeight — CSS constraints we control
+  //   2. n.height — node-level property that NodeResizer may set during drag
+  //   3. n.measured — cached DOM measurement; clearing forces React Flow to re-measure
+  // Sets minHeight to the Resizer floor (50) so Resizer.handleResizeStart still works
+  // (it checks `typeof style.minHeight !== "number"`).
+  const resetNodeHeight = useCallback(() => {
+    setNodes((nds) => nds.map((n) => {
+      if (n.id !== id) return n;
+      const style = (n.style ?? {}) as Record<string, unknown>;
+      const { height: _h, minHeight: _mh, ...rest } = style;
+      return {
+        ...n,
+        height: undefined,
+        measured: undefined,
+        style: { ...rest, minHeight: 50 },
+      };
+    }));
+  }, [id, setNodes]);
+
+  const handleImageLoad = useCallback(() => {
+    resetNodeHeight();
+  }, [resetNodeHeight]);
+
+  // Track whether this is the initial render to skip the effect on mount
+  const imageExpandedInitial = useRef(true);
+
+  const toggleImageExpanded = useCallback(() => {
+    imageExpandedInitial.current = false;
+    setImageExpanded((prev) => !prev);
+  }, []);
+
+  // Run after React commits DOM changes from the toggle so React Flow
+  // re-measures the actual content (with or without the <img>).
+  useEffect(() => {
+    if (imageExpandedInitial.current) return;
+    resetNodeHeight();
+    scheduleSave();
+  }, [imageExpanded, resetNodeHeight, scheduleSave]);
 
   const fileTypeInfo = getFileTypeInfo(filePath);
   const borderColor = d.color ?? (noteType ? getNodeColor(noteType) : fileTypeInfo?.color ?? "var(--border-color)");
@@ -587,13 +634,24 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
         )}
         <span className="canvas-file-node-title" style={{ ...(d.fontSize ? { fontSize: d.fontSize } : {}), ...(d.fontFamily ? { fontFamily: d.fontFamily } : {}) }}>{title}</span>
       </div>
-      {isImage && imageSrc && (
+      {isImage && (imageSrc || imageError) && (
         <div className="canvas-file-node-image">
-          <button className="canvas-file-node-image-toggle nodrag" onClick={() => setImageExpanded(!imageExpanded)}>
+          <button className="canvas-file-node-image-toggle nodrag" onClick={toggleImageExpanded}>
             {imageExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </button>
-          {imageExpanded && (
-            <img src={imageSrc} alt={title} className="canvas-file-node-image-img nodrag" draggable={false} />
+          {imageExpanded && imageError && (
+            <div className="canvas-file-node-image-error">Failed to load preview</div>
+          )}
+          {imageExpanded && imageSrc && !imageError && (
+            <img
+              src={imageSrc}
+              alt={title}
+              className="canvas-file-node-image-img nowheel"
+              draggable={false}
+              loading="lazy"
+              onLoad={handleImageLoad}
+              onError={() => setImageError(true)}
+            />
           )}
         </div>
       )}

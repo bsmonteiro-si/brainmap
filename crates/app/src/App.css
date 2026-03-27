@@ -5620,6 +5620,12 @@ body {
   object-fit: contain;
 }
 
+.canvas-file-node-image-error {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 .canvas-file-node-missing {
   font-size: 11px;
   color: var(--danger);
