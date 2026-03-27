@@ -216,8 +216,7 @@ export function fuzzyFilterTree(nodes: TreeNode[], query: string): TreeNode[] {
 // ── Context Menu ─────────────────────────────────────────────────────────────
 
 const MENU_WIDTH = 200;
-// Keep in sync with VIDEO_EXTS in handlers.rs::handle_resolve_video_path
-const VIDEO_EXTS = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".ogv"];
+import { IMAGE_EXTS, VIDEO_EXTS } from "../../utils/fileExtensions";
 
 interface ContextMenuState {
   x: number;
@@ -801,10 +800,6 @@ function FileTreeNode({
   const label = node.matchIndices && node.matchIndices.length > 0
     ? highlightFuzzyMatch(node.title, node.matchIndices)
     : node.title;
-
-  // Keep in sync with IMAGE_EXTS in handlers.rs::handle_resolve_image_path
-  const IMAGE_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", ".bmp"];
-  // VIDEO_EXTS is defined at module level
 
   const handleClick = () => {
     const lowerPath = node.fullPath.toLowerCase();
