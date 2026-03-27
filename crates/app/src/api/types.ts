@@ -12,6 +12,7 @@ export type { NoteDetailDto as NoteDetail } from "./generated";
 export type { PlainFileDto as PlainFileDetail } from "./generated";
 export type { PdfMetaDto as PdfFileMeta } from "./generated";
 export type { NodeSummaryDto as NodeSummary } from "./generated";
+export type { ImportResultDto, ImportFailureDto } from "./generated";
 
 export interface HighlightRect {
   x: number;
@@ -62,6 +63,7 @@ import type {
   StatsDto,
   PlainFileDto,
   PdfMetaDto,
+  ImportResultDto,
 } from "./generated";
 
 export interface BrainMapAPI {
@@ -122,5 +124,6 @@ export interface BrainMapAPI {
   revealInFileManager(absolutePath: string): Promise<void>;
   openInDefaultApp(absolutePath: string): Promise<void>;
   duplicateNote(path: string): Promise<NoteDetailDto>;
+  importFiles(sourcePaths: string[], targetDir: string): Promise<ImportResultDto>;
   onEvent(callback: (event: WorkspaceEvent) => void): () => void;
 }

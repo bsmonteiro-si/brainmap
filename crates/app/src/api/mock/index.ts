@@ -398,6 +398,10 @@ export class MockBridge implements BrainMapAPI {
     return copy;
   }
 
+  async importFiles(_sourcePaths: string[], _targetDir: string): Promise<{ imported: string[]; failed: { path: string; error: string }[] }> {
+    return { imported: [], failed: [] };
+  }
+
   onEvent(callback: (event: WorkspaceEvent) => void): () => void {
     return eventBus.subscribe(callback);
   }

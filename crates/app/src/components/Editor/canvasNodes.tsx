@@ -15,6 +15,7 @@ import { useTabStore } from "../../stores/tabStore";
 import { useUIStore } from "../../stores/uiStore";
 import { useCanvasPanelMode, useCanvasSave, useCanvasSnapshot, useCanvasPath } from "./CanvasEditor";
 import { extractTitleBody } from "../../utils/extractTitleBody";
+import { getAPI } from "../../api/bridge";
 
 import { getNodeColor } from "../GraphView/graphStyles";
 import { IMAGE_EXTS, VIDEO_EXTS } from "../../utils/fileExtensions";
@@ -526,6 +527,32 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
   const tags = node?.tags ?? [];
   const summary = node?.summary;
   const [summaryExpanded, setSummaryExpanded] = useState(true);
+  const isImage = IMAGE_EXTS.some((ext) => filePath.toLowerCase().endsWith(ext));
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [imageExpanded, setImageExpanded] = useState(true);
+
+  useEffect(() => {
+    if (!isImage || !fileExists) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const api = await getAPI();
+        const meta = await api.resolveImagePath(filePath);
+        let url: string;
+        if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+          const { convertFileSrc } = await import("@tauri-apps/api/core");
+          url = convertFileSrc(meta.absolute_path);
+        } else {
+          url = meta.absolute_path;
+        }
+        if (!cancelled) setImageSrc(url);
+      } catch {
+        // Silently ignore — node still shows title/badge
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isImage, fileExists, filePath]);
+
   const fileTypeInfo = getFileTypeInfo(filePath);
   const borderColor = d.color ?? (noteType ? getNodeColor(noteType) : fileTypeInfo?.color ?? "var(--border-color)");
 
@@ -560,6 +587,16 @@ function CanvasFileNodeInner({ id, data, selected }: NodeProps) {
         )}
         <span className="canvas-file-node-title" style={{ ...(d.fontSize ? { fontSize: d.fontSize } : {}), ...(d.fontFamily ? { fontFamily: d.fontFamily } : {}) }}>{title}</span>
       </div>
+      {isImage && imageSrc && (
+        <div className="canvas-file-node-image">
+          <button className="canvas-file-node-image-toggle nodrag" onClick={() => setImageExpanded(!imageExpanded)}>
+            {imageExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          </button>
+          {imageExpanded && (
+            <img src={imageSrc} alt={title} className="canvas-file-node-image-img nodrag" draggable={false} />
+          )}
+        </div>
+      )}
       {summary && (
         <div
           className={`canvas-file-node-summary${summaryExpanded ? " canvas-file-node-summary--expanded" : ""}`}

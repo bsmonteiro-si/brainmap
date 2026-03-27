@@ -4,6 +4,7 @@ import type {
   BrainMapAPI,
   EdgeDto,
   GraphTopology,
+  ImportResultDto,
   NodeSummary,
   NoteDetail,
   PdfFileMeta,
@@ -188,6 +189,10 @@ export class TauriBridge implements BrainMapAPI {
 
   async duplicateNote(path: string): Promise<NoteDetail> {
     return invoke("duplicate_note", { path });
+  }
+
+  async importFiles(sourcePaths: string[], targetDir: string): Promise<ImportResultDto> {
+    return invoke("import_files", { sourcePaths, targetDir });
   }
 
   onEvent(callback: (event: WorkspaceEvent) => void): () => void {

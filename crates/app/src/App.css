@@ -5595,6 +5595,31 @@ body {
   color: var(--text-secondary);
 }
 
+.canvas-file-node-image {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.canvas-file-node-image-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+}
+
+.canvas-file-node-image-img {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
 .canvas-file-node-missing {
   font-size: 11px;
   color: var(--danger);
@@ -6689,5 +6714,41 @@ body {
   border-right: 2px solid var(--text-secondary);
   border-bottom: 2px solid var(--text-secondary);
   opacity: 0.4;
+}
+
+/* ── External file drop overlay ─────────────────────────────── */
+
+.external-drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(var(--accent-rgb, 59, 130, 246), 0.08);
+  border: 3px dashed var(--accent-color, #3b82f6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.external-drop-overlay-content {
+  font-size: 1.2rem;
+  color: var(--accent-color, #3b82f6);
+  font-weight: 500;
+  padding: 12px 24px;
+  border-radius: 8px;
+  background: var(--bg-primary, #1e1e2e);
+}
+
+/* Highlight on the folder (or root) that would receive external file drops */
+.tree-folder.external-drop-target {
+  background: var(--accent-color, #3b82f6) !important;
+  color: #fff !important;
+  border-radius: 4px;
+}
+
+.file-tree-content.external-drop-target {
+  outline: 2px dashed var(--accent-color, #3b82f6);
+  outline-offset: -2px;
+  border-radius: 4px;
 }
 

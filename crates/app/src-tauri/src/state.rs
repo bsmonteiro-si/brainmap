@@ -25,7 +25,8 @@ pub struct AppState {
     /// The currently active workspace root (canonicalized).
     active_root: Arc<Mutex<Option<String>>>,
     /// Per-workspace file watchers. Dropping a debouncer stops its watcher.
-    watchers: Arc<Mutex<HashMap<String, notify_debouncer_mini::Debouncer<notify::RecommendedWatcher>>>>,
+    watchers:
+        Arc<Mutex<HashMap<String, notify_debouncer_mini::Debouncer<notify::RecommendedWatcher>>>>,
 }
 
 impl AppState {

@@ -1,13 +1,15 @@
 use std::collections::HashSet;
 use tauri::State;
-use tracing::{info, warn, error, debug};
+use tracing::{debug, error, info, warn};
 
 use brainmap_core::model::{Direction, RelativePath};
 
 use crate::dto::*;
 use crate::handlers;
-use crate::state::{AppState, WorkspaceSlot, canonicalize_root};
-use crate::watcher::{self, node_to_payload, edge_to_payload, emit_topology_event, emit_files_changed_event};
+use crate::state::{canonicalize_root, AppState, WorkspaceSlot};
+use crate::watcher::{
+    self, edge_to_payload, emit_files_changed_event, emit_topology_event, node_to_payload,
+};
 
 /// Build a WorkspaceInfoDto from a slot's workspace.
 fn workspace_info_from_slot(slot: &WorkspaceSlot) -> WorkspaceInfoDto {
@@ -33,9 +35,7 @@ pub async fn open_workspace(
     // If a slot already exists for this root, just activate it.
     if state.has_slot(&canonical) {
         state.set_active_root(Some(canonical.clone()));
-        return state.with_slot(&canonical, |slot| {
-            Ok(workspace_info_from_slot(slot))
-        });
+        return state.with_slot(&canonical, |slot| Ok(workspace_info_from_slot(slot)));
     }
 
     // Check for overlapping roots.
@@ -57,9 +57,7 @@ pub async fn open_workspace(
     if !state.insert_slot(canonical.clone(), slot) {
         // Another thread won the race — activate the existing slot.
         state.set_active_root(Some(canonical.clone()));
-        return state.with_slot(&canonical, |slot| {
-            Ok(workspace_info_from_slot(slot))
-        });
+        return state.with_slot(&canonical, |slot| Ok(workspace_info_from_slot(slot)));
     }
     state.set_active_root(Some(canonical.clone()));
 
@@ -92,7 +90,10 @@ pub fn close_workspace(state: State<'_, AppState>, root: String) -> Result<(), S
 }
 
 #[tauri::command]
-pub fn switch_workspace(state: State<'_, AppState>, root: String) -> Result<WorkspaceInfoDto, String> {
+pub fn switch_workspace(
+    state: State<'_, AppState>,
+    root: String,
+) -> Result<WorkspaceInfoDto, String> {
     let canonical = canonicalize_root(&root);
     info!(root = %canonical, "switch_workspace called");
 
@@ -102,9 +103,7 @@ pub fn switch_workspace(state: State<'_, AppState>, root: String) -> Result<Work
 
     state.set_active_root(Some(canonical.clone()));
 
-    state.with_slot(&canonical, |slot| {
-        Ok(workspace_info_from_slot(slot))
-    })
+    state.with_slot(&canonical, |slot| Ok(workspace_info_from_slot(slot)))
 }
 
 #[tauri::command]
@@ -113,8 +112,8 @@ pub async fn refresh_workspace(state: State<'_, AppState>) -> Result<WorkspaceIn
     info!(root = %root, "refresh_workspace called");
     state.with_slot_mut(&root, |slot| {
         let path = slot.workspace.root.clone();
-        let fresh = brainmap_core::workspace::Workspace::open_or_init(&path)
-            .map_err(|e| e.to_string())?;
+        let fresh =
+            brainmap_core::workspace::Workspace::open_or_init(&path).map_err(|e| e.to_string())?;
         slot.workspace = fresh;
         // Clear expected_writes so the file watcher doesn't suppress events
         // for paths that were pending before refresh.
@@ -127,7 +126,11 @@ pub async fn refresh_workspace(state: State<'_, AppState>) -> Result<WorkspaceIn
 pub fn get_graph_topology(state: State<'_, AppState>) -> Result<GraphTopologyDto, String> {
     state.with_active(|ws| {
         let topo = handlers::handle_get_topology(ws);
-        info!(nodes = topo.nodes.len(), edges = topo.edges.len(), "get_graph_topology");
+        info!(
+            nodes = topo.nodes.len(),
+            edges = topo.edges.len(),
+            "get_graph_topology"
+        );
         Ok(topo)
     })
 }
@@ -149,7 +152,10 @@ pub fn create_node(
 
     // Collect folder nodes before, create note, and read back state — all in one lock
     let (created_path, added_nodes, added_edges) = state.with_slot_mut(&root, |slot| {
-        let folder_nodes_before: HashSet<String> = slot.workspace.graph.all_nodes()
+        let folder_nodes_before: HashSet<String> = slot
+            .workspace
+            .graph
+            .all_nodes()
             .filter(|(_, nd)| nd.is_folder())
             .map(|(rp, _)| rp.as_str().to_string())
             .collect();
@@ -226,15 +232,25 @@ pub fn delete_node(
         let rp = RelativePath::new(&path);
 
         // Collect all edges touching this node before deletion
-        let mut edges: Vec<_> = slot.workspace.graph.edges_for(&rp, &Direction::Both)
-            .into_iter().cloned().collect();
+        let mut edges: Vec<_> = slot
+            .workspace
+            .graph
+            .edges_for(&rp, &Direction::Both)
+            .into_iter()
+            .cloned()
+            .collect();
 
         // Collect ancestor folder node paths and their edges (they may get pruned)
         let mut folder_ancestors: Vec<String> = Vec::new();
         if let Some(parent_rp) = rp.parent() {
             let mut current = Some(parent_rp);
             while let Some(dir_rp) = current {
-                if slot.workspace.graph.get_node(&dir_rp).map_or(false, |n| n.is_folder()) {
+                if slot
+                    .workspace
+                    .graph
+                    .get_node(&dir_rp)
+                    .map_or(false, |n| n.is_folder())
+                {
                     folder_ancestors.push(dir_rp.as_str().to_string());
                     // Collect folder edges before deletion might prune them
                     for e in slot.workspace.graph.edges_for(&dir_rp, &Direction::Both) {
@@ -249,8 +265,14 @@ pub fn delete_node(
         handlers::handle_delete_note(&mut slot.workspace, &path, force.unwrap_or(false))?;
 
         // Check which folder nodes were pruned
-        let removed_folders: Vec<String> = folder_ancestors.into_iter()
-            .filter(|fp| slot.workspace.graph.get_node(&RelativePath::new(fp)).is_none())
+        let removed_folders: Vec<String> = folder_ancestors
+            .into_iter()
+            .filter(|fp| {
+                slot.workspace
+                    .graph
+                    .get_node(&RelativePath::new(fp))
+                    .is_none()
+            })
             .collect();
 
         Ok((edges, removed_folders))
@@ -263,7 +285,14 @@ pub fn delete_node(
         removed_nodes.push(folder_path.clone());
     }
 
-    emit_topology_event(&app, &root, vec![], removed_nodes, vec![], all_removed_edges);
+    emit_topology_event(
+        &app,
+        &root,
+        vec![],
+        removed_nodes,
+        vec![],
+        all_removed_edges,
+    );
 
     Ok(())
 }
@@ -316,9 +345,16 @@ pub fn move_folder(
     })?;
 
     // Register expected writes for all notes under the old folder
-    let old_prefix = if old_folder.ends_with('/') { old_folder.clone() } else { format!("{}/", old_folder) };
+    let old_prefix = if old_folder.ends_with('/') {
+        old_folder.clone()
+    } else {
+        format!("{}/", old_folder)
+    };
     let note_paths: Vec<std::path::PathBuf> = state.with_slot(&root, |slot| {
-        Ok(slot.workspace.notes.keys()
+        Ok(slot
+            .workspace
+            .notes
+            .keys()
             .filter(|p| p.as_str().starts_with(&old_prefix))
             .map(|p| slot.workspace.root.join(p.as_str()))
             .collect())
@@ -383,7 +419,9 @@ pub fn create_link(
     let rel = params.rel.clone();
     let abs_path = state.with_slot(&root, |slot| Ok(slot.workspace.root.join(&params.source)))?;
     state.register_expected_write(&root, abs_path);
-    state.with_slot_mut(&root, |slot| handlers::handle_create_link(&mut slot.workspace, params))?;
+    state.with_slot_mut(&root, |slot| {
+        handlers::handle_create_link(&mut slot.workspace, params)
+    })?;
 
     // Emit the new edge
     emit_topology_event(
@@ -423,7 +461,9 @@ pub fn delete_link(
         kind: "Explicit".to_string(),
     };
 
-    state.with_slot_mut(&root, |slot| handlers::handle_delete_link(&mut slot.workspace, &source, &target, &rel))?;
+    state.with_slot_mut(&root, |slot| {
+        handlers::handle_delete_link(&mut slot.workspace, &source, &target, &rel)
+    })?;
 
     emit_topology_event(&app, &root, vec![], vec![], vec![], vec![edge_payload]);
 
@@ -439,7 +479,10 @@ pub fn list_links(
 }
 
 #[tauri::command]
-pub fn get_node_summary(state: State<'_, AppState>, path: String) -> Result<NodeSummaryDto, String> {
+pub fn get_node_summary(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<NodeSummaryDto, String> {
     state.with_active(|ws| handlers::handle_get_node_summary(ws, &path))
 }
 
@@ -464,15 +507,20 @@ pub fn delete_folder(
         if p.is_absolute() {
             return Err("Folder path must be relative".to_string());
         }
-        let normalized = ws.root.join(p).components().fold(
-            std::path::PathBuf::new(),
-            |mut acc, c| {
-                match c {
-                    std::path::Component::ParentDir => { acc.pop(); acc }
-                    _ => { acc.push(c); acc }
-                }
-            },
-        );
+        let normalized =
+            ws.root
+                .join(p)
+                .components()
+                .fold(std::path::PathBuf::new(), |mut acc, c| match c {
+                    std::path::Component::ParentDir => {
+                        acc.pop();
+                        acc
+                    }
+                    _ => {
+                        acc.push(c);
+                        acc
+                    }
+                });
         if !normalized.starts_with(&ws.root) {
             return Err("Path escapes workspace root".to_string());
         }
@@ -480,7 +528,11 @@ pub fn delete_folder(
     })?;
 
     // Register expected writes for ALL note files in the folder before deleting
-    let prefix = if path.ends_with('/') { path.clone() } else { format!("{}/", path) };
+    let prefix = if path.ends_with('/') {
+        path.clone()
+    } else {
+        format!("{}/", path)
+    };
 
     // Collect all workspace files under the folder before deletion (for files-changed event)
     let all_files_in_folder: Vec<String> = state.with_slot(&root, |slot| {
@@ -495,7 +547,10 @@ pub fn delete_folder(
     // Collect edges and folder nodes before deletion, then perform deletion in one lock
     let (result, edges_before, removed_folder_nodes) = state.with_slot_mut(&root, |slot| {
         // Register expected writes
-        let note_abs_paths: Vec<std::path::PathBuf> = slot.workspace.notes.keys()
+        let note_abs_paths: Vec<std::path::PathBuf> = slot
+            .workspace
+            .notes
+            .keys()
             .filter(|p| p.as_str().starts_with(&prefix))
             .map(|p| slot.workspace.root.join(p.as_str()))
             .collect();
@@ -513,9 +568,14 @@ pub fn delete_folder(
         }
 
         // Collect folder node paths under this prefix
-        let folder_nodes_before: Vec<String> = slot.workspace.graph.all_nodes()
+        let folder_nodes_before: Vec<String> = slot
+            .workspace
+            .graph
+            .all_nodes()
             .filter(|(_, nd)| nd.is_folder())
-            .filter(|(fp, _)| fp.as_str().starts_with(&prefix) || fp.as_str() == path.trim_end_matches('/'))
+            .filter(|(fp, _)| {
+                fp.as_str().starts_with(&prefix) || fp.as_str() == path.trim_end_matches('/')
+            })
             .map(|(fp, _)| fp.as_str().to_string())
             .collect();
 
@@ -528,11 +588,18 @@ pub fn delete_folder(
         }
 
         // Perform deletion
-        let result = handlers::handle_delete_folder(&mut slot.workspace, &path, force.unwrap_or(false))?;
+        let result =
+            handlers::handle_delete_folder(&mut slot.workspace, &path, force.unwrap_or(false))?;
 
         // Check which folder nodes were removed
-        let removed_folders: Vec<String> = folder_nodes_before.into_iter()
-            .filter(|fp| slot.workspace.graph.get_node(&RelativePath::new(fp)).is_none())
+        let removed_folders: Vec<String> = folder_nodes_before
+            .into_iter()
+            .filter(|fp| {
+                slot.workspace
+                    .graph
+                    .get_node(&RelativePath::new(fp))
+                    .is_none()
+            })
             .collect();
 
         // Register expected writes (must be done here while we have the lock)
@@ -555,7 +622,8 @@ pub fn delete_folder(
     // Emit files-changed for untracked files that were in the folder
     let deleted_note_set: std::collections::HashSet<&str> =
         result.deleted_paths.iter().map(|s| s.as_str()).collect();
-    let removed_plain_files: Vec<String> = all_files_in_folder.into_iter()
+    let removed_plain_files: Vec<String> = all_files_in_folder
+        .into_iter()
         .filter(|f| !deleted_note_set.contains(f.as_str()))
         .collect();
     if !removed_plain_files.is_empty() {
@@ -578,15 +646,20 @@ pub fn create_folder(state: State<'_, AppState>, path: String) -> Result<(), Str
         }
         // Normalize ".." components without requiring the directory to exist yet,
         // then verify the result stays within the workspace root.
-        let normalized = ws.root.join(p).components().fold(
-            std::path::PathBuf::new(),
-            |mut acc, c| {
-                match c {
-                    std::path::Component::ParentDir => { acc.pop(); acc }
-                    _ => { acc.push(c); acc }
-                }
-            },
-        );
+        let normalized =
+            ws.root
+                .join(p)
+                .components()
+                .fold(std::path::PathBuf::new(), |mut acc, c| match c {
+                    std::path::Component::ParentDir => {
+                        acc.pop();
+                        acc
+                    }
+                    _ => {
+                        acc.push(c);
+                        acc
+                    }
+                });
         if !normalized.starts_with(&ws.root) {
             return Err("Path escapes workspace root".to_string());
         }
@@ -607,7 +680,9 @@ pub fn create_plain_file(
         handlers::validate_relative_path(&slot.workspace.root, &path)
     })?;
     state.register_expected_write(&root, abs_path);
-    let result = state.with_slot(&root, |slot| handlers::handle_create_plain_file(&slot.workspace, &path, body.as_deref()))?;
+    let result = state.with_slot(&root, |slot| {
+        handlers::handle_create_plain_file(&slot.workspace, &path, body.as_deref())
+    })?;
 
     emit_files_changed_event(&app, &root, vec![path.clone()], vec![]);
 
@@ -632,7 +707,9 @@ pub fn delete_plain_file(
         handlers::validate_relative_path(&slot.workspace.root, &path)
     })?;
     state.register_expected_write(&root, abs_path);
-    state.with_slot(&root, |slot| handlers::handle_delete_plain_file(&slot.workspace, &path))?;
+    state.with_slot(&root, |slot| {
+        handlers::handle_delete_plain_file(&slot.workspace, &path)
+    })?;
 
     emit_files_changed_event(&app, &root, vec![], vec![path.clone()]);
 
@@ -686,24 +763,37 @@ pub fn resolve_pdf_path(state: State<'_, AppState>, path: String) -> Result<PdfM
 }
 
 #[tauri::command]
-pub fn load_pdf_highlights(state: State<'_, AppState>, pdf_path: String) -> Result<Vec<PdfHighlightDto>, String> {
+pub fn load_pdf_highlights(
+    state: State<'_, AppState>,
+    pdf_path: String,
+) -> Result<Vec<PdfHighlightDto>, String> {
     state.with_active(|ws| handlers::handle_load_pdf_highlights(ws, &pdf_path))
 }
 
 #[tauri::command]
-pub fn save_pdf_highlights(state: State<'_, AppState>, pdf_path: String, highlights: Vec<PdfHighlightDto>) -> Result<(), String> {
+pub fn save_pdf_highlights(
+    state: State<'_, AppState>,
+    pdf_path: String,
+    highlights: Vec<PdfHighlightDto>,
+) -> Result<(), String> {
     state.with_active(|ws| handlers::handle_save_pdf_highlights(ws, &pdf_path, highlights))
 }
 
 #[tauri::command]
-pub fn write_plain_file(state: State<'_, AppState>, path: String, body: String) -> Result<(), String> {
+pub fn write_plain_file(
+    state: State<'_, AppState>,
+    path: String,
+    body: String,
+) -> Result<(), String> {
     let root = state.resolve_root(None)?;
     let abs_path = state.with_slot(&root, |slot| {
         handlers::validate_relative_path(&slot.workspace.root, &path)
     })?;
     debug!(path = %path, abs_path = %abs_path.display(), "write_plain_file: registering expected write");
     state.register_expected_write(&root, abs_path);
-    state.with_slot(&root, |slot| handlers::handle_write_plain_file(&slot.workspace, &path, &body))
+    state.with_slot(&root, |slot| {
+        handlers::handle_write_plain_file(&slot.workspace, &path, &body)
+    })
 }
 
 #[tauri::command]
@@ -727,7 +817,10 @@ pub fn write_raw_note(
         &app,
         &root,
         diff.added_nodes.iter().map(node_to_payload).collect(),
-        diff.removed_nodes.iter().map(|p| p.as_str().to_string()).collect(),
+        diff.removed_nodes
+            .iter()
+            .map(|p| p.as_str().to_string())
+            .collect(),
         diff.added_edges.iter().map(edge_to_payload).collect(),
         diff.removed_edges.iter().map(edge_to_payload).collect(),
     );
@@ -756,7 +849,10 @@ pub fn convert_to_note(
         &app,
         &root,
         diff.added_nodes.iter().map(node_to_payload).collect(),
-        diff.removed_nodes.iter().map(|p| p.as_str().to_string()).collect(),
+        diff.removed_nodes
+            .iter()
+            .map(|p| p.as_str().to_string())
+            .collect(),
         diff.added_edges.iter().map(edge_to_payload).collect(),
         diff.removed_edges.iter().map(edge_to_payload).collect(),
     );
@@ -767,6 +863,18 @@ pub fn convert_to_note(
 #[tauri::command]
 pub fn list_workspace_files(state: State<'_, AppState>) -> Result<Vec<String>, String> {
     state.with_active(|ws| Ok(handlers::handle_list_workspace_files(ws)))
+}
+
+#[tauri::command]
+pub fn import_files(
+    state: State<'_, AppState>,
+    source_paths: Vec<String>,
+    target_dir: String,
+) -> Result<ImportResultDto, String> {
+    let root = state.resolve_root(None)?;
+    state.with_slot(&root, |slot| {
+        handlers::handle_import_files(&slot.workspace, &source_paths, &target_dir)
+    })
 }
 
 #[tauri::command]
@@ -836,8 +944,8 @@ pub fn duplicate_note(state: State<'_, AppState>, path: String) -> Result<NoteDe
     state.with_active_mut(|ws| {
         // Read original note content
         let abs = ws.root.join(&path);
-        let content = std::fs::read_to_string(&abs)
-            .map_err(|e| format!("Failed to read note: {}", e))?;
+        let content =
+            std::fs::read_to_string(&abs).map_err(|e| format!("Failed to read note: {}", e))?;
 
         // Generate copy path: "Note.md" → "Note (copy).md"
         let stem = path.trim_end_matches(".md");
@@ -854,14 +962,15 @@ pub fn duplicate_note(state: State<'_, AppState>, path: String) -> Result<NoteDe
             std::fs::create_dir_all(parent)
                 .map_err(|e| format!("Failed to create directory: {}", e))?;
         }
-        std::fs::write(&copy_abs, &content)
-            .map_err(|e| format!("Failed to write copy: {}", e))?;
+        std::fs::write(&copy_abs, &content).map_err(|e| format!("Failed to write copy: {}", e))?;
 
         // Reload the workspace to pick up the new file
         ws.add_file(&copy_path).map_err(|e| e.to_string())?;
 
         // Return the new note detail
-        let note = ws.notes.get(&RelativePath::new(&copy_path))
+        let note = ws
+            .notes
+            .get(&RelativePath::new(&copy_path))
             .ok_or_else(|| format!("Failed to find copied note: {}", copy_path))?;
         Ok(NoteDetailDto::from(note))
     })

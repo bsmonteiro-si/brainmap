@@ -43,15 +43,14 @@ pub fn handle_get_topology(ws: &Workspace) -> GraphTopologyDto {
 
 /// Get full note content for the editor.
 pub fn handle_read_note(ws: &Workspace, path: &str) -> Result<NoteDetailDto, String> {
-    let note = ws.read_note(path).map_err(|e: BrainMapError| e.to_string())?;
+    let note = ws
+        .read_note(path)
+        .map_err(|e: BrainMapError| e.to_string())?;
     Ok(NoteDetailDto::from(note))
 }
 
 /// Create a new note.
-pub fn handle_create_note(
-    ws: &mut Workspace,
-    params: CreateNoteParams,
-) -> Result<String, String> {
+pub fn handle_create_note(ws: &mut Workspace, params: CreateNoteParams) -> Result<String, String> {
     let status = params
         .status
         .as_deref()
@@ -91,10 +90,7 @@ pub fn handle_convert_to_note(
 }
 
 /// Update an existing note.
-pub fn handle_update_note(
-    ws: &mut Workspace,
-    params: UpdateNoteParams,
-) -> Result<(), String> {
+pub fn handle_update_note(ws: &mut Workspace, params: UpdateNoteParams) -> Result<(), String> {
     let status = params
         .status
         .as_deref()
@@ -125,7 +121,8 @@ pub fn handle_delete_note(ws: &mut Workspace, path: &str, force: bool) -> Result
     if abs.exists() {
         trash::delete(&abs).map_err(|e| format!("Failed to move to trash: {}", e))?;
     }
-    ws.delete_note(path, force).map_err(|e: BrainMapError| e.to_string())
+    ws.delete_note(path, force)
+        .map_err(|e: BrainMapError| e.to_string())
 }
 
 /// Delete a folder and all notes inside it.
@@ -179,8 +176,8 @@ pub fn handle_delete_folder(
         }
 
         if !external_backlinks.is_empty() {
-            let bl_json = serde_json::to_string(&external_backlinks)
-                .unwrap_or_else(|_| "[]".to_string());
+            let bl_json =
+                serde_json::to_string(&external_backlinks).unwrap_or_else(|_| "[]".to_string());
             return Err(format!("EXTERNAL_BACKLINKS:{}", bl_json));
         }
     }
@@ -195,13 +192,9 @@ pub fn handle_delete_folder(
             Ok(()) => deleted_paths.push(note_path.clone()),
             Err(e) => {
                 // Partial failure: return what we managed to delete + the error
-                let partial_json = serde_json::to_string(&deleted_paths)
-                    .unwrap_or_else(|_| "[]".to_string());
-                return Err(format!(
-                    "PARTIAL_DELETE:{}:{}",
-                    partial_json,
-                    e
-                ));
+                let partial_json =
+                    serde_json::to_string(&deleted_paths).unwrap_or_else(|_| "[]".to_string());
+                return Err(format!("PARTIAL_DELETE:{}:{}", partial_json, e));
             }
         }
     }
@@ -308,7 +301,10 @@ pub fn handle_search(ws: &Workspace, params: SearchParams) -> Result<Vec<SearchR
         status: params.status,
     };
 
-    let results = ws.index.search(&params.query, &filters).map_err(|e: BrainMapError| e.to_string())?;
+    let results = ws
+        .index
+        .search(&params.query, &filters)
+        .map_err(|e: BrainMapError| e.to_string())?;
     Ok(results
         .into_iter()
         .map(|r| SearchResultDto {
@@ -348,8 +344,13 @@ pub fn handle_get_neighbors(
 
 /// Create a link between two notes.
 pub fn handle_create_link(ws: &mut Workspace, params: LinkParams) -> Result<(), String> {
-    ws.create_link(&params.source, &params.target, &params.rel, params.annotation)
-        .map_err(|e: BrainMapError| e.to_string())
+    ws.create_link(
+        &params.source,
+        &params.target,
+        &params.rel,
+        params.annotation,
+    )
+    .map_err(|e: BrainMapError| e.to_string())
 }
 
 /// Delete a link.
@@ -411,8 +412,7 @@ pub fn handle_get_stats(ws: &Workspace) -> StatsDto {
 /// Read a plain (non-BrainMap) file's raw content.
 pub fn handle_read_plain_file(ws: &Workspace, path: &str) -> Result<PlainFileDto, String> {
     let abs = validate_relative_path(&ws.root, path)?;
-    let bytes = std::fs::read(&abs)
-        .map_err(|e| format!("Failed to read file: {}", e))?;
+    let bytes = std::fs::read(&abs).map_err(|e| format!("Failed to read file: {}", e))?;
     match String::from_utf8(bytes) {
         Ok(body) => Ok(PlainFileDto {
             path: path.to_string(),
@@ -436,15 +436,16 @@ pub fn handle_resolve_image_path(ws: &Workspace, path: &str) -> Result<ImageMeta
     if !abs.exists() {
         return Err(format!("File not found: {}", path));
     }
-    let ext = abs.extension()
+    let ext = abs
+        .extension()
         .and_then(|e| e.to_str())
         .map(|e| e.to_lowercase());
     let ext_str = ext.as_deref().unwrap_or("");
     if !IMAGE_EXTS.contains(&ext_str) {
         return Err(format!("Not an image file: {}", path));
     }
-    let meta = std::fs::metadata(&abs)
-        .map_err(|e| format!("Failed to read file metadata: {}", e))?;
+    let meta =
+        std::fs::metadata(&abs).map_err(|e| format!("Failed to read file metadata: {}", e))?;
     let size = meta.len();
     const MAX_IMAGE_SIZE: u64 = 100 * 1024 * 1024; // 100 MB
     if size > MAX_IMAGE_SIZE {
@@ -469,15 +470,16 @@ pub fn handle_resolve_video_path(ws: &Workspace, path: &str) -> Result<VideoMeta
     if !abs.exists() {
         return Err(format!("File not found: {}", path));
     }
-    let ext = abs.extension()
+    let ext = abs
+        .extension()
         .and_then(|e| e.to_str())
         .map(|e| e.to_lowercase());
     let ext_str = ext.as_deref().unwrap_or("");
     if !VIDEO_EXTS.contains(&ext_str) {
         return Err(format!("Not a video file: {}", path));
     }
-    let meta = std::fs::metadata(&abs)
-        .map_err(|e| format!("Failed to read file metadata: {}", e))?;
+    let meta =
+        std::fs::metadata(&abs).map_err(|e| format!("Failed to read file metadata: {}", e))?;
     let size = meta.len();
     const MAX_VIDEO_SIZE: u64 = 2 * 1024 * 1024 * 1024; // 2 GB
     if size > MAX_VIDEO_SIZE {
@@ -500,14 +502,15 @@ pub fn handle_resolve_pdf_path(ws: &Workspace, path: &str) -> Result<PdfMetaDto,
     if !abs.exists() {
         return Err(format!("File not found: {}", path));
     }
-    let ext = abs.extension()
+    let ext = abs
+        .extension()
         .and_then(|e| e.to_str())
         .map(|e| e.to_lowercase());
     if ext.as_deref() != Some("pdf") {
         return Err(format!("Not a PDF file: {}", path));
     }
-    let meta = std::fs::metadata(&abs)
-        .map_err(|e| format!("Failed to read file metadata: {}", e))?;
+    let meta =
+        std::fs::metadata(&abs).map_err(|e| format!("Failed to read file metadata: {}", e))?;
     let size = meta.len();
     const MAX_PDF_SIZE: u64 = 50 * 1024 * 1024; // 50 MB
     if size > MAX_PDF_SIZE {
@@ -525,7 +528,11 @@ pub fn handle_resolve_pdf_path(ws: &Workspace, path: &str) -> Result<PdfMetaDto,
 
 /// Create a new plain (non-BrainMap) file on disk.
 /// Creates parent directories if needed. Rejects if the file already exists.
-pub fn handle_create_plain_file(ws: &Workspace, path: &str, body: Option<&str>) -> Result<String, String> {
+pub fn handle_create_plain_file(
+    ws: &Workspace,
+    path: &str,
+    body: Option<&str>,
+) -> Result<String, String> {
     let abs = validate_relative_path(&ws.root, path)?;
     if abs.exists() {
         return Err(format!("File already exists: {}", path));
@@ -547,8 +554,7 @@ pub fn handle_write_plain_file(ws: &Workspace, path: &str, body: &str) -> Result
         return Err("Cannot write to a BrainMap-managed note via plain file API".to_string());
     }
     let abs = validate_relative_path(&ws.root, path)?;
-    std::fs::write(&abs, body)
-        .map_err(|e| format!("Failed to write file: {}", e))
+    std::fs::write(&abs, body).map_err(|e| format!("Failed to write file: {}", e))
 }
 
 /// Delete a plain (non-BrainMap) file from disk.
@@ -562,21 +568,27 @@ pub fn handle_delete_plain_file(ws: &Workspace, path: &str) -> Result<(), String
     if !abs.exists() {
         return Err(format!("File not found: {}", path));
     }
-    trash::delete(&abs)
-        .map_err(|e| format!("Failed to move to trash: {}", e))?;
+    trash::delete(&abs).map_err(|e| format!("Failed to move to trash: {}", e))?;
     Ok(())
 }
 
 /// Move a plain (non-BrainMap) file on disk.
 /// Rejects moves of files tracked in the BrainMap graph (use `move_note` instead).
-pub fn handle_move_plain_file(ws: &Workspace, old_path: &str, new_path: &str) -> Result<String, String> {
+pub fn handle_move_plain_file(
+    ws: &Workspace,
+    old_path: &str,
+    new_path: &str,
+) -> Result<String, String> {
     let rp = brainmap_core::model::RelativePath::new(old_path);
     if ws.notes.contains_key(&rp) {
         return Err("Cannot move a BrainMap-managed note via plain file API".to_string());
     }
     let new_rp = brainmap_core::model::RelativePath::new(new_path);
     if ws.notes.contains_key(&new_rp) {
-        return Err(format!("Target path conflicts with a managed note: {}", new_path));
+        return Err(format!(
+            "Target path conflicts with a managed note: {}",
+            new_path
+        ));
     }
     let old_abs = validate_relative_path(&ws.root, old_path)?;
     let new_abs = validate_relative_path(&ws.root, new_path)?;
@@ -590,42 +602,52 @@ pub fn handle_move_plain_file(ws: &Workspace, old_path: &str, new_path: &str) ->
         std::fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create directories: {}", e))?;
     }
-    std::fs::rename(&old_abs, &new_abs)
-        .map_err(|e| format!("Failed to move file: {}", e))?;
+    std::fs::rename(&old_abs, &new_abs).map_err(|e| format!("Failed to move file: {}", e))?;
     Ok(new_path.to_string())
 }
 
 /// Write raw content (frontmatter + body) for a BrainMap-managed note.
 /// Writes to disk then re-parses via `reload_file` to update graph/index.
 /// Returns the `GraphDiff` from reload_file for event emission.
-pub fn handle_write_raw_note(ws: &mut Workspace, path: &str, content: &str) -> Result<brainmap_core::model::GraphDiff, String> {
+pub fn handle_write_raw_note(
+    ws: &mut Workspace,
+    path: &str,
+    content: &str,
+) -> Result<brainmap_core::model::GraphDiff, String> {
     let rp = brainmap_core::model::RelativePath::new(path);
     if !ws.notes.contains_key(&rp) {
         return Err("Path is not a BrainMap-managed note".to_string());
     }
     let abs = validate_relative_path(&ws.root, path)?;
-    std::fs::write(&abs, content)
-        .map_err(|e| format!("Failed to write file: {}", e))?;
-    let diff = ws.reload_file(path)
+    std::fs::write(&abs, content).map_err(|e| format!("Failed to write file: {}", e))?;
+    let diff = ws
+        .reload_file(path)
         .map_err(|e| format!("File saved but parse failed: {}", e))?;
     Ok(diff)
 }
 
 /// Validate that a relative path stays within the workspace root.
-pub(crate) fn validate_relative_path(root: &std::path::Path, path: &str) -> Result<std::path::PathBuf, String> {
+pub(crate) fn validate_relative_path(
+    root: &std::path::Path,
+    path: &str,
+) -> Result<std::path::PathBuf, String> {
     let p = std::path::Path::new(path);
     if p.is_absolute() {
         return Err("Path must be relative".to_string());
     }
-    let normalized = root.join(p).components().fold(
-        std::path::PathBuf::new(),
-        |mut acc, c| {
-            match c {
-                std::path::Component::ParentDir => { acc.pop(); acc }
-                _ => { acc.push(c); acc }
-            }
-        },
-    );
+    let normalized =
+        root.join(p)
+            .components()
+            .fold(std::path::PathBuf::new(), |mut acc, c| match c {
+                std::path::Component::ParentDir => {
+                    acc.pop();
+                    acc
+                }
+                _ => {
+                    acc.push(c);
+                    acc
+                }
+            });
     if !normalized.starts_with(root) {
         return Err("Path escapes workspace root".to_string());
     }
@@ -634,7 +656,10 @@ pub(crate) fn validate_relative_path(root: &std::path::Path, path: &str) -> Resu
 
 /// Load PDF highlights from a sidecar JSON file next to the PDF.
 /// Returns empty vec if the sidecar file doesn't exist (not an error).
-pub fn handle_load_pdf_highlights(ws: &Workspace, pdf_path: &str) -> Result<Vec<PdfHighlightDto>, String> {
+pub fn handle_load_pdf_highlights(
+    ws: &Workspace,
+    pdf_path: &str,
+) -> Result<Vec<PdfHighlightDto>, String> {
     let sidecar = format!("{}.highlights.json", pdf_path);
     let abs = validate_relative_path(&ws.root, &sidecar)?;
     if !abs.exists() {
@@ -649,7 +674,11 @@ pub fn handle_load_pdf_highlights(ws: &Workspace, pdf_path: &str) -> Result<Vec<
 
 /// Save PDF highlights to a sidecar JSON file next to the PDF.
 /// If the highlights vec is empty, deletes the sidecar file.
-pub fn handle_save_pdf_highlights(ws: &Workspace, pdf_path: &str, highlights: Vec<PdfHighlightDto>) -> Result<(), String> {
+pub fn handle_save_pdf_highlights(
+    ws: &Workspace,
+    pdf_path: &str,
+    highlights: Vec<PdfHighlightDto>,
+) -> Result<(), String> {
     let sidecar = format!("{}.highlights.json", pdf_path);
     let abs = validate_relative_path(&ws.root, &sidecar)?;
     if highlights.is_empty() {
@@ -666,8 +695,7 @@ pub fn handle_save_pdf_highlights(ws: &Workspace, pdf_path: &str, highlights: Ve
         std::fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create directories: {}", e))?;
     }
-    std::fs::write(&abs, json)
-        .map_err(|e| format!("Failed to write highlights file: {}", e))?;
+    std::fs::write(&abs, json).map_err(|e| format!("Failed to write highlights file: {}", e))?;
     Ok(())
 }
 
@@ -690,11 +718,218 @@ pub(crate) fn collect_folder_files(
     collect_files_recursive(base, dir, out);
 }
 
-fn collect_files_recursive(
-    base: &std::path::Path,
-    dir: &std::path::Path,
+// ── Import helpers ──────────────────────────────────────────────
+
+/// Given a target directory and a desired file/folder name, return a name that
+/// does not collide with anything already in that directory.  On collision,
+/// appends " (1)", " (2)", … before the extension (or at the end for
+/// extensionless names / dotfiles).
+pub(crate) fn deduplicate_name(dir: &std::path::Path, name: &str) -> String {
+    if !dir.join(name).exists() {
+        return name.to_string();
+    }
+    let path = std::path::Path::new(name);
+    let (stem, ext) = match (path.file_stem(), path.extension()) {
+        (Some(s), Some(e)) => (
+            s.to_string_lossy().into_owned(),
+            Some(e.to_string_lossy().into_owned()),
+        ),
+        _ => (name.to_string(), None),
+    };
+    for i in 1u32.. {
+        let candidate = match &ext {
+            Some(e) => format!("{} ({}).{}", stem, i, e),
+            None => format!("{} ({})", stem, i),
+        };
+        if !dir.join(&candidate).exists() {
+            return candidate;
+        }
+    }
+    unreachable!()
+}
+
+/// Recursively copy a directory tree from `src` into `dst`, recording
+/// each copied file's path (relative to `ws_root`) in `out`.
+/// Skips symlinks to avoid cycles.
+fn copy_dir_recursive(
+    src: &std::path::Path,
+    dst: &std::path::Path,
+    ws_root: &std::path::Path,
     out: &mut Vec<String>,
-) {
+) -> Result<(), String> {
+    std::fs::create_dir_all(dst)
+        .map_err(|e| format!("Failed to create directory {}: {}", dst.display(), e))?;
+
+    let entries = std::fs::read_dir(src)
+        .map_err(|e| format!("Failed to read directory {}: {}", src.display(), e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let src_path = entry.path();
+
+        // Skip symlinks
+        if src_path.is_symlink() {
+            continue;
+        }
+
+        let file_name = entry.file_name();
+        let dst_path = dst.join(&file_name);
+
+        // Check destination doesn't land inside .brainmap/
+        if let Ok(rel) = dst_path.strip_prefix(ws_root) {
+            let first_component = rel
+                .components()
+                .next()
+                .map(|c| c.as_os_str().to_string_lossy().into_owned());
+            if first_component.as_deref() == Some(".brainmap") {
+                continue;
+            }
+        }
+
+        if src_path.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path, ws_root, out)?;
+        } else {
+            std::fs::copy(&src_path, &dst_path)
+                .map_err(|e| format!("Failed to copy {}: {}", src_path.display(), e))?;
+            if let Ok(rel) = dst_path.strip_prefix(ws_root) {
+                out.push(rel.to_string_lossy().into_owned());
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Import external files into the workspace by copying them.
+/// Does NOT register expected writes — the file watcher handles graph integration.
+pub fn handle_import_files(
+    ws: &Workspace,
+    source_paths: &[String],
+    target_dir: &str,
+) -> Result<crate::dto::ImportResultDto, String> {
+    use crate::dto::{ImportFailureDto, ImportResultDto};
+
+    if source_paths.is_empty() {
+        return Ok(ImportResultDto {
+            imported: vec![],
+            failed: vec![],
+        });
+    }
+
+    // Validate and resolve target directory
+    let target_abs = if target_dir.is_empty() {
+        ws.root.clone()
+    } else {
+        validate_relative_path(&ws.root, target_dir)?
+    };
+
+    // Check target doesn't land inside .brainmap/
+    if let Ok(rel) = target_abs.strip_prefix(&ws.root) {
+        let first = rel
+            .components()
+            .next()
+            .map(|c| c.as_os_str().to_string_lossy().into_owned());
+        if first.as_deref() == Some(".brainmap") {
+            return Err("Cannot import into .brainmap directory".to_string());
+        }
+    }
+
+    std::fs::create_dir_all(&target_abs)
+        .map_err(|e| format!("Failed to create target directory: {}", e))?;
+
+    let mut imported = Vec::new();
+    let mut failed = Vec::new();
+
+    let canonical_root = ws.root.canonicalize().unwrap_or_else(|_| ws.root.clone());
+
+    for source in source_paths {
+        let src_path = std::path::PathBuf::from(source);
+
+        if !src_path.exists() {
+            failed.push(ImportFailureDto {
+                path: source.clone(),
+                error: "Source path does not exist".to_string(),
+            });
+            continue;
+        }
+
+        // Canonicalize to resolve symlinks at top level
+        let canonical_src = match src_path.canonicalize() {
+            Ok(p) => p,
+            Err(e) => {
+                failed.push(ImportFailureDto {
+                    path: source.clone(),
+                    error: format!("Cannot resolve path: {}", e),
+                });
+                continue;
+            }
+        };
+
+        // Skip if source is already inside workspace root
+        if canonical_src.starts_with(&canonical_root) {
+            failed.push(ImportFailureDto {
+                path: source.clone(),
+                error: "File is already inside the workspace".to_string(),
+            });
+            continue;
+        }
+
+        let file_name = match src_path.file_name() {
+            Some(n) => n.to_string_lossy().into_owned(),
+            None => {
+                failed.push(ImportFailureDto {
+                    path: source.clone(),
+                    error: "Invalid file name".to_string(),
+                });
+                continue;
+            }
+        };
+
+        // Check the destination name won't create a .brainmap entry
+        if file_name == ".brainmap" {
+            failed.push(ImportFailureDto {
+                path: source.clone(),
+                error: "Cannot import .brainmap directory".to_string(),
+            });
+            continue;
+        }
+
+        let dest_name = deduplicate_name(&target_abs, &file_name);
+        let dest_path = target_abs.join(&dest_name);
+
+        if canonical_src.is_dir() {
+            let mut dir_files = Vec::new();
+            match copy_dir_recursive(&canonical_src, &dest_path, &ws.root, &mut dir_files) {
+                Ok(()) => imported.extend(dir_files),
+                Err(e) => {
+                    // Report whatever was actually copied before the error
+                    imported.extend(dir_files);
+                    failed.push(ImportFailureDto {
+                        path: source.clone(),
+                        error: format!("Partially copied: {}", e),
+                    });
+                }
+            }
+        } else {
+            match std::fs::copy(&canonical_src, &dest_path) {
+                Ok(_) => {
+                    if let Ok(rel) = dest_path.strip_prefix(&ws.root) {
+                        imported.push(rel.to_string_lossy().into_owned());
+                    }
+                }
+                Err(e) => {
+                    failed.push(ImportFailureDto {
+                        path: source.clone(),
+                        error: format!("Copy failed: {}", e),
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(ImportResultDto { imported, failed })
+}
+
+fn collect_files_recursive(base: &std::path::Path, dir: &std::path::Path, out: &mut Vec<String>) {
     let entries = match std::fs::read_dir(dir) {
         Ok(e) => e,
         Err(_) => return,
@@ -712,5 +947,183 @@ fn collect_files_recursive(
         } else if let Ok(rel) = path.strip_prefix(base) {
             out.push(rel.to_string_lossy().into_owned());
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn deduplicate_name_no_conflict() {
+        let dir = TempDir::new().unwrap();
+        assert_eq!(deduplicate_name(dir.path(), "photo.png"), "photo.png");
+    }
+
+    #[test]
+    fn deduplicate_name_single_conflict() {
+        let dir = TempDir::new().unwrap();
+        std::fs::write(dir.path().join("photo.png"), b"").unwrap();
+        assert_eq!(deduplicate_name(dir.path(), "photo.png"), "photo (1).png");
+    }
+
+    #[test]
+    fn deduplicate_name_multiple_conflicts() {
+        let dir = TempDir::new().unwrap();
+        std::fs::write(dir.path().join("photo.png"), b"").unwrap();
+        std::fs::write(dir.path().join("photo (1).png"), b"").unwrap();
+        assert_eq!(deduplicate_name(dir.path(), "photo.png"), "photo (2).png");
+    }
+
+    #[test]
+    fn deduplicate_name_no_extension() {
+        let dir = TempDir::new().unwrap();
+        std::fs::write(dir.path().join("Makefile"), b"").unwrap();
+        assert_eq!(deduplicate_name(dir.path(), "Makefile"), "Makefile (1)");
+    }
+
+    #[test]
+    fn deduplicate_name_dotfile() {
+        let dir = TempDir::new().unwrap();
+        std::fs::write(dir.path().join(".gitignore"), b"").unwrap();
+        assert_eq!(deduplicate_name(dir.path(), ".gitignore"), ".gitignore (1)");
+    }
+
+    fn make_test_workspace(dir: &std::path::Path) -> Workspace {
+        Workspace::open_or_init(dir).unwrap()
+    }
+
+    #[test]
+    fn import_files_empty_source() {
+        let dir = TempDir::new().unwrap();
+        let ws = make_test_workspace(dir.path());
+        let result = handle_import_files(&ws, &[], "").unwrap();
+        assert!(result.imported.is_empty());
+        assert!(result.failed.is_empty());
+    }
+
+    #[test]
+    fn import_files_single_file() {
+        let ws_dir = TempDir::new().unwrap();
+        let ws = make_test_workspace(ws_dir.path());
+
+        // Create an external source file
+        let src_dir = TempDir::new().unwrap();
+        let src_file = src_dir.path().join("test.txt");
+        std::fs::write(&src_file, "hello world").unwrap();
+
+        let result =
+            handle_import_files(&ws, &[src_file.to_string_lossy().into_owned()], "").unwrap();
+
+        assert_eq!(result.imported, vec!["test.txt"]);
+        assert!(result.failed.is_empty());
+        assert_eq!(
+            std::fs::read_to_string(ws_dir.path().join("test.txt")).unwrap(),
+            "hello world"
+        );
+    }
+
+    #[test]
+    fn import_files_name_collision() {
+        let ws_dir = TempDir::new().unwrap();
+        let ws = make_test_workspace(ws_dir.path());
+
+        // Pre-existing file in workspace
+        std::fs::write(ws_dir.path().join("test.txt"), "existing").unwrap();
+
+        // External source
+        let src_dir = TempDir::new().unwrap();
+        let src_file = src_dir.path().join("test.txt");
+        std::fs::write(&src_file, "new content").unwrap();
+
+        let result =
+            handle_import_files(&ws, &[src_file.to_string_lossy().into_owned()], "").unwrap();
+
+        assert_eq!(result.imported, vec!["test (1).txt"]);
+        assert!(result.failed.is_empty());
+        assert_eq!(
+            std::fs::read_to_string(ws_dir.path().join("test (1).txt")).unwrap(),
+            "new content"
+        );
+    }
+
+    #[test]
+    fn import_files_directory() {
+        let ws_dir = TempDir::new().unwrap();
+        let ws = make_test_workspace(ws_dir.path());
+
+        // Create external directory with files
+        let src_dir = TempDir::new().unwrap();
+        let folder = src_dir.path().join("myfolder");
+        std::fs::create_dir_all(&folder).unwrap();
+        std::fs::write(folder.join("a.txt"), "aaa").unwrap();
+        std::fs::write(folder.join("b.txt"), "bbb").unwrap();
+
+        let result =
+            handle_import_files(&ws, &[folder.to_string_lossy().into_owned()], "").unwrap();
+
+        assert_eq!(result.imported.len(), 2);
+        assert!(result.failed.is_empty());
+        assert!(ws_dir.path().join("myfolder/a.txt").exists());
+        assert!(ws_dir.path().join("myfolder/b.txt").exists());
+    }
+
+    #[test]
+    fn import_files_target_brainmap_rejected() {
+        let ws_dir = TempDir::new().unwrap();
+        let ws = make_test_workspace(ws_dir.path());
+
+        let src_dir = TempDir::new().unwrap();
+        let src_file = src_dir.path().join("test.txt");
+        std::fs::write(&src_file, "data").unwrap();
+
+        let result =
+            handle_import_files(&ws, &[src_file.to_string_lossy().into_owned()], ".brainmap");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains(".brainmap"));
+    }
+
+    #[test]
+    fn import_files_source_not_found() {
+        let ws_dir = TempDir::new().unwrap();
+        let ws = make_test_workspace(ws_dir.path());
+
+        let result = handle_import_files(&ws, &["/nonexistent/file.txt".to_string()], "").unwrap();
+
+        assert!(result.imported.is_empty());
+        assert_eq!(result.failed.len(), 1);
+        assert!(result.failed[0].error.contains("does not exist"));
+    }
+
+    #[test]
+    fn import_files_source_inside_workspace() {
+        let ws_dir = TempDir::new().unwrap();
+        let ws = make_test_workspace(ws_dir.path());
+
+        // Create a file inside the workspace
+        let internal = ws_dir.path().join("internal.txt");
+        std::fs::write(&internal, "data").unwrap();
+
+        let result =
+            handle_import_files(&ws, &[internal.to_string_lossy().into_owned()], "").unwrap();
+
+        assert!(result.imported.is_empty());
+        assert_eq!(result.failed.len(), 1);
+        assert!(result.failed[0].error.contains("already inside"));
+    }
+
+    #[test]
+    fn import_files_path_traversal_rejected() {
+        let ws_dir = TempDir::new().unwrap();
+        let ws = make_test_workspace(ws_dir.path());
+
+        let src_dir = TempDir::new().unwrap();
+        let src_file = src_dir.path().join("test.txt");
+        std::fs::write(&src_file, "data").unwrap();
+
+        let result =
+            handle_import_files(&ws, &[src_file.to_string_lossy().into_owned()], "../escape");
+        assert!(result.is_err());
     }
 }

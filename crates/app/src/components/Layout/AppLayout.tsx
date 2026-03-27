@@ -14,6 +14,7 @@ import { CanvasPanel } from "../Canvas/CanvasPanel";
 import { VideoPipPanel } from "../Editor/VideoPipPanel";
 import { TabBar } from "../Editor/TabBar";
 import { CanvasEditor } from "../Editor/CanvasEditor";
+import { useExternalDragDrop } from "../../hooks/useExternalDragDrop";
 
 const PANEL_IDS = {
   content: "content",
@@ -36,6 +37,7 @@ export function AppLayout() {
   const info = useWorkspaceStore((s) => s.info);
   const activeSegment = useSegmentStore((s) => s.segments.find((seg) => seg.id === s.activeSegmentId));
   const segmentName = activeSegment?.name ?? info?.name ?? "";
+  const { isDraggingExternal } = useExternalDragDrop();
   const isFirstMount = useRef(true);
 
   const tabSizes = getTabSizes(panelSizes, activeLeftTab);
@@ -158,6 +160,11 @@ export function AppLayout() {
         </Group>
       </div>
       <VideoPipPanel />
+      {isDraggingExternal && (
+        <div className="external-drop-overlay">
+          <div className="external-drop-overlay-content">Drop files to import into workspace</div>
+        </div>
+      )}
     </>
   );
 }

@@ -221,7 +221,9 @@ Custom `CanvasEdge` component replaces the default React Flow edge.
 
 - **Path**: Bezier (default), Straight, or Step. Determined by `data.edgeType` per-edge or `canvasDefaultEdgeType` setting as fallback. Uses `getBezierPath()`, `getStraightPath()`, or `getSmoothStepPath()`.
 - **Label**: Displayed at midpoint. Double-click to edit. New edges (`data.isNew = true`) auto-prompt for label input. Label font size (`data.labelFontSize`, default 11) and font family (`data.labelFontFamily`) are applied as inline styles to both the display span and the edit input.
-- **Toolbar**: Shown when selected (not during label edit). Contains: Edit label, Delete, Color picker, Edge type picker (bezier/straight/step), Label format picker (font size + font family).
+- **Reconnection**: Edges can be redirected by dragging their arrow tips to a new node. Uses React Flow's `onReconnect` API with `reconnectEdge` utility (`shouldReplaceId: false` to keep stable edge IDs). Failed reconnections (drop on empty canvas) leave the edge unchanged.
+- **Toolbar**: Shown when selected (not during label edit). Contains: Edit label, Delete, Color picker, Edge type picker (bezier/straight/step), Invert direction (swaps source/target + handles + markers), Toggle bidirectional (adds/removes `markerStart`), Label format picker (font size + font family).
+- **Direction controls**: Invert swaps `source`/`target`, transforms handle IDs (strip/add `-target` suffix), and swaps `markerStart`/`markerEnd`. Bidirectional toggle derives marker ID from `style.stroke` to stay color-consistent.
 - **Color sync**: Color changes update both `style.stroke` AND marker IDs (`brainmap-arrow-{color}`) so the arrow matches the line.
 - **Custom SVG markers**: Defined inline in the ReactFlow component. One default marker (`brainmap-arrow`) + one per unique edge color. Size controlled by `canvasArrowSize` setting. `refX=8` pulls arrow tip slightly back from the path endpoint to avoid overlapping nodes.
 - **Interaction width**: `BaseEdge` uses `interactionWidth={20}` for a 20px invisible hit area, making edges easy to click regardless of visible stroke width.

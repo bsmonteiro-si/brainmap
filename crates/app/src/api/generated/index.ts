@@ -6,6 +6,8 @@ export type { DeleteFolderResultDto } from "./DeleteFolderResultDto";
 export type { EdgeDto } from "./EdgeDto";
 export type { ExternalBacklinkDto } from "./ExternalBacklinkDto";
 export type { GraphTopologyDto } from "./GraphTopologyDto";
+export type { ImportFailureDto } from "./ImportFailureDto";
+export type { ImportResultDto } from "./ImportResultDto";
 export type { LinkParams } from "./LinkParams";
 export type { ListLinksParams } from "./ListLinksParams";
 export type { ListNodesParams } from "./ListNodesParams";

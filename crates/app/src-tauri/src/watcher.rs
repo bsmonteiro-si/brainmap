@@ -233,22 +233,27 @@ async fn process_md_change(app: &AppHandle, root_key: &str, path: PathBuf) {
 
     let path_exists = path.exists();
     let path_is_known = state
-        .with_slot(root_key, |slot| Ok(slot.workspace.notes.contains_key(&rel_path)))
+        .with_slot(root_key, |slot| {
+            Ok(slot.workspace.notes.contains_key(&rel_path))
+        })
         .unwrap_or(false);
 
     let diff_result = if path_exists && path_is_known {
         state.with_slot_mut(root_key, |slot| {
-            slot.workspace.reload_file(&rel_path_str)
+            slot.workspace
+                .reload_file(&rel_path_str)
                 .map_err(|e| e.to_string())
         })
     } else if path_exists {
         state.with_slot_mut(root_key, |slot| {
-            slot.workspace.add_file(&rel_path_str)
+            slot.workspace
+                .add_file(&rel_path_str)
                 .map_err(|e| e.to_string())
         })
     } else {
         state.with_slot_mut(root_key, |slot| {
-            slot.workspace.remove_file(&rel_path_str)
+            slot.workspace
+                .remove_file(&rel_path_str)
                 .map_err(|e| e.to_string())
         })
     };
@@ -265,7 +270,10 @@ async fn process_md_change(app: &AppHandle, root_key: &str, path: PathBuf) {
         app,
         root_key,
         diff.added_nodes.iter().map(node_to_payload).collect(),
-        diff.removed_nodes.iter().map(|p| p.as_str().to_string()).collect(),
+        diff.removed_nodes
+            .iter()
+            .map(|p| p.as_str().to_string())
+            .collect(),
         diff.added_edges.iter().map(edge_to_payload).collect(),
         diff.removed_edges.iter().map(edge_to_payload).collect(),
     );

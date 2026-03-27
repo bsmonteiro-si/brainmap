@@ -122,7 +122,11 @@ impl From<&NodeData> for NodeDto {
             path: nd.path.as_str().to_string(),
             title: nd.title.clone(),
             note_type: nd.note_type.clone(),
-            tags: if nd.tags.is_empty() { None } else { Some(nd.tags.clone()) },
+            tags: if nd.tags.is_empty() {
+                None
+            } else {
+                Some(nd.tags.clone())
+            },
             modified: nd.modified.map(|d| d.to_string()),
             summary: nd.summary.clone(),
         }
@@ -187,7 +191,8 @@ impl From<&Note> for NoteDetailDto {
             note_type: note.frontmatter.note_type.clone(),
             tags: note.frontmatter.tags.clone(),
             status: note.frontmatter.status.as_ref().map(|s| {
-                serde_json::to_value(s).ok()
+                serde_json::to_value(s)
+                    .ok()
                     .and_then(|v| v.as_str().map(String::from))
                     .unwrap_or_else(|| format!("{:?}", s).to_lowercase())
             }),
@@ -233,7 +238,8 @@ impl From<&Note> for NodeSummaryDto {
             note_type: note.frontmatter.note_type.clone(),
             tags: note.frontmatter.tags.clone(),
             status: note.frontmatter.status.as_ref().map(|s| {
-                serde_json::to_value(s).ok()
+                serde_json::to_value(s)
+                    .ok()
                     .and_then(|v| v.as_str().map(String::from))
                     .unwrap_or_else(|| format!("{:?}", s).to_lowercase())
             }),
@@ -367,7 +373,9 @@ pub struct PdfHighlightDto {
 // ── Helpers ────────────────────────────────────────────────────────
 
 /// Convert serde_yaml::Value map to serde_json::Value map for IPC boundary.
-fn yaml_map_to_json(map: &HashMap<String, serde_yaml::Value>) -> HashMap<String, serde_json::Value> {
+fn yaml_map_to_json(
+    map: &HashMap<String, serde_yaml::Value>,
+) -> HashMap<String, serde_json::Value> {
     map.iter()
         .map(|(k, v)| (k.clone(), yaml_to_json(v)))
         .collect()
@@ -393,9 +401,7 @@ fn yaml_to_json(v: &serde_yaml::Value) -> serde_json::Value {
         serde_yaml::Value::Mapping(map) => {
             let obj: serde_json::Map<String, serde_json::Value> = map
                 .iter()
-                .filter_map(|(k, v)| {
-                    k.as_str().map(|ks| (ks.to_string(), yaml_to_json(v)))
-                })
+                .filter_map(|(k, v)| k.as_str().map(|ks| (ks.to_string(), yaml_to_json(v))))
                 .collect();
             serde_json::Value::Object(obj)
         }
@@ -439,6 +445,22 @@ fn json_to_yaml(v: &serde_json::Value) -> serde_yaml::Value {
     }
 }
 
+// ── Import DTOs ──────────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Clone, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
+pub struct ImportFailureDto {
+    pub path: String,
+    pub error: String,
+}
+
+#[derive(Debug, Serialize, Clone, TS)]
+#[ts(export, export_to = "../../src/api/generated/")]
+pub struct ImportResultDto {
+    pub imported: Vec<String>,
+    pub failed: Vec<ImportFailureDto>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -472,5 +494,7 @@ mod tests {
         MoveFolderResultDto::export_all().expect("MoveFolderResultDto");
         PlainFileDto::export_all().expect("PlainFileDto");
         PdfMetaDto::export_all().expect("PdfMetaDto");
+        ImportResultDto::export_all().expect("ImportResultDto");
+        ImportFailureDto::export_all().expect("ImportFailureDto");
     }
 }
