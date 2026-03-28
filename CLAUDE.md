@@ -8,7 +8,7 @@ Run `./scripts/check.sh` before committing. Activate hook: `git config core.hook
 
 ## Building and Testing
 
-`cargo build` / `cargo test`. Per-crate: `-p brainmap-core`, `-p brainmap`, `-p brainmap-mcp`.
+`cargo build` / `cargo test`. Per-crate: `-p brainmap-core`, `-p brainmap`, `-p brainmap-mcp`. E2E tests: `cd tests/e2e && npx vitest run` (runs against a real Tauri app instance via tauri-plugin-mcp socket). See `tests/e2e/README.md` for architecture and gotchas, `docs/extension-guides/add-e2e-test.md` for adding new tests.
 
 ## Project Structure
 
@@ -45,7 +45,7 @@ When adding debug logs for troubleshooting: use `log.debug(target, msg, fields?)
 
 ## Reference Docs
 
-**Before implementing**, check `docs/extension-guides/` for step-by-step recipes: `add-callout-type`, `add-canvas-node-type`, `add-inline-command`, `add-cli-command`, `add-cm-preview-widget`, `add-edge-type`, `add-file-type-editor`, `add-mcp-tool`, `add-note-type`, `add-panel-tab`, `add-tauri-command`, `add-zustand-store`. Follow the guide if one matches your task. **Before making architectural decisions**, check `docs/decisions/` for prior ADRs. Error recovery: `docs/error-recovery.md`. Changelog: `docs/CHANGELOG.md`.
+**Before implementing**, check `docs/extension-guides/` for step-by-step recipes: `add-callout-type`, `add-canvas-node-type`, `add-e2e-test`, `add-inline-command`, `add-cli-command`, `add-cm-preview-widget`, `add-edge-type`, `add-file-type-editor`, `add-mcp-tool`, `add-note-type`, `add-panel-tab`, `add-tauri-command`, `add-zustand-store`. Follow the guide if one matches your task. **Before making architectural decisions**, check `docs/decisions/` for prior ADRs. Error recovery: `docs/error-recovery.md`. Changelog: `docs/CHANGELOG.md`.
 
 ## Review Agents
 

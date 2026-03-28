@@ -85,7 +85,11 @@ pub fn run() {
                 tauri_plugin_mcp::init_with_config(
                     tauri_plugin_mcp::PluginConfig::new("BrainMap".to_string())
                         .start_socket_server(true)
-                        .socket_path("/tmp/brainmap-mcp.sock".into()),
+                        .socket_path(
+                            std::env::var("BRAINMAP_MCP_SOCKET")
+                                .unwrap_or_else(|_| "/tmp/brainmap-mcp.sock".to_string())
+                                .into(),
+                        ),
                 )
             }
             #[cfg(not(debug_assertions))]

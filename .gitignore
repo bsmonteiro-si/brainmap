@@ -24,6 +24,11 @@ Thumbs.db
 # Claude review artifacts
 .claude/reviews/
 
+# E2E test artifacts
+tests/e2e/screenshots/
+tests/e2e/logs/
+tests/e2e/.e2e-socket-path
+
 # Environment
 .env
 .env.local
