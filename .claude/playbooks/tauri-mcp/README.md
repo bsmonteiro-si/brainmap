@@ -40,6 +40,7 @@ ToolSearch(query="select:mcp__tauri-mcp__query_page")
 
 | File | Covers |
 |------|--------|
+| `00-principles.md` | **READ FIRST** — rules for effective MCP usage, common mistakes to avoid |
 | `01-basics.md` | Screenshot, verify app, sidebar nav, view state dump |
 | `02-file-tree.md` | Expand, open, list, toolbar, context menus, rename |
 | `03-tabs.md` | Switch, close, new tab, list open tabs |

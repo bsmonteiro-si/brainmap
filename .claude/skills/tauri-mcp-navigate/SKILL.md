@@ -10,9 +10,10 @@ Read the playbook files at `.claude/playbooks/tauri-mcp/` for precise interactio
 
 ## Quick Start
 
-1. Load tools: `ToolSearch(query="select:mcp__tauri-mcp__take_screenshot")` and `ToolSearch(query="select:mcp__tauri-mcp__execute_js")`
-2. Verify app: `mcp__tauri-mcp__query_page(mode="app_info")`
-3. Read the relevant playbook for your task
+1. **Read `00-principles.md` first** — mandatory rules for MCP usage
+2. Load tools: `ToolSearch(query="select:mcp__tauri-mcp__take_screenshot")` and `ToolSearch(query="select:mcp__tauri-mcp__execute_js")`
+3. Verify app: `mcp__tauri-mcp__query_page(mode="app_info")`
+4. Read the relevant playbook for your task
 
 ## Playbook Index
 

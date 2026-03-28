@@ -1162,27 +1162,26 @@ function CanvasEdgeInner({
   const handleInvert = (e: React.MouseEvent) => {
     e.stopPropagation();
     pushSnapshot();
-    setEdges((eds) =>
-      eds.map((ed) => {
-        if (ed.id !== id) return ed;
-        // Strip marker keys first so swapping doesn't leave stale undefined values
-        const { markerStart: _, markerEnd: __, sourceHandle: _sh, targetHandle: _th, ...base } = ed;
-        const inverted = {
-          ...base,
-          source: ed.target,
-          target: ed.source,
-          ...(ed.targetHandle
-            ? { sourceHandle: ed.targetHandle.replace(/-target$/, "") }
-            : {}),
-          ...(ed.sourceHandle
-            ? { targetHandle: `${ed.sourceHandle}-target` }
-            : {}),
-          ...(ed.markerEnd ? { markerStart: ed.markerEnd } : {}),
-          ...(ed.markerStart ? { markerEnd: ed.markerStart } : {}),
-        };
-        return inverted;
-      }),
-    );
+    setEdges((eds) => {
+      const target = eds.find((ed) => ed.id === id);
+      if (!target) return eds;
+      const { markerStart: _, markerEnd: __, sourceHandle: _sh, targetHandle: _th, ...base } = target;
+      const inverted = {
+        ...base,
+        source: target.target,
+        target: target.source,
+        sourceHandle: target.targetHandle
+          ? target.targetHandle.replace(/-target$/, "")
+          : undefined,
+        targetHandle: target.sourceHandle
+          ? `${target.sourceHandle}-target`
+          : undefined,
+        markerEnd: target.markerEnd || undefined,
+        markerStart: target.markerStart || undefined,
+      };
+      // Remove then re-add to force React Flow to re-render with new endpoints
+      return [...eds.filter((ed) => ed.id !== id), inverted];
+    });
     scheduleSave();
   };
 
