@@ -60,6 +60,18 @@ describe("applyTopologyDiff", () => {
       expect(result.nodes.get("A.md")?.title).toBe("New");
       expect(result.nodes.get("A.md")?.note_type).toBe("book-note");
     });
+
+    it("preserves summary and modified from the event payload", () => {
+      const state = makeState(makeNodes(["A.md", "Old", "concept"]));
+      const event: WorkspaceEvent = {
+        type: "node-updated",
+        path: "A.md",
+        node: { path: "A.md", title: "New", note_type: "concept", tags: null, summary: "A summary", modified: "2026-03-28" },
+      };
+      const result = applyTopologyDiff(state, event);
+      expect(result.nodes.get("A.md")?.summary).toBe("A summary");
+      expect(result.nodes.get("A.md")?.modified).toBe("2026-03-28");
+    });
   });
 
   describe("node-deleted", () => {

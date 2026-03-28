@@ -182,7 +182,7 @@ export class MockBridge implements BrainMapAPI {
     eventBus.emit({
       type: "node-updated",
       path: params.path,
-      node: { path: note.path, title: note.title, note_type: note.note_type, tags: note.tags.length > 0 ? note.tags : null, modified: note.modified },
+      node: { path: note.path, title: note.title, note_type: note.note_type, tags: note.tags.length > 0 ? note.tags : null, modified: note.modified, summary: note.summary ?? null },
     });
   }
 

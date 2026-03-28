@@ -30,6 +30,8 @@ pub(crate) struct NodeDtoPayload {
     pub title: String,
     pub note_type: String,
     pub tags: Vec<String>,
+    pub summary: Option<String>,
+    pub modified: Option<String>,
 }
 
 #[derive(Serialize, Clone)]
@@ -123,6 +125,8 @@ pub(crate) fn node_to_payload(n: &NodeData) -> NodeDtoPayload {
         title: n.title.clone(),
         note_type: n.note_type.clone(),
         tags: n.tags.clone(),
+        summary: n.summary.clone(),
+        modified: n.modified.map(|d| d.to_string()),
     }
 }
 

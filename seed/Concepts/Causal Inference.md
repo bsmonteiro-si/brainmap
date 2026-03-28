@@ -22,6 +22,8 @@ links:
   type: related-to
 - target: ../People/Judea Pearl.md
   type: authored-by
+- target: "Personal::Notes/Applied Causal Inference.md"
+  type: related-to
 aliases:
 - causal analysis
 - causal reasoning
