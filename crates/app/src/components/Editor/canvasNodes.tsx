@@ -148,6 +148,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
 }) {
   const { setNodes, setEdges } = useReactFlow();
   const scheduleSave = useCanvasSave();
+  const pushSnapshot = useCanvasSnapshot();
   const selectedCount = useStore(selectSelectedCount);
   const [showColors, setShowColors] = useState(false);
   const [showBgColors, setShowBgColors] = useState(false);
@@ -156,17 +157,20 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
 
   const closeAllDropdowns = () => { setShowColors(false); setShowBgColors(false); setShowShapes(false); setShowTextFormat(false); };
   const setNodeData = (patch: Record<string, unknown>) => {
+    pushSnapshot();
     setNodes((nds) => nds.map((n) => n.id === id ? { ...n, data: { ...n.data, ...patch } } : n));
     scheduleSave();
   };
 
   const handleDelete = () => {
+    pushSnapshot();
     setNodes((nds) => nds.filter((n) => n.id !== id));
     setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
     scheduleSave();
   };
 
   const handleColor = (color: string) => {
+    pushSnapshot();
     setNodes((nds) =>
       nds.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, color } } : n,
@@ -176,6 +180,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
   };
 
   const handleClearColor = () => {
+    pushSnapshot();
     setNodes((nds) =>
       nds.map((n) => {
         if (n.id !== id) return n;
@@ -187,6 +192,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
   };
 
   const handleBgColor = (bgColor: string) => {
+    pushSnapshot();
     setNodes((nds) =>
       nds.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, bgColor } } : n,
@@ -196,6 +202,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
   };
 
   const handleClearBgColor = () => {
+    pushSnapshot();
     setNodes((nds) =>
       nds.map((n) => {
         if (n.id !== id) return n;
@@ -269,6 +276,7 @@ function CanvasNodeToolbar({ id, selected, shape, fontSize, fontFamily, textAlig
                       className={`canvas-shape-picker-btn${active ? " canvas-shape-picker-btn--active" : ""}`}
                       title={s.label}
                       onClick={() => {
+                        pushSnapshot();
                         const isFixed = s.id === "circle" || s.id === "diamond";
                         setNodes((nds) => nds.map((n) => {
                           if (n.id !== id) return n;

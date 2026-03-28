@@ -8,6 +8,7 @@ pub mod watcher;
 
 use brainmap_core::logging::{init_logging, LogConfig};
 use state::AppState;
+use tauri::menu::{Menu, PredefinedMenuItem, Submenu};
 
 pub fn run() {
     let log_dir = std::env::var("HOME")
@@ -21,6 +22,60 @@ pub fn run() {
     });
 
     tauri::Builder::default()
+        .menu(|app| {
+            // Custom menu: omit Undo/Redo from Edit so Cmd+Z reaches the WebView JS handlers
+            Menu::with_items(
+                app,
+                &[
+                    #[cfg(target_os = "macos")]
+                    &Submenu::with_items(
+                        app,
+                        "BrainMap",
+                        true,
+                        &[
+                            &PredefinedMenuItem::about(app, None, None)?,
+                            &PredefinedMenuItem::separator(app)?,
+                            &PredefinedMenuItem::services(app, None)?,
+                            &PredefinedMenuItem::separator(app)?,
+                            &PredefinedMenuItem::hide(app, None)?,
+                            &PredefinedMenuItem::hide_others(app, None)?,
+                            &PredefinedMenuItem::show_all(app, None)?,
+                            &PredefinedMenuItem::separator(app)?,
+                            &PredefinedMenuItem::quit(app, None)?,
+                        ],
+                    )?,
+                    &Submenu::with_items(
+                        app,
+                        "Edit",
+                        true,
+                        &[
+                            // No Undo/Redo — handled in frontend JS (canvas, CodeMirror, frontmatter)
+                            &PredefinedMenuItem::cut(app, None)?,
+                            &PredefinedMenuItem::copy(app, None)?,
+                            &PredefinedMenuItem::paste(app, None)?,
+                            &PredefinedMenuItem::select_all(app, None)?,
+                        ],
+                    )?,
+                    &Submenu::with_items(
+                        app,
+                        "View",
+                        true,
+                        &[&PredefinedMenuItem::fullscreen(app, None)?],
+                    )?,
+                    &Submenu::with_items(
+                        app,
+                        "Window",
+                        true,
+                        &[
+                            &PredefinedMenuItem::minimize(app, None)?,
+                            &PredefinedMenuItem::maximize(app, None)?,
+                            &PredefinedMenuItem::separator(app)?,
+                            &PredefinedMenuItem::close_window(app, None)?,
+                        ],
+                    )?,
+                ],
+            )
+        })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_drag::init())
