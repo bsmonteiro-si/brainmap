@@ -8,7 +8,7 @@ Run `./scripts/check.sh` before committing. Activate hook: `git config core.hook
 
 ## Building and Testing
 
-`cargo build` / `cargo test`. Per-crate: `-p brainmap-core`, `-p brainmap`, `-p brainmap-mcp`. E2E tests: `cd tests/e2e && npx vitest run` (runs against a real Tauri app instance via tauri-plugin-mcp socket). See `tests/e2e/README.md` for architecture and gotchas, `docs/extension-guides/add-e2e-test.md` for adding new tests.
+`cargo build` / `cargo test`. Per-crate: `-p brainmap-core`, `-p brainmap`, `-p brainmap-mcp`. E2E tests: `cd tests/e2e && npx vitest run` (runs against a real Tauri app instance via tauri-plugin-mcp socket). See `tests/e2e/README.md` for architecture and gotchas, `docs/extension-guides/add-e2e-test.md` for adding new tests. Isolated app instance: `./scripts/e2e-app.sh start` launches a separate BrainMap on port 1520 with its own MCP socket (`/tmp/brainmap-mcp-isolated.sock`); use `tauri-mcp-isolated` MCP tools (or direct socket) to interact without touching the dev instance; `./scripts/e2e-app.sh stop` to tear down.
 
 ## Project Structure
 
@@ -41,7 +41,7 @@ Signature: `log.level(target, msg, fields?)` where level is `error`/`warn`/`info
 
 ### Debugging Workflow
 
-When adding debug logs for troubleshooting: use `log.debug(target, msg, fields?)`. Read results yourself via `grep pattern ~/.brainmap/logs/brainmap.log.YYYY-MM-DD` — never ask the user to check logs. You are always responsible for fetching and analyzing log output.
+When adding debug logs for troubleshooting: use `log.debug(target, msg, fields?)`. Read results yourself via `grep pattern ~/.brainmap/logs/brainmap.log.YYYY-MM-DD` — never ask the user to check logs. You are always responsible for fetching and analyzing log output. When interacting via MCP tools (dev or isolated instance), **always check logs after interactions** — don't rely only on screenshots. Isolated instance logs are at `tests/e2e/logs/app/brainmap.log.YYYY-MM-DD` (separated via `BRAINMAP_LOG_DIR`).
 
 ## Reference Docs
 

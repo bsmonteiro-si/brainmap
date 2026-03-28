@@ -6,6 +6,13 @@
       "env": {
         "TAURI_MCP_IPC_PATH": "/tmp/brainmap-mcp.sock"
       }
+    },
+    "tauri-mcp-isolated": {
+      "command": "node",
+      "args": ["/tmp/tauri-plugin-mcp/mcp-server-ts/build/index.js"],
+      "env": {
+        "TAURI_MCP_IPC_PATH": "/tmp/brainmap-mcp-isolated.sock"
+      }
     }
   }
 }

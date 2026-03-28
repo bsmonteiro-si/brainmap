@@ -22,6 +22,7 @@ tests/e2e/
   vitest.config.ts   # 60s test timeout, 120s hook timeout
   screenshots/       # .gitignored — screenshots saved during tests
   logs/              # .gitignored — cargo tauri dev stdout/stderr
+  logs/app/          # .gitignored — app logs (BRAINMAP_LOG_DIR), separate from dev instance
 ```
 
 ### Isolation
@@ -50,6 +51,22 @@ Warm runs take ~15s (app boot + tests). First run compiles Rust (~2-3 min).
 ## Adding a new test
 
 See `docs/extension-guides/add-e2e-test.md` for the step-by-step recipe.
+
+## Logs
+
+Both e2e tests and the isolated app instance use `BRAINMAP_LOG_DIR` to write app logs separately from the dev instance. This prevents log interleaving when both are running simultaneously.
+
+| Log | Location | Contains |
+|-----|----------|----------|
+| App logs (isolated) | `tests/e2e/logs/app/brainmap.log.YYYY-MM-DD` | Backend tracing + frontend `log.*()` output |
+| Cargo/Vite output | `tests/e2e/logs/isolated-app.log` | Rust compilation, Vite startup, plugin init |
+| App logs (dev) | `~/.brainmap/logs/brainmap.log.YYYY-MM-DD` | Your normal dev instance logs |
+
+After running tests or interacting with the isolated instance, check app logs:
+
+```bash
+grep "your-target" tests/e2e/logs/app/brainmap.log.$(date +%Y-%m-%d) | tail -20
+```
 
 ## Socket protocol
 

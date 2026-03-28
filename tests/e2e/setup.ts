@@ -75,6 +75,7 @@ export async function setup(): Promise<void> {
         ...process.env,
         PATH: `${process.env.HOME}/.cargo/bin:${process.env.PATH}`,
         BRAINMAP_MCP_SOCKET: SOCKET_PATH,
+        BRAINMAP_LOG_DIR: path.join(import.meta.dirname, "logs", "app"),
         VITE_PORT,
         VITE_HMR_PORT,
       },

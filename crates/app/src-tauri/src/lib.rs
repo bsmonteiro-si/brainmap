@@ -11,8 +11,11 @@ use state::AppState;
 use tauri::menu::{Menu, PredefinedMenuItem, Submenu};
 
 pub fn run() {
-    let log_dir = std::env::var("HOME")
-        .map(|h| std::path::PathBuf::from(h).join(".brainmap/logs"))
+    let log_dir = std::env::var("BRAINMAP_LOG_DIR")
+        .map(std::path::PathBuf::from)
+        .or_else(|_| {
+            std::env::var("HOME").map(|h| std::path::PathBuf::from(h).join(".brainmap/logs"))
+        })
         .ok();
     let _log_guard = init_logging(&LogConfig {
         log_dir,
