@@ -312,7 +312,7 @@ fn test_move_note_same_dir_preserves_custom_title() {
     // Set a custom title that differs from the filename stem
     let file_path = tmp.path().join(old_path);
     let content = std::fs::read_to_string(&file_path).unwrap();
-    let updated = content.replace("title: Confounding", "title: \"Confounding Variables Explained\"");
+    let updated = content.replace("title: \"Confounding\"", "title: \"Confounding Variables Explained\"");
     std::fs::write(&file_path, &updated).unwrap();
     ws.reload_file(old_path).unwrap();
 
