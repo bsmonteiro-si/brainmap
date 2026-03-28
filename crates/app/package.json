@@ -20,6 +20,7 @@
     "@codemirror/search": "^6.6.0",
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.36.5",
+    "@crabnebula/tauri-plugin-drag": "^2.1.0",
     "@excalidraw/excalidraw": "^0.18.0",
     "@tauri-apps/api": "^2.2.0",
     "@tauri-apps/plugin-dialog": "^2.2.0",
@@ -41,6 +42,7 @@
     "rehype-highlight": "^7.0.2",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
+    "tauri-plugin-mcp": "^0.1.0",
     "zustand": "^5.0.3"
   },
   "devDependencies": {

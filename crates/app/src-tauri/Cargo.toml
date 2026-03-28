@@ -17,6 +17,8 @@ notify-debouncer-mini = "0.5"
 tokio = { version = "1", features = ["sync", "rt"] }
 ts-rs = { version = "10", features = ["serde-compat"] }
 trash = "5"
+tauri-plugin-drag = "2.1.0"
+tauri-plugin-mcp = { git = "https://github.com/P3GLEG/tauri-plugin-mcp" }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"

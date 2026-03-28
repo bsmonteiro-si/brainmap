@@ -23,6 +23,22 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_drag::init())
+        .plugin({
+            #[cfg(debug_assertions)]
+            {
+                tauri_plugin_mcp::init_with_config(
+                    tauri_plugin_mcp::PluginConfig::new("BrainMap".to_string())
+                        .start_socket_server(true)
+                        .socket_path("/tmp/brainmap-mcp.sock".into()),
+                )
+            }
+            #[cfg(not(debug_assertions))]
+            {
+                // No-op in release builds — MCP plugin is dev-only
+                tauri::plugin::Builder::new("mcp-noop").build()
+            }
+        })
         .manage(AppState::new())
         .setup(|app| {
             #[cfg(target_os = "macos")]
