@@ -2572,6 +2572,8 @@ body {
   flex: 1;
   overflow: auto;
   padding: 4px 0;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .tree-item {
   display: flex;
@@ -2585,6 +2587,7 @@ body {
   color: var(--text-primary);
   border-left: 2px solid transparent;
   position: relative;
+  -webkit-user-select: none;
   user-select: none;
   min-width: 0;
 }
@@ -2639,6 +2642,59 @@ body {
 .file-tree-content.drag-over-root {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
+
+/* Drag ghost element (follows cursor during mouse-based drag) */
+.drag-ghost {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  opacity: 0.9;
+}
+
+/* Prevent text selection during active drag */
+body.dragging-active {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* External file drop overlay — full-window dimmed backdrop with label */
+.external-drop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border: 3px dashed var(--accent);
+  z-index: 9998;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.external-drop-overlay-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.external-drop-overlay-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
 .tree-folder {
   color: var(--text-secondary);
   font-weight: 500;
@@ -6722,39 +6778,4 @@ body {
   opacity: 0.4;
 }
 
-/* ── External file drop overlay ─────────────────────────────── */
-
-.external-drop-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  background: rgba(var(--accent-rgb, 59, 130, 246), 0.08);
-  border: 3px dashed var(--accent-color, #3b82f6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.external-drop-overlay-content {
-  font-size: 1.2rem;
-  color: var(--accent-color, #3b82f6);
-  font-weight: 500;
-  padding: 12px 24px;
-  border-radius: 8px;
-  background: var(--bg-primary, #1e1e2e);
-}
-
-/* Highlight on the folder (or root) that would receive external file drops */
-.tree-folder.external-drop-target {
-  background: var(--accent-color, #3b82f6) !important;
-  color: #fff !important;
-  border-radius: 4px;
-}
-
-.file-tree-content.external-drop-target {
-  outline: 2px dashed var(--accent-color, #3b82f6);
-  outline-offset: -2px;
-  border-radius: 4px;
-}
 

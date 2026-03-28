@@ -37,8 +37,10 @@ export function AppLayout() {
   const info = useWorkspaceStore((s) => s.info);
   const activeSegment = useSegmentStore((s) => s.segments.find((seg) => seg.id === s.activeSegmentId));
   const segmentName = activeSegment?.name ?? info?.name ?? "";
-  const { isDraggingExternal } = useExternalDragDrop();
   const isFirstMount = useRef(true);
+
+  // Inbound file drops from Finder (via Tauri native drag events)
+  const { externalDragOver, dragFileCount, externalDropTarget } = useExternalDragDrop();
 
   const tabSizes = getTabSizes(panelSizes, activeLeftTab);
 
@@ -122,7 +124,7 @@ export function AppLayout() {
               <div
                 style={{ flex: 1, overflow: "hidden", display: activeLeftTab === "files" ? "flex" : "none", flexDirection: "column" }}
               >
-                <FileTreePanel />
+                <FileTreePanel externalDropTarget={externalDragOver ? externalDropTarget : null} />
               </div>
               <div
                 style={{ flex: 1, overflow: "hidden", display: activeLeftTab === "search" ? "flex" : "none", flexDirection: "column" }}
@@ -160,9 +162,14 @@ export function AppLayout() {
         </Group>
       </div>
       <VideoPipPanel />
-      {isDraggingExternal && (
+      {externalDragOver && (
         <div className="external-drop-overlay">
-          <div className="external-drop-overlay-content">Drop files to import into workspace</div>
+          <div className="external-drop-overlay-label">
+            <span className="external-drop-overlay-icon">↓</span>
+            {dragFileCount > 1
+              ? `Drop ${dragFileCount} files into ${externalDropTarget || "workspace root"}`
+              : `Drop file into ${externalDropTarget || "workspace root"}`}
+          </div>
         </div>
       )}
     </>

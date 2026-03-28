@@ -1,201 +1,195 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getAPI } from "../api/bridge";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { useUndoStore } from "../stores/undoStore";
 import { log } from "../utils/logger";
+import { open } from "@tauri-apps/plugin-dialog";
 
-const EXTERNAL_DROP_TARGET_CLASS = "external-drop-target";
+// ── Inbound drop hook (Finder → app) ───────────────────────────────
+// With dragDropEnabled: true, Tauri intercepts native file drags and
+// exposes them via onDragDropEvent(). Mouse events for internal drag
+// are unaffected.
 
-/**
- * Given a physical screen position from a Tauri drag event, find the folder
- * the cursor is over by hit-testing the DOM.
- *
- * Returns the folder's relative path, or "" for workspace root.
- */
-function resolveDropFolder(x: number, y: number): string {
+/** Convert Tauri PhysicalPosition to CSS pixels (accounting for DPR + zoom). */
+function physicalToCss(px: number, py: number): { x: number; y: number } {
+  const dpr = window.devicePixelRatio || 1;
+  const zoom = parseFloat(document.documentElement.style.zoom || "1");
+  return { x: (px / dpr) / zoom, y: (py / dpr) / zoom };
+}
+
+/** Resolve the folder path under a CSS-pixel position via elementFromPoint. */
+function resolveDropFolder(cssX: number, cssY: number): string {
   if (typeof document.elementFromPoint !== "function") return "";
-  const el = document.elementFromPoint(x, y);
+  const el = document.elementFromPoint(cssX, cssY);
   if (!el) return "";
 
-  // Walk up from the hit element to find a tree item with data-tree-path
-  const treeItem = (el as HTMLElement).closest?.("[data-tree-path]") as HTMLElement | null;
-  if (!treeItem) return "";
-
-  const path = treeItem.getAttribute("data-tree-path") ?? "";
-
-  // If it's a folder, use its path directly
-  if (treeItem.classList.contains("tree-folder")) {
-    return path;
+  // Check if cursor is over a tree item
+  const treeItem = el.closest("[data-tree-path]") as HTMLElement | null;
+  if (treeItem) {
+    // If it's a folder, target that folder
+    if (treeItem.dataset.treeIsFolder === "1") {
+      return treeItem.dataset.treePath!;
+    }
+    // If it's a file, target its parent folder
+    const path = treeItem.dataset.treePath!;
+    const lastSlash = path.lastIndexOf("/");
+    return lastSlash === -1 ? "" : path.substring(0, lastSlash);
   }
 
-  // If it's a file, use its parent folder
-  const lastSlash = path.lastIndexOf("/");
-  return lastSlash >= 0 ? path.substring(0, lastSlash) : "";
+  // If over the file tree container but not a specific item, target root
+  if (el.closest(".file-tree-content")) return "";
+
+  // Outside the file tree entirely — target root
+  return "";
 }
 
-/**
- * Apply or remove a highlight CSS class on the folder element that would
- * receive a drop.  Only one element is highlighted at a time.
- */
-function highlightDropTarget(folder: string | null) {
-  // Remove previous highlight
-  document
-    .querySelectorAll(`.${EXTERNAL_DROP_TARGET_CLASS}`)
-    .forEach((el) => el.classList.remove(EXTERNAL_DROP_TARGET_CLASS));
-
-  if (folder === null) return;
-
-  if (folder === "") {
-    // Highlight the file-tree-content root container
-    document
-      .querySelector(".file-tree-content")
-      ?.classList.add(EXTERNAL_DROP_TARGET_CLASS);
-  } else {
-    // Highlight the specific folder element
-    const escaped = typeof CSS !== "undefined" && CSS.escape
-      ? CSS.escape(folder)
-      : folder.replace(/"/g, '\\"');
-    const el = document.querySelector(
-      `.tree-folder[data-tree-path="${escaped}"]`,
-    );
-    el?.classList.add(EXTERNAL_DROP_TARGET_CLASS);
-  }
-}
-
-/**
- * Listens for Tauri v2 native drag-drop events (files dragged from external
- * apps like Finder) and imports them into the resolved target folder.
- *
- * Uses `getCurrentWebview().onDragDropEvent()` which aggregates the four
- * separate Tauri events (drag-enter, drag-over, drag-drop, drag-leave)
- * into a single discriminated-union callback.
- *
- * Returns `isDraggingExternal` for rendering a drop overlay.
- */
 export function useExternalDragDrop() {
-  const [isDraggingExternal, setIsDraggingExternal] = useState(false);
-  const targetFolderRef = useRef("");
+  const [externalDragOver, setExternalDragOver] = useState(false);
+  const [dragFileCount, setDragFileCount] = useState(0);
+  const [externalDropTarget, setExternalDropTarget] = useState("");
+  const dropTargetRef = useRef("");
 
   useEffect(() => {
-    // Prevent the browser from navigating to dropped files.
-    const preventDefault = (e: DragEvent) => {
-      e.preventDefault();
-    };
-    document.addEventListener("dragover", preventDefault);
-    document.addEventListener("drop", preventDefault);
-
+    let unlisten: (() => void) | null = null;
     let cancelled = false;
-    let unlistenFn: (() => void) | null = null;
 
     getCurrentWebview()
-      .onDragDropEvent(async (event) => {
-        if (cancelled) return;
-        const payload = event.payload;
-
-        switch (payload.type) {
-          case "enter":
-            if (payload.paths && payload.paths.length > 0) {
-              setIsDraggingExternal(true);
-              targetFolderRef.current = "";
-              log.debug("drag-drop", "drag enter", {
-                count: payload.paths.length,
-              });
-            }
+      .onDragDropEvent((event) => {
+        switch (event.payload.type) {
+          case "enter": {
+            const paths = (event.payload as { paths?: string[] }).paths ?? [];
+            setExternalDragOver(true);
+            setDragFileCount(paths.length);
+            log.debug("import::drag", "drag enter", { count: paths.length });
             break;
-
+          }
           case "over": {
-            const pos = payload.position;
-            const folder = resolveDropFolder(pos.x, pos.y);
-            targetFolderRef.current = folder;
-            highlightDropTarget(folder);
+            const pos = (event.payload as { position: { x: number; y: number } }).position;
+            const css = physicalToCss(pos.x, pos.y);
+            const folder = resolveDropFolder(css.x, css.y);
+            if (folder !== dropTargetRef.current) {
+              dropTargetRef.current = folder;
+              setExternalDropTarget(folder);
+            }
             break;
           }
-
-          case "leave":
-            setIsDraggingExternal(false);
-            highlightDropTarget(null);
-            break;
-
           case "drop": {
-            setIsDraggingExternal(false);
-            highlightDropTarget(null);
-
-            const paths = payload.paths;
-            if (!paths || paths.length === 0) return;
-
-            const info = useWorkspaceStore.getState().info;
-            if (!info) {
-              log.warn(
-                "drag-drop",
-                "Ignored file drop — no workspace is open",
-              );
-              return;
-            }
-
-            // Resolve target from drop position, falling back to the last
-            // tracked position from "over" events.
-            const pos = payload.position;
-            const targetDir =
-              resolveDropFolder(pos.x, pos.y) || targetFolderRef.current;
-
-            log.info("drag-drop", "drop received", {
-              count: paths.length,
-              targetDir,
-            });
-
-            try {
-              const api = await getAPI();
-              const result = await api.importFiles(paths, targetDir);
-
-              const imported = result.imported.length;
-              const failed = result.failed.length;
-              const where = targetDir || "workspace root";
-
-              if (imported > 0 && failed === 0) {
-                showToast(
-                  `Imported ${imported} file${imported === 1 ? "" : "s"} into ${where}`,
-                );
-              } else if (imported > 0 && failed > 0) {
-                showToast(
-                  `Imported ${imported} file${imported === 1 ? "" : "s"} into ${where}, ${failed} failed`,
-                );
-              } else if (failed > 0) {
-                showToast(`Import failed: ${result.failed[0].error}`);
-              }
-
-              log.info("drag-drop", "import complete", {
-                imported,
-                failed,
-                targetDir,
-              });
-            } catch (err) {
-              const msg = err instanceof Error ? err.message : String(err);
-              showToast(`Import failed: ${msg}`);
-              log.error("drag-drop", "import error", { error: msg });
-            }
+            const pos = (event.payload as { position: { x: number; y: number }; paths: string[] }).position;
+            const css = physicalToCss(pos.x, pos.y);
+            const folder = resolveDropFolder(css.x, css.y);
+            setExternalDragOver(false);
+            setDragFileCount(0);
+            setExternalDropTarget("");
+            dropTargetRef.current = "";
+            const paths = (event.payload as { paths: string[] }).paths;
+            log.info("import::drag", "drop received", { count: paths.length, targetFolder: folder });
+            handleExternalDrop(paths, folder);
             break;
           }
+          case "leave":
+            setExternalDragOver(false);
+            setDragFileCount(0);
+            setExternalDropTarget("");
+            dropTargetRef.current = "";
+            break;
         }
       })
       .then((fn) => {
         if (cancelled) {
           fn();
         } else {
-          unlistenFn = fn;
+          unlisten = fn;
         }
       });
 
     return () => {
       cancelled = true;
-      document.removeEventListener("dragover", preventDefault);
-      document.removeEventListener("drop", preventDefault);
-      highlightDropTarget(null);
-      unlistenFn?.();
+      unlisten?.();
     };
   }, []);
 
-  return { isDraggingExternal };
+  return { externalDragOver, dragFileCount, externalDropTarget };
+}
+
+async function handleExternalDrop(paths: string[], targetDir: string) {
+  const info = useWorkspaceStore.getState().info;
+  if (!info) {
+    log.warn("import::drag", "No workspace open, ignoring drop");
+    return;
+  }
+
+  if (paths.length === 0) return;
+
+  try {
+    const api = await getAPI();
+    const result = await api.importFiles(paths, targetDir);
+
+    const imported = result.imported.length;
+    const failed = result.failed.length;
+    const where = targetDir || "workspace root";
+
+    if (imported > 0 && failed === 0) {
+      showToast(`Imported ${imported} file${imported === 1 ? "" : "s"} into ${where}`);
+    } else if (imported > 0 && failed > 0) {
+      showToast(`Imported ${imported} file${imported === 1 ? "" : "s"} into ${where}, ${failed} failed`);
+    } else if (failed > 0) {
+      showToast(`Import failed: ${result.failed[0].error}`);
+    }
+
+    log.info("import::drag", "drop import complete", { imported, failed, targetDir });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    showToast(`Import failed: ${msg}`);
+    log.error("import::drag", "drop import error", { error: msg });
+  }
+}
+
+// ── File picker import (context menu) ──────────────────────────────
+
+/**
+ * Open a native file picker and import the selected files into the workspace.
+ * @param targetDir relative folder within workspace ("" for root)
+ */
+export async function importFilesViaDialog(targetDir = ""): Promise<void> {
+  const info = useWorkspaceStore.getState().info;
+  if (!info) {
+    log.warn("import", "No workspace open");
+    return;
+  }
+
+  const selected = await open({
+    multiple: true,
+    title: "Import files into workspace",
+  });
+
+  if (!selected) return;
+
+  const paths = Array.isArray(selected) ? selected : [selected];
+  if (paths.length === 0) return;
+
+  try {
+    const api = await getAPI();
+    const result = await api.importFiles(paths, targetDir);
+
+    const imported = result.imported.length;
+    const failed = result.failed.length;
+    const where = targetDir || "workspace root";
+
+    if (imported > 0 && failed === 0) {
+      showToast(`Imported ${imported} file${imported === 1 ? "" : "s"} into ${where}`);
+    } else if (imported > 0 && failed > 0) {
+      showToast(`Imported ${imported} file${imported === 1 ? "" : "s"} into ${where}, ${failed} failed`);
+    } else if (failed > 0) {
+      showToast(`Import failed: ${result.failed[0].error}`);
+    }
+
+    log.info("import", "import complete", { imported, failed, targetDir });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    showToast(`Import failed: ${msg}`);
+    log.error("import", "import error", { error: msg });
+  }
 }
 
 function showToast(message: string) {

@@ -2,6 +2,12 @@
 
 Feature history moved from CLAUDE.md. Organized by phase and feature area.
 
+## Full Drag-and-Drop Support
+
+- **Inbound file drops (Finder → app)**: Drag files from Finder into BrainMap to import them into the workspace root. Uses Tauri's native `onDragDropEvent` API with `dragDropEnabled: true`. Shows a visual overlay during drag-over.
+- **Outbound file drag (app → Finder)**: Alt+drag a file tree item to export it to Finder or other apps. Uses `@crabnebula/tauri-plugin-drag` for native OS drag.
+- **Internal drag rewritten to mouse events**: File tree reorder/move now uses `mousedown`/`mousemove`/`mouseup` instead of HTML5 drag events. This is required because Tauri's `dragDropEnabled: true` intercepts all HTML5 drag events on macOS WKWebView. A floating ghost element follows the cursor during drag. All existing reorder, move-to-folder, and move-to-root functionality is preserved.
+
 ## External File Change Detection
 
 - **Live reload for `.md` files**: When a markdown note is modified outside the app, the graph view updates node metadata (title, type, tags) immediately and the editor auto-reloads content (or shows a conflict banner if the note has unsaved edits). Backend watcher now emits a `node-updated` event alongside `topology-changed` for file modifications.
