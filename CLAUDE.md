@@ -2,6 +2,10 @@
 
 Structured markdown -> interactive visual knowledge graph.
 
+**AI-first codebase.** Docs, logs, conventions, extension guides, error messages, and gotcha tables are the primary interface for agents — not supplementary documentation. Every written convention is load-bearing. When in doubt, write it down.
+
+**Solo developer, push to main.** No PRs, no branch protection, no CI, no human code review. The mandatory review agent loops (plan-reviewer, code-reviewer, team-based reviews) are the only quality gate between code and production. Treat them accordingly — they are not optional process overhead.
+
 ## Verification
 
 Run `./scripts/check.sh` before committing. Activate hook: `git config core.hooksPath .githooks`
@@ -30,6 +34,17 @@ Frontmatter: `title`, `type`, `tags`, `status`, `created`, `modified`, `source`,
 - Envelope: `{"success": bool, "data": ..., "error": {"code": ..., "message": ...}}`
 - CodeMirror spacing: NEVER add `margin` or `padding` to `.cm-line` elements — it breaks mouse hit-testing. Use block widget decorations (`Decoration.widget({ widget, block: true })`) with a matching `estimatedHeight` getter instead; CM6 includes these in its height map.
 - Canvas docs: When modifying Canvas code (`CanvasEditor.tsx`, `canvasNodes.tsx`, `canvasTranslation.ts`, `canvasShapes.ts`, `CanvasPanel.tsx`, canvas CSS, or canvas-related uiStore settings), check `docs/canvas-architecture.md` for contradictions with your changes. Update the doc if you add/remove/rename components, change data flow, modify state management patterns, add keyboard shortcuts, or change integration points. The extension guide `add-canvas-node-type.md` must also be updated if the node type creation process changes.
+- Stale async guard: All async callbacks (file reads, image loads, plain-file fetches) must check the current path/note still matches before applying state. Pattern: `if (get().activeNote?.path === path) { set(...) }`.
+- Diagnosis-first debugging: When debugging, state your hypothesis for the root cause before editing source files. If a first fix doesn't work, add `log.debug` output and read the logs before attempting a second fix — do not guess twice in a row. For structured debugging, use the `/debug` skill. For complex cross-cutting bugs, use the `/debug-team` skill.
+
+## Platform Gotchas Index
+
+Known platform constraints that cause silent failures. Check the relevant section before debugging.
+
+- Canvas / React Flow: `docs/canvas-architecture.md` § Known Platform Gotchas
+- Tauri WebView: `docs/06-architecture.md` § Tauri WebView Constraints
+- CodeMirror: see `.cm-line` rule in Conventions above + `docs/extension-guides/add-cm-preview-widget.md` § Pitfalls
+- E2E testing: `tests/e2e/README.md` § Gotchas
 
 ## Logging
 
@@ -47,12 +62,21 @@ When adding debug logs for troubleshooting: use `log.debug(target, msg, fields?)
 
 **Before implementing**, check `docs/extension-guides/` for step-by-step recipes: `add-callout-type`, `add-canvas-node-type`, `add-e2e-test`, `add-inline-command`, `add-cli-command`, `add-cm-preview-widget`, `add-edge-type`, `add-file-type-editor`, `add-mcp-tool`, `add-note-type`, `add-panel-tab`, `add-tauri-command`, `add-zustand-store`. Follow the guide if one matches your task. **Before making architectural decisions**, check `docs/decisions/` for prior ADRs. Error recovery: `docs/error-recovery.md`. Changelog: `docs/CHANGELOG.md`.
 
-## Review Agents
+## Agents
 
-Two review agents are defined in `.claude/agents/`. These are NOT optional -- they are mandatory parts of the development workflow described below.
+Six agent definitions live in `.claude/agents/`. Review agents are mandatory; layer agents are used by team skills (`/feature-team`, `/debug-team`).
+
+### Review Agents (mandatory)
 
 - **plan-reviewer** (`.claude/agents/plan-reviewer.md`): Reviews implementation plans for architectural alignment, scope, edge cases, test strategy, and data model impact.
 - **code-reviewer** (`.claude/agents/code-reviewer.md`): Reviews implemented code for correctness, Rust quality, function design, test coverage, serialization, and performance.
+
+### Layer Agents (for teams)
+
+- **rust-core** (`.claude/agents/rust-core.md`): Owns `crates/core/`, `crates/cli/`, `crates/mcp/`. Rust data layer, workspace API, CLI commands, MCP tools.
+- **tauri-backend** (`.claude/agents/tauri-backend.md`): Owns `crates/app/src-tauri/`. Tauri commands, DTOs, file watcher, IPC bridge.
+- **frontend** (`.claude/agents/frontend.md`): Owns `crates/app/src/`. React components, Zustand stores, CSS, CodeMirror extensions.
+- **e2e-qa** (`.claude/agents/e2e-qa.md`): Owns `tests/e2e/`. E2E test specs, helpers, MCP socket client, visual verification.
 
 ## Mandatory Feedback Loops
 
@@ -63,7 +87,7 @@ Whenever you create an implementation plan (whether in plan mode or not), you MU
 1. Write the plan to `.claude/reviews/plans/<descriptive-name>.md`.
 2. Read `.claude/agents/plan-reviewer.md` for the review criteria.
 3. Immediately spawn one or more `general-purpose` agents to review the plan. Each agent must:
-   - Receive the full plan content and the review criteria from the agent definition file.
+   - Receive the full plan content, the original user request, and the review criteria from the agent definition file.
    - Focus on a distinct aspect if multiple agents are used (e.g., one on architecture, one on edge cases/testing).
    - Write its feedback to `.claude/reviews/plans/<descriptive-name>-review-<N>.md`.
 4. Read all review files. For any finding with severity `blocker` or `should-fix`, update the plan in place.
@@ -75,7 +99,7 @@ Whenever you finish implementing code (a complete feature, a step in a plan, or 
 
 1. Read `.claude/agents/code-reviewer.md` for the review criteria.
 2. Spawn one or more `general-purpose` agents to review the changed files. Each agent must:
-   - Receive the list of changed files, the diff or full file contents, and the review criteria from the agent definition file.
+   - Receive the list of changed files, the diff or full file contents, the original user request, and the review criteria from the agent definition file.
    - If there are many changed files, split across agents by area (e.g., one for core, one for CLI).
    - Write its feedback to `.claude/reviews/code/<descriptive-name>-review-<N>.md`.
 3. Read all review files. For any finding with severity `bug` or `should-fix`, fix the code.
@@ -83,12 +107,36 @@ Whenever you finish implementing code (a complete feature, a step in a plan, or 
 5. Repeat until there are no more `bug` or `should-fix` findings.
 6. Only then consider the implementation done.
 
+### Team-Based Reviews (Large Changes)
+
+When a change touches **5+ files across 2+ areas** (e.g., core + frontend, canvas + stores + CSS), upgrade from subagents to a review team. Reviewers as teammates can cross-pollinate findings:
+
+1. Follow the same review criteria from the agent definition files.
+2. Instead of spawning independent subagents, create a review team with one reviewer per area.
+3. Reviewers investigate their area and **message each other** when findings may affect another area (e.g., "store change breaks undo path — check canvas undo/redo").
+4. Cap cross-communication to **one round** — reviewer reports finding, affected reviewer checks it, done.
+5. After all reviewers report, converge findings into the same `.claude/reviews/` files as the subagent flow.
+6. Fix/iterate the same way as the standard loop.
+
+For smaller changes (< 5 files or single area), the standard subagent flow above is sufficient.
+
+### Unbiased Handoff Rule
+
+When spawning reviewers, investigators, or teammates, pass **context without conclusion**:
+
+- **Pass**: facts (diff, file paths, test results, user request, symptoms, reproduction steps, what was tried and what happened)
+- **Do NOT pass**: your interpretation ("I did X because Y", "this fixes the Z problem", "I think the root cause is X", "the best approach is Y")
+
+Let the agent form its own judgment from the raw evidence. If you frame the handoff around your conclusion, the agent will confirm it instead of challenging it.
+
 ### Rules
 
 - Never skip the feedback loops. They run even for small changes.
 - Review files accumulate in `.claude/reviews/` -- do not delete them during a session.
 - If a review agent raises a `suggestion`, note it but do not block on it. Use judgment.
 - When spawning review agents, always pass the full content of the relevant agent definition file as part of the prompt -- do not summarize it.
+- Follow the Unbiased Handoff Rule — never frame a review or investigation prompt around your own conclusion.
+- For cross-layer features, consider the `/feature-team` skill to parallelize implementation across stack layers.
 
 ## Review Cleanup
 

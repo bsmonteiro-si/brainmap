@@ -353,6 +353,21 @@ All settings are persisted to `brainmap:uiPrefs` localStorage. Each has a `setCa
 | Fix undo/redo | `CanvasEditor.tsx`, search `undoStackRef` / `pushSnapshot` / `canvasUndo` |
 | Fix counter-zoom issues | `CanvasEditor.tsx`, search `counterZoomStyle` / `uiZoom` |
 
+## Known Platform Gotchas
+
+These are hard-won constraints that cause silent failures or wasted debugging if you don't know about them. Check this table before debugging canvas issues.
+
+| Gotcha | Symptom | Workaround |
+|--------|---------|------------|
+| `NODE_TYPES` must be module-level const | Recreating in render unmounts/remounts all nodes, losing internal state | Define `NODE_TYPES` and `EDGE_TYPES` as `const` at module scope, never inside a component |
+| `node.measured` dimensions update during resize | Height reads stale mid-gesture, causing jumps or incorrect persistence | Capture dimensions in a `useRef` at gesture start; read from ref during gesture |
+| Child `setNodes`/`setEdges` via `useReactFlow()` bypasses parent `onNodesChange` | Edits from node toolbars, text editing, or edge editing are not auto-saved | Always follow with `scheduleSave()` from `CanvasSaveContext` |
+| `window.prompt` / `window.confirm` blocked in Tauri WebView | Silent no-op or crash — no dialog appears | Use custom React dialog components; never use native browser dialogs |
+| Viewport restore races with node initialization | Viewport jumps, resets to origin, or `fitView` overrides saved position | Defer via `pendingViewportRef` + `useNodesInitialized()`; guard with `hasRestoredViewportRef` |
+| React Flow internal styles have high specificity | Custom CSS silently ignored, no visible error | Inspect computed styles in DevTools; may need `.react-flow` ancestor selectors or more specific selectors |
+| Counter-zoom breaks `getBoundingClientRect()` | Click coordinates misaligned with visual node positions | Canvas container applies `zoom: 1/uiZoom`; context menus multiply `clientX`/`clientY` by `uiZoom` |
+| Drag-drop coordinates need double scaling | Dropped items land at wrong position | Convert via `physicalPos / (dpr * zoom)` — device pixel ratio AND global zoom are separate factors |
+
 ## Keeping This Doc Current
 
 This doc is referenced by CLAUDE.md as the authoritative Canvas architecture reference. Agents modifying Canvas code MUST:
@@ -368,4 +383,6 @@ This doc is referenced by CLAUDE.md as the authoritative Canvas architecture ref
    - Added a node type -> update Node Type Architecture + Common Tasks
    - Changed translation logic -> update Translation Layer
    - Changed context menu items -> update Context Menus
+   - Discovered a framework/runtime constraint during debugging -> add row to Known Platform Gotchas
+   - Upgraded `@xyflow/react` or Tauri -> re-verify each gotcha row still applies (remove if fixed upstream)
 4. **New extension guides**: If your change establishes a new repeatable pattern (like adding a canvas toolbar plugin), create a guide in `docs/extension-guides/`.

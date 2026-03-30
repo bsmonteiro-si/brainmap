@@ -374,6 +374,19 @@ app/
 
 The architecture supports all of these without structural changes — the core library abstractions (Graph Engine, Indexer) hide the storage backend from consumers.
 
+## Tauri WebView Constraints
+
+These constraints apply to all frontend code running in the Tauri WebView, not just canvas.
+
+| Constraint | Symptom | Workaround |
+|------------|---------|------------|
+| `window.prompt` / `window.confirm` / `window.alert` blocked | Silent no-op or crash — no dialog appears, no error thrown | Use custom React dialog components for all user input |
+| `__TAURI_INTERNALS__` not `__TAURI__` (v2) | `undefined` errors when calling IPC | Tauri v2 exposes `window.__TAURI_INTERNALS__.invoke()`, not the v1 `window.__TAURI__` |
+| `TAURI_CONFIG` env var not supported (v2) | Config overrides silently ignored | Use `--config` CLI flag: `npx tauri dev --config '{...}'` |
+| Global `document.documentElement.style.zoom` breaks coordinate math | `getBoundingClientRect()` returns zoomed coords but mouse events don't | Drag-drop: `physicalPos / (dpr * zoom)`; Canvas: counter-zoom container; Context menus: multiply by `uiZoom` |
+| Stale async results after navigation | Previous tab's fetch resolves and overwrites current tab's state | Guard all async callbacks: check current path/note still matches before applying `set()` |
+| localStorage can be cleared by OS cache management | UI preferences (panel sizes, viewports, theme) reset unexpectedly | Acceptable for non-critical prefs; do not store authoritative data in localStorage |
+
 ## Tauri IPC Strategy
 
 The Tauri IPC bridge can become a bottleneck if every graph interaction requires a round-trip. To prevent this:
