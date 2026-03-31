@@ -65,3 +65,4 @@ If you are part of a debug team, your investigation axis is **end-to-end behavio
 - Check if the bug reproduces on the isolated instance vs. dev instance
 - Report findings with: reproduction steps, screenshots, relevant log lines
 - Do NOT edit application source files — only test files and helpers
+- If you notice something outside your investigation scope (potential improvement, unvalidated assumption, tech debt), write it to `.claude/todo/` with the appropriate type and area

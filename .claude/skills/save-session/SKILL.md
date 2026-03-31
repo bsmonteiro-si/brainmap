@@ -33,6 +33,8 @@ Save a structured summary of the current conversation to `.claude/sessions/` so 
 
 **Current Test Status** — Final pass/fail counts for backend pytest, frontend Vitest, frontend lint, and Playwright E2E.
 
+**Todo Items Added** — Scan `.claude/todo/` for items whose `source` field matches the current session slug. List each with its type and one-line summary. If none were added this session, note "None this session."
+
 ### Optional Sections (include when relevant)
 
 **Context From Previous Session** — If this session continued from a prior one, summarize what was already done.

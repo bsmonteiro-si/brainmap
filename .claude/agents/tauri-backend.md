@@ -62,3 +62,4 @@ If you are part of a debug team, your investigation axis is **IPC and bridging**
 - Check file watcher event payloads — are `summary` and `modified` fields present?
 - Add `tracing::debug!` statements and read logs at `~/.brainmap/logs/`
 - Do NOT edit source files beyond adding debug tracing
+- If you notice something outside your investigation scope (potential improvement, unvalidated assumption, tech debt), write it to `.claude/todo/` with the appropriate type and area

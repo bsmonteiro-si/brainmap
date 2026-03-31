@@ -233,3 +233,31 @@ Note: the new card starts off-screen at the canvas center. Use "Fit View" after 
 ## Delete a Node
 
 Two-step: open node context menu, then click Delete. See `08-helpers.md` for clicking context menu items.
+
+## Synthetic Keyboard Events
+
+When dispatching keyboard events on the canvas (e.g., Cmd+Z for undo), `e.target` must be inside the canvas container for scoped handlers to fire. Synthetic events set `e.target` to whatever element you call `dispatchEvent()` on — NOT `document.activeElement`.
+
+**Two-step pattern** — focus first, then dispatch on the focused element:
+
+```js
+// Step 1: Focus the canvas container
+mcp__tauri-mcp__execute_js(code=`
+var c = document.querySelector('.canvas-container');
+if (c) c.focus();
+return 'focused';
+`)
+
+// Step 2: Dispatch on the active element (separate call so focus has settled)
+mcp__tauri-mcp__execute_js(code=`
+var el = document.activeElement || document;
+el.dispatchEvent(new KeyboardEvent('keydown', {
+  key: 'z', metaKey: true, bubbles: true, cancelable: true
+}));
+return 'dispatched Cmd+Z on ' + el.tagName;
+`)
+```
+
+**Why two calls?** `.focus()` and `dispatchEvent()` in the same `execute_js` call doesn't give the browser time to update `document.activeElement`. The second call sees the settled focus state.
+
+**Wrong**: `document.dispatchEvent(...)` — sets `e.target = document`, which is outside the canvas container, so scoped handlers won't fire.

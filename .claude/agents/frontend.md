@@ -69,3 +69,4 @@ If you are part of a debug team, your investigation axis is **rendering, state, 
 - Look for stale closures, missing effect dependencies, or ref timing issues
 - Add `log.debug(target, msg, fields?)` statements and read logs at `~/.brainmap/logs/`
 - Do NOT edit source files beyond adding debug logging
+- If you notice something outside your investigation scope (potential improvement, unvalidated assumption, tech debt), write it to `.claude/todo/` with the appropriate type and area

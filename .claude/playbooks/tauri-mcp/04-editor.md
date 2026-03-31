@@ -63,7 +63,7 @@ return 'No CodeMirror editor open';
 
 ## Keyboard Shortcuts
 
-Dispatch on `document`. These are global shortcuts handled in `App.tsx`:
+Dispatch on `document`. These are global shortcuts handled in `App.tsx` (NOT CodeMirror keymaps — see limitations below):
 
 ```js
 // Save (Cmd+S)
@@ -102,3 +102,14 @@ document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: tr
 return 'Dispatched Escape';
 `)
 ```
+
+## Synthetic KeyboardEvent Limitations
+
+CodeMirror 6 ignores synthetic `KeyboardEvent` dispatched via `dispatchEvent()` — it uses its own internal input handling that only processes real browser keystrokes. You **cannot** test CM undo/redo, formatting shortcuts, or any CM keymap via `execute_js`.
+
+To verify CM behavior via MCP:
+- Use `type_text` to input text, then read `.cm-content.textContent` to verify
+- Use store actions (`useEditorStore`) for operations like save
+- Assert DOM state (content, classes) rather than triggering key-based commands
+
+For keyboard shortcuts handled in `App.tsx` (Cmd+S, Cmd+N, etc.), dispatching on `document` works fine — those use standard `addEventListener`, not CM keymaps.

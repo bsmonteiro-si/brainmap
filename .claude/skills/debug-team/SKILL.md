@@ -8,6 +8,16 @@ argument: Description of the bug, what has already been tried, and which systems
 
 You are launching a multi-agent debugging team for a complex bug. This is the heavy artillery — use it when single-agent debugging has failed or the bug clearly involves multiple interacting systems.
 
+## Step 0: Triage — Is a Team Actually Needed?
+
+Before creating a team, honestly assess whether the overhead is justified. A debug team has real costs: team creation, task assignment, mailbox routing, shutdown protocol, and context duplication. Ask yourself:
+
+1. **Will investigators need to message each other mid-investigation?** If the axes are independent and investigators just report back to you, parallel subagents achieve the same result faster.
+2. **Will investigators need to implement fixes in different files?** If the fix is likely a single-file change, you don't need coordinated implementation.
+3. **Does the bug span 3+ truly independent systems that need coordinated fixes?** If it's contained to one layer (e.g., purely frontend DOM/events), subagents suffice.
+
+If the answer to all three is **no**, tell the user: "This bug doesn't need team overhead — two parallel subagents investigating [axis A] and [axis B] will get the same result faster. Want me to do that instead?" Only proceed with the full team if at least one answer is **yes**, or if the user explicitly wants the team anyway.
+
 ## Step 1: Identify Investigation Axes
 
 Based on the bug description and what has already been tried, identify 2-3 independent investigation axes. Common splits for BrainMap:
