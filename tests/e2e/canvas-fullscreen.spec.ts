@@ -327,4 +327,157 @@ describe("Canvas Fullscreen", () => {
     expect(during.zoom).toBe(before.zoom);
     expect(after.zoom).toBe(before.zoom);
   });
+
+  it("zoom in preserves all nodes and their IDs", async () => {
+    // Snapshot nodes before zoom
+    const beforeSnapshot = await client.executeJs(`
+      (function() {
+        var nodes = document.querySelectorAll('.react-flow__node');
+        return JSON.stringify(Array.from(nodes).map(function(n) {
+          return { id: n.getAttribute('data-id'), text: n.textContent.trim().substring(0, 80) };
+        }).sort(function(a, b) { return a.id < b.id ? -1 : 1; }));
+      })()
+    `);
+    const before = typeof beforeSnapshot === "string" ? JSON.parse(beforeSnapshot) : beforeSnapshot;
+    expect(before.length).toBeGreaterThan(0);
+
+    // Zoom in via controls button
+    await client.executeJs(`
+      (function() {
+        var btn = document.querySelector('.react-flow__controls-zoomin');
+        if (btn) { btn.click(); btn.click(); btn.click(); }
+        return 'zoomed';
+      })()
+    `);
+    await sleep(500);
+
+    // Snapshot nodes after zoom in
+    const afterSnapshot = await client.executeJs(`
+      (function() {
+        var nodes = document.querySelectorAll('.react-flow__node');
+        return JSON.stringify(Array.from(nodes).map(function(n) {
+          return { id: n.getAttribute('data-id'), text: n.textContent.trim().substring(0, 80) };
+        }).sort(function(a, b) { return a.id < b.id ? -1 : 1; }));
+      })()
+    `);
+    const after = typeof afterSnapshot === "string" ? JSON.parse(afterSnapshot) : afterSnapshot;
+
+    // Same number of nodes, same IDs, same text content
+    expect(after.length).toBe(before.length);
+    for (let i = 0; i < before.length; i++) {
+      expect(after[i].id).toBe(before[i].id);
+      expect(after[i].text).toBe(before[i].text);
+    }
+  });
+
+  it("zoom out preserves all nodes and their IDs", async () => {
+    // Snapshot nodes before zoom
+    const beforeSnapshot = await client.executeJs(`
+      (function() {
+        var nodes = document.querySelectorAll('.react-flow__node');
+        return JSON.stringify(Array.from(nodes).map(function(n) {
+          return { id: n.getAttribute('data-id'), text: n.textContent.trim().substring(0, 80) };
+        }).sort(function(a, b) { return a.id < b.id ? -1 : 1; }));
+      })()
+    `);
+    const before = typeof beforeSnapshot === "string" ? JSON.parse(beforeSnapshot) : beforeSnapshot;
+
+    // Zoom out via controls button
+    await client.executeJs(`
+      (function() {
+        var btn = document.querySelector('.react-flow__controls-zoomout');
+        if (btn) { btn.click(); btn.click(); btn.click(); }
+        return 'zoomed';
+      })()
+    `);
+    await sleep(500);
+
+    // Snapshot nodes after zoom out
+    const afterSnapshot = await client.executeJs(`
+      (function() {
+        var nodes = document.querySelectorAll('.react-flow__node');
+        return JSON.stringify(Array.from(nodes).map(function(n) {
+          return { id: n.getAttribute('data-id'), text: n.textContent.trim().substring(0, 80) };
+        }).sort(function(a, b) { return a.id < b.id ? -1 : 1; }));
+      })()
+    `);
+    const after = typeof afterSnapshot === "string" ? JSON.parse(afterSnapshot) : afterSnapshot;
+
+    expect(after.length).toBe(before.length);
+    for (let i = 0; i < before.length; i++) {
+      expect(after[i].id).toBe(before[i].id);
+      expect(after[i].text).toBe(before[i].text);
+    }
+  });
+
+  it("zoom in during fullscreen preserves nodes", async () => {
+    // Enter fullscreen
+    await client.executeJs(`
+      (async () => {
+        const { useUIStore } = await import('/src/stores/uiStore.ts');
+        var path = useUIStore.getState().activeCanvasPath;
+        if (!useUIStore.getState().canvasFullscreen) {
+          useUIStore.getState().toggleCanvasFullscreen(path);
+        }
+        return 'entered';
+      })()
+    `);
+    await sleep(500);
+
+    // Snapshot nodes
+    const beforeSnapshot = await client.executeJs(`
+      (function() {
+        var nodes = document.querySelectorAll('.react-flow__node');
+        return JSON.stringify(Array.from(nodes).map(function(n) {
+          return n.getAttribute('data-id');
+        }).sort());
+      })()
+    `);
+    const before = typeof beforeSnapshot === "string" ? JSON.parse(beforeSnapshot) : beforeSnapshot;
+
+    // Zoom in
+    await client.executeJs(`
+      (function() {
+        var btn = document.querySelector('.react-flow__controls-zoomin');
+        if (btn) { btn.click(); btn.click(); }
+        return 'zoomed';
+      })()
+    `);
+    await sleep(500);
+
+    // Verify same node IDs
+    const afterSnapshot = await client.executeJs(`
+      (function() {
+        var nodes = document.querySelectorAll('.react-flow__node');
+        return JSON.stringify(Array.from(nodes).map(function(n) {
+          return n.getAttribute('data-id');
+        }).sort());
+      })()
+    `);
+    const after = typeof afterSnapshot === "string" ? JSON.parse(afterSnapshot) : afterSnapshot;
+
+    expect(after).toEqual(before);
+
+    // Exit fullscreen and verify nodes survive the round-trip
+    await client.executeJs(`
+      (async () => {
+        const { useUIStore } = await import('/src/stores/uiStore.ts');
+        useUIStore.getState().toggleCanvasFullscreen();
+        return 'exited';
+      })()
+    `);
+    await sleep(500);
+
+    const exitedSnapshot = await client.executeJs(`
+      (function() {
+        var nodes = document.querySelectorAll('.react-flow__node');
+        return JSON.stringify(Array.from(nodes).map(function(n) {
+          return n.getAttribute('data-id');
+        }).sort());
+      })()
+    `);
+    const exited = typeof exitedSnapshot === "string" ? JSON.parse(exitedSnapshot) : exitedSnapshot;
+
+    expect(exited).toEqual(before);
+  });
 });
