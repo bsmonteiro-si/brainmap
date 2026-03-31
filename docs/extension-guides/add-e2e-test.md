@@ -7,6 +7,8 @@ For architecture details and gotchas, see `tests/e2e/README.md`.
 ## Reference implementations
 
 - `file-tree.spec.ts` — Expand/collapse folders, visibility assertions
+- `canvas-fullscreen.spec.ts` — Fullscreen toggle, zoom, content preservation across state changes
+- `canvas-undo-scope.spec.ts` — Keyboard event scoping, undo/redo isolation between canvas and editor
 
 ## Prerequisites
 
@@ -92,6 +94,21 @@ Rules:
 - **Wait after interactions.** CSS animations (150ms) and React re-renders need time. Use `await sleep(400)` after clicks that trigger state changes.
 - **Assert end state, not interactions.** Check what the DOM looks like after, not that a click handler was called.
 - Use `getClient()` from `connect.ts` — it returns a shared socket connection.
+
+### 3b. Avoid shared state between spec files
+
+Vitest runs spec files in parallel by default. All specs share a single app instance via the MCP socket. If two specs modify the same resource (e.g., both open and mutate the same `.canvas` file), they will interfere with each other.
+
+Rules:
+- **Different specs must use different files.** If `canvas-fullscreen.spec.ts` tests `The Smoking Controversy.canvas`, your new canvas spec must use a different canvas file (e.g., `Canvas Features Demo.canvas`).
+- **Clean up in `afterAll`.** Close canvases, close tabs, and restore any modified files from the seed copy. Even with different files, stale UI state (expanded folders, open tabs) leaks between specs.
+- **If cleanup isn't enough**, restore the file from seed in `afterAll`:
+  ```typescript
+  const seedFile = path.join(import.meta.dirname, "../../seed", canvasPath);
+  const wsRoot = await client.executeJs(`...get workspace root...`);
+  fs.copyFileSync(seedFile, path.join(wsRoot, canvasPath));
+  ```
+- **Store-based navigation** (e.g., `openNote(path)` via store import) **expands parent folders as a side effect**. This can break file-tree tests that assert folders are collapsed. Prefer `clickFile()` helper when the tree is visible, or collapse folders in your cleanup.
 
 ### 4. Handle visibility correctly
 
