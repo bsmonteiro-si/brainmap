@@ -58,7 +58,25 @@ export async function setup(): Promise<void> {
     flags: "w",
   });
 
-  // 4. Spawn cargo tauri dev
+  // 4. Check if Vite port is already in use (e.g. leftover e2e-app.sh instance)
+  try {
+    execSync(`lsof -ti:${VITE_PORT}`, { stdio: "pipe" });
+    // If we get here, something is listening on the port
+    throw new Error(
+      `Port ${VITE_PORT} is already in use. Kill the process with: lsof -ti:${VITE_PORT} | xargs kill\n` +
+      `Or stop the isolated app: ./scripts/e2e-app.sh stop`,
+    );
+  } catch (e: unknown) {
+    // lsof exits with code 1 when nothing is listening — that's what we want
+    if (e instanceof Error && "status" in e) {
+      // execSync threw because lsof returned non-zero → port is free, continue
+    } else {
+      // Our own Error from the throw above
+      throw e;
+    }
+  }
+
+  // 5. Spawn cargo tauri dev
   const tauriConfigOverride = JSON.stringify({
     build: {
       devUrl: `http://localhost:${VITE_PORT}`,
@@ -99,7 +117,7 @@ export async function setup(): Promise<void> {
     tauriProcess = null;
   });
 
-  // 5. Safety-net: kill children on unexpected exit
+  // 6. Safety-net: kill children on unexpected exit
   process.on("exit", killTauriProcess);
   process.on("SIGINT", () => {
     killTauriProcess();
@@ -110,22 +128,22 @@ export async function setup(): Promise<void> {
     process.exit(143);
   });
 
-  // 6. Poll for socket file (token file is optional — not all plugin versions create one)
+  // 7. Poll for socket file (token file is optional — not all plugin versions create one)
   console.log(`[e2e] Waiting for socket at ${SOCKET_PATH} ...`);
   await waitForFiles([SOCKET_PATH], MAX_WAIT_MS);
   console.log("[e2e] Socket file detected.");
 
-  // 7. Connect client (small delay to ensure socket is accepting connections)
+  // 8. Connect client (small delay to ensure socket is accepting connections)
   await new Promise((r) => setTimeout(r, 1_000));
   client = new E2EClient(SOCKET_PATH);
   await client.connect();
   console.log("[e2e] Connected to Tauri MCP socket.");
 
-  // 8. Wait for the WebView to be ready (JS context loaded)
+  // 9. Wait for the WebView to be ready (JS context loaded)
   await waitForWebView(client);
   console.log("[e2e] WebView is ready.");
 
-  // 9. Open test workspace via the app's segment actions
+  // 10. Open test workspace via the app's segment actions
   //    This replicates what the SegmentPicker UI does: addSegment + openWorkspace + loadTopology.
   //    We import the bundled module dynamically from the Vite dev server's module graph.
   const escapedPath = tempWorkspaceDir!.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
@@ -138,11 +156,11 @@ export async function setup(): Promise<void> {
   `);
   console.log("[e2e] Workspace opened via openFolderAsSegment.");
 
-  // 10. Wait for the file tree to render
+  // 11. Wait for the file tree to render
   await client.waitForSelector("[data-tree-path]", 30_000);
   console.log("[e2e] File tree loaded. Setup complete.");
 
-  // 11. Write socket path to a file so test workers can create their own client
+  // 12. Write socket path to a file so test workers can create their own client
   fs.writeFileSync(
     path.join(import.meta.dirname, ".e2e-socket-path"),
     SOCKET_PATH,

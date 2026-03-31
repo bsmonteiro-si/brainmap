@@ -1,5 +1,5 @@
 ---
-name: debug
+name: bugfix
 description: Structured single-agent debugging workflow that enforces diagnosis before fixing. Use for non-trivial bugs where guessing would waste iterations.
 argument: Description of the bug or unexpected behavior
 ---

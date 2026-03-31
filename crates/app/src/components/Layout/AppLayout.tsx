@@ -13,7 +13,6 @@ import { IconSidebar } from "./IconSidebar";
 import { CanvasPanel } from "../Canvas/CanvasPanel";
 import { VideoPipPanel } from "../Editor/VideoPipPanel";
 import { TabBar } from "../Editor/TabBar";
-import { CanvasEditor } from "../Editor/CanvasEditor";
 import { useExternalDragDrop } from "../../hooks/useExternalDragDrop";
 
 const PANEL_IDS = {
@@ -76,18 +75,6 @@ export function AppLayout() {
     },
     [savePanelSizes]
   );
-
-  // Fullscreen mode: render only the canvas, no chrome
-  if (canvasFullscreen) {
-    return (
-      <>
-        <div className="app-layout-root" style={{ width: "100%", height: "100vh" }}>
-          <CanvasEditor path={canvasFullscreen} />
-        </div>
-        <VideoPipPanel />
-      </>
-    );
-  }
 
   return (
     <>

@@ -234,7 +234,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
   const canvasFullscreen = useUIStore((s) => s.canvasFullscreen);
   const toggleCanvasFullscreen = useUIStore((s) => s.toggleCanvasFullscreen);
   const colorMode: ColorMode = canvasTheme;
-  const containerClass = `canvas-container${canvasTheme === "light" ? " canvas-light" : ""}${canvasNodeShadow > 0 ? " canvas-node-shadows" : ""}`;
+  const containerClass = `canvas-container${canvasTheme === "light" ? " canvas-light" : ""}${canvasNodeShadow > 0 ? " canvas-node-shadows" : ""}${canvasFullscreen === path ? " canvas-fullscreen" : ""}`;
   const shapeVars = {
     "--callout-tail": `${canvasCalloutTailSize}px`,
     "--callout-tail-inner": `${canvasCalloutTailSize - 1}px`,
@@ -260,11 +260,14 @@ export function CanvasEditorInner({ path }: { path: string }) {
   // Counter-zoom: neutralise the global document.documentElement.style.zoom so
   // React Flow's coordinate math (getBoundingClientRect vs mouse events) stays
   // consistent.  Scale width/height up so the container still fills its parent.
+  const isFullscreen = canvasFullscreen === path;
   const counterZoomStyle: React.CSSProperties = useMemo(
-    () => uiZoom !== 1
-      ? { zoom: 1 / uiZoom, width: `${uiZoom * 100}%`, height: `${uiZoom * 100}%` }
-      : {},
-    [uiZoom],
+    () => isFullscreen
+      ? {} // fixed-position fullscreen is outside the zoomed document flow
+      : uiZoom !== 1
+        ? { zoom: 1 / uiZoom, width: `${uiZoom * 100}%`, height: `${uiZoom * 100}%` }
+        : {},
+    [uiZoom, isFullscreen],
   );
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -286,6 +289,9 @@ export function CanvasEditorInner({ path }: { path: string }) {
 
   // ── Clipboard for copy/paste ─────────────────────────────────────────────
   const clipboardRef = useRef<{ nodes: string; edges: string } | null>(null);
+
+  // ── Container ref (for scoping keyboard shortcuts to this canvas) ────────
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   // ── Undo/Redo stacks ─────────────────────────────────────────────────────
   const MAX_CANVAS_UNDO = 30;
@@ -530,9 +536,11 @@ export function CanvasEditorInner({ path }: { path: string }) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return;
-      // Don't intercept when editing text inside a node
       const target = e.target as HTMLElement | null;
-      if (target?.closest("textarea, input")) return;
+      // Only handle when focus is inside this canvas instance
+      if (!canvasContainerRef.current?.contains(target)) return;
+      // Don't intercept when editing text inside a node
+      if (target?.closest("textarea, input, [contenteditable]")) return;
       if (e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         e.stopPropagation();
@@ -1376,7 +1384,7 @@ export function CanvasEditorInner({ path }: { path: string }) {
     <CanvasPathContext.Provider value={path}>
     <CanvasSnapshotContext.Provider value={stablePushSnapshot}>
     <CanvasSaveContext.Provider value={stableScheduleSave}>
-    <div className={containerClass} style={{ ...shapeVars, ...counterZoomStyle }}>
+    <div ref={canvasContainerRef} className={containerClass} tabIndex={-1} style={{ ...shapeVars, ...counterZoomStyle, outline: "none" }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -1582,11 +1590,11 @@ export function CanvasEditorInner({ path }: { path: string }) {
             <HelpCircle size={18} />
           </button>
           <button
-            className={`canvas-toolbar-btn canvas-toolbar-btn--small${canvasFullscreen ? " canvas-toolbar-btn--active" : ""}`}
-            title={canvasFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+            className={`canvas-toolbar-btn canvas-toolbar-btn--small${isFullscreen ? " canvas-toolbar-btn--active" : ""}`}
+            title={isFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
             onClick={() => toggleCanvasFullscreen(path)}
           >
-            {canvasFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+            {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
           </button>
         </Panel>
       </ReactFlow>

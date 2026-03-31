@@ -4995,6 +4995,17 @@ body.dragging-active {
   flex-direction: column;
 }
 
+.canvas-container.canvas-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg-primary);
+}
+
+.canvas-container.canvas-fullscreen.canvas-light {
+  background: #f8f8f8;
+}
+
 .canvas-container .react-flow {
   font-family: var(--ui-font-family);
   font-size: var(--ui-font-size);

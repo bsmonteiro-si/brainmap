@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { EditableFrontmatter } from "./editorStore";
+import { useUIStore } from "./uiStore";
 
 type FmSnapshot = Partial<EditableFrontmatter> | null;
 
@@ -114,6 +115,9 @@ export const useTabStore = create<TabStoreState>((set, get) => ({
     const { tabs, activeTabId } = get();
     const idx = tabs.findIndex((t) => t.id === id);
     if (idx < 0) return;
+    // Clear canvas fullscreen if the closed tab was fullscreened
+    const ui = useUIStore.getState();
+    if (ui.canvasFullscreen === id) ui.toggleCanvasFullscreen();
     const next = tabs.filter((t) => t.id !== id);
     if (next.length === 0) {
       set({ tabs: [], activeTabId: null });

@@ -1,6 +1,6 @@
 ---
 name: debug-team
-description: Spawn a competing-hypothesis debug team for complex cross-cutting bugs. Use when a single-agent /debug session has already failed or the bug clearly spans multiple systems (e.g., React Flow + state + CSS interacting).
+description: Spawn a competing-hypothesis debug team for complex cross-cutting bugs. Use when a single-agent /bugfix session has already failed or the bug clearly spans multiple systems (e.g., React Flow + state + CSS interacting).
 argument: Description of the bug, what has already been tried, and which systems are suspected
 ---
 
