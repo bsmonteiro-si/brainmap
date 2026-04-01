@@ -439,8 +439,10 @@ function Resizer({ id, selected, minWidth = 120, minHeight = 40, autoHeight = fa
     setNodes((nds) => nds.map((n) => {
       if (n.id !== id) return n;
       const style = (n.style ?? {}) as Record<string, unknown>;
-      if (typeof style.height !== "number") return n;
-      const h = style.height as number;
+      // React Flow stores the actual resized height in n.measured.height,
+      // NOT in style.height (which stays at the value we set in resizeStart).
+      const h = n.measured?.height ?? (typeof style.height === "number" ? style.height as number : null);
+      if (h == null) return n;
       const { height, ...rest } = style;
       if (h < preResizeHeightRef.current) {
         // User shrunk below original content height: keep explicit height
