@@ -37,6 +37,7 @@ Frontmatter: `title`, `type`, `tags`, `status`, `created`, `modified`, `source`,
 - Stale async guard: All async callbacks (file reads, image loads, plain-file fetches) must check the current path/note still matches before applying state. Pattern: `if (get().activeNote?.path === path) { set(...) }`.
 - Diagnosis-first debugging: When debugging, state your hypothesis for the root cause before editing source files. If a first fix doesn't work, add `log.debug` output and read the logs before attempting a second fix — do not guess twice in a row. For structured debugging, use the `/bugfix` skill. For complex cross-cutting bugs, use the `/debug-team` skill.
 - CSS verification: Before writing CSS, read existing styles on the target element and its parent chain to check for specificity conflicts. For subtle visual properties (shadow, opacity, border, gradient), state the minimum visible value — e.g., box-shadow opacity below 0.15 is invisible on dark backgrounds. For structured UI fixes, use the `/ui-fix` skill.
+- Testing: Follow `docs/extension-guides/add-unit-test.md`. Frontend tests use real Zustand stores with mocked API bridge — never mock stores in store tests. DOM queries use `getByRole`/`getByLabelText`/`getByText` — never CSS class selectors. Cross-store mocks use `createMockStore` from `test-utils/storeMocks.ts` — never hand-typed objects. New Tauri handlers require tests in `handlers.rs`. New `TauriBridge` methods require contract tests in `apiBridge.contract.test.ts`. Rust tests use `tempfile::TempDir` per test — never shared mutable state. MCP tool tests verify response schema, not just `success == true`.
 - Todo capture: When you notice something outside the current task's scope — a potential improvement, an unvalidated assumption, a friction point, or tech debt — write it to `.claude/todo/` rather than ignoring it or fixing it in-band. Mention any items added at the end of your response.
 
 ## Platform Gotchas Index
@@ -47,6 +48,22 @@ Known platform constraints that cause silent failures. Check the relevant sectio
 - Tauri WebView: `docs/06-architecture.md` § Tauri WebView Constraints
 - CodeMirror: see `.cm-line` rule in Conventions above + `docs/extension-guides/add-cm-preview-widget.md` § Pitfalls
 - E2E testing: `tests/e2e/README.md` § Gotchas
+- tauri-mcp bridge: see § tauri-mcp Bridge Recovery below
+
+### tauri-mcp Bridge Recovery
+
+The `tauri-mcp` and `tauri-mcp-isolated` MCP servers (defined in `.mcp.json`) depend on a Node.js bridge server built from the [P3GLEG/tauri-plugin-mcp](https://github.com/P3GLEG/tauri-plugin-mcp) repo. The built artifact lives at `/tmp/tauri-plugin-mcp/mcp-server-ts/build/index.js`. Because `/tmp/` is ephemeral, macOS can purge it on reboot or disk pressure.
+
+**Symptom**: `/mcp` reconnect fails, `tauri-mcp-isolated` tools are unavailable, E2E tests can't connect.
+
+**Fix** (run these steps in order):
+```bash
+cd /tmp && git clone https://github.com/P3GLEG/tauri-plugin-mcp.git tauri-plugin-mcp
+cd /tmp/tauri-plugin-mcp/mcp-server-ts && npm install --cache /tmp/npm-cache && npx tsc
+```
+Then reconnect via `/mcp`. If the isolated app was running, restart it: `./scripts/e2e-app.sh stop && ./scripts/e2e-app.sh start`.
+
+**When to check**: Before debugging MCP connection failures, verify `/tmp/tauri-plugin-mcp/mcp-server-ts/build/index.js` exists. If missing, run the fix above. Do not waste time diagnosing socket or protocol issues when the bridge server itself is gone.
 
 ## Logging
 
@@ -62,7 +79,7 @@ When adding debug logs for troubleshooting: use `log.debug(target, msg, fields?)
 
 ## Reference Docs
 
-**Before implementing**, check `docs/extension-guides/` for step-by-step recipes: `add-callout-type`, `add-canvas-node-type`, `add-e2e-test`, `add-inline-command`, `add-cli-command`, `add-cm-preview-widget`, `add-edge-type`, `add-file-type-editor`, `add-mcp-tool`, `add-note-type`, `add-panel-tab`, `add-tauri-command`, `add-zustand-store`. Follow the guide if one matches your task. **Before making architectural decisions**, check `docs/decisions/` for prior ADRs. Error recovery: `docs/error-recovery.md`. Changelog: `docs/CHANGELOG.md`.
+**Before implementing**, check `docs/extension-guides/` for step-by-step recipes: `add-callout-type`, `add-canvas-node-type`, `add-e2e-test`, `add-inline-command`, `add-cli-command`, `add-cm-preview-widget`, `add-edge-type`, `add-file-type-editor`, `add-mcp-tool`, `add-note-type`, `add-panel-tab`, `add-tauri-command`, `add-unit-test`, `add-zustand-store`. Follow the guide if one matches your task. **Before making architectural decisions**, check `docs/decisions/` for prior ADRs. Error recovery: `docs/error-recovery.md`. Changelog: `docs/CHANGELOG.md`.
 
 ## Agents
 

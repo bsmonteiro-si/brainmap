@@ -31,6 +31,8 @@ In a Bayesian network, each node represents a random variable, and each directed
 
 Before Bayesian networks, probabilistic reasoning in AI was intractable for realistic problems. The graph structure enables message-passing algorithms that perform exact or approximate inference efficiently by exploiting conditional independencies. Pearl's own algorithm for belief propagation in tree-structured networks was a landmark result.
 
+![Bayesian network diagram](../assets/bayesian-network-diagram.png)
+
 ## From Probabilistic to Causal
 
 Bayesian networks represent statistical relationships but do not inherently encode causal direction. The same graph can be consistent with multiple causal interpretations. Pearl's later work added causal semantics — interpreting arrows as causal influences — transforming Bayesian networks into causal diagrams capable of supporting interventional and counterfactual reasoning. This evolution from probabilistic to causal graphical models is a central narrative in The Book of Why.

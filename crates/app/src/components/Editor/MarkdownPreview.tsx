@@ -9,6 +9,7 @@ import { resolveNotePath, isLocalNoteLink, ensureMdExtension } from "../../utils
 import { useUIStore, THEME_BASE } from "../../stores/uiStore";
 import { useGraphStore } from "../../stores/graphStore";
 import { useEditorStore } from "../../stores/editorStore";
+import { getAPI } from "../../api/bridge";
 import { CALLOUT_TYPES, CALLOUT_FALLBACK, CALLOUT_RE } from "./calloutTypes";
 import { remarkCalloutMerge } from "./remarkCalloutMerge";
 import { remarkInlineSource } from "./remarkInlineSource";
@@ -110,6 +111,73 @@ function MermaidPreviewBlock({ source }: { source: string }) {
     return <div className="mermaid-loading">Rendering diagram&hellip;</div>;
   }
   return <div className="mermaid-preview" dangerouslySetInnerHTML={{ __html: svgHtml }} />;
+}
+
+// ---------------------------------------------------------------------------
+// Resolved image component (loads via Tauri asset protocol)
+// ---------------------------------------------------------------------------
+
+function MarkdownImage({ src, alt, notePath }: { src?: string; alt?: string; notePath: string }) {
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!src) {
+      setLoading(false);
+      setError("No image source");
+      return;
+    }
+
+    // External URLs (http/https/data) pass through directly
+    if (/^(https?:|data:)/i.test(src)) {
+      setResolvedSrc(src);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setResolvedSrc(null);
+
+    (async () => {
+      try {
+        const wsRelPath = resolveNotePath(notePath, src);
+        const api = await getAPI();
+        const meta = await api.resolveImagePath(wsRelPath);
+
+        let url: string;
+        if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+          const { convertFileSrc } = await import("@tauri-apps/api/core");
+          url = convertFileSrc(meta.absolute_path);
+        } else {
+          url = meta.absolute_path;
+        }
+
+        if (!cancelled) {
+          setResolvedSrc(url);
+          setLoading(false);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : String(e));
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [src, notePath]);
+
+  if (loading) {
+    return <span className="md-image-loading">Loading image&#8230;</span>;
+  }
+  if (error) {
+    return <span className="md-image-error">{error}</span>;
+  }
+  // SVG security: always render via <img>, never <object>/<embed>/<iframe>
+  return <img src={resolvedSrc!} alt={alt ?? ""} />;
 }
 
 interface Props {
@@ -246,6 +314,9 @@ export function MarkdownPreview({ content, notePath }: Props) {
           </a>
         );
       },
+      img: ({ src, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
+        <MarkdownImage src={src} alt={alt ?? ""} notePath={notePath} {...props} />
+      ),
       blockquote: ({
         children,
         node: _node,

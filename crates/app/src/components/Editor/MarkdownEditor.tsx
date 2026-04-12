@@ -27,6 +27,7 @@ import { smartPaste } from "./cmSmartPaste";
 import { createSlashAutocompletion } from "./cmSlashCommands";
 import { headingFoldService } from "./cmHeadingFold";
 import { mermaidDecorations, clearMermaidCache } from "./cmMermaidDecorations";
+import { imageDecorations, clearImageCache } from "./cmImageDecorations";
 import { buildCodeHighlight, resolveCodeTheme } from "./cmCodeHighlight";
 
 const ACCENT = "#4a9eff";
@@ -144,6 +145,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
 
     if (!raw) {
       clearMermaidCache();
+      clearImageCache();
       extensions.push(
         markdown({ extensions: GFM, codeLanguages: languages }),
         // Markdown-specific styles (headings, emphasis, strong, strikethrough, monospace) — must come
@@ -165,6 +167,7 @@ export function MarkdownEditor({ notePath, content, onChange, onViewReady, resto
           : []),
         headingFoldService(),
         mermaidDecorations(isDark),
+        imageDecorations(notePath),
       );
       if (wsRoot) {
         extensions.push(editorContextMenu(wsRoot.replace(/\/$/, "") + "/" + notePath, findTableRange, formatTableInView));

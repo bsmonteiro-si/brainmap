@@ -81,6 +81,17 @@ Available commands: `execute_js`, `take_screenshot`, `wait_for`, `get_page_state
 
 ## Gotchas
 
+### tauri-mcp bridge server disappears after reboot
+
+The MCP bridge at `/tmp/tauri-plugin-mcp/mcp-server-ts/build/index.js` lives in `/tmp/` and gets purged by macOS on reboot or disk pressure. If `/mcp` reconnect fails or `tauri-mcp-isolated` tools are unavailable, rebuild it:
+
+```bash
+cd /tmp && git clone https://github.com/P3GLEG/tauri-plugin-mcp.git tauri-plugin-mcp
+cd /tmp/tauri-plugin-mcp/mcp-server-ts && npm install --cache /tmp/npm-cache && npx tsc
+```
+
+Then `/mcp` to reconnect. Check `CLAUDE.md` § tauri-mcp Bridge Recovery for full details.
+
 ### Tauri v2 IPC is `__TAURI_INTERNALS__`, not `__TAURI__`
 
 Tauri v2 does NOT expose `window.__TAURI__`. The IPC bridge is at `window.__TAURI_INTERNALS__`:

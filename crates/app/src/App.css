@@ -1394,6 +1394,30 @@ body {
   background: color-mix(in srgb, var(--danger) 8%, transparent);
   border-radius: 4px;
 }
+/* -- Inline image widget (CodeMirror edit mode) -- */
+.editor-body .cm-editor .cm-image-widget {
+  padding: 8px 4px;
+  text-align: center;
+}
+.editor-body .cm-editor .cm-image-widget .cm-image-preview {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+.editor-body .cm-editor .cm-image-loading {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 20px;
+}
+.editor-body .cm-editor .cm-image-error {
+  color: var(--danger);
+  font-size: 0.85em;
+  padding: 8px;
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  border-radius: 4px;
+  text-align: left;
+}
+
 .editor-body .cm-editor .cm-inline-code {
   background: none;
   border: none;
@@ -2974,6 +2998,22 @@ body.dragging-active {
 .md-preview h4,
 .md-preview h5,
 .md-preview h6 { font-size: 1em; }
+
+.md-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+.md-preview .md-image-error {
+  color: var(--danger);
+  font-size: 0.85em;
+  padding: 4px 8px;
+}
+.md-preview .md-image-loading {
+  color: var(--text-muted);
+  font-style: italic;
+}
 
 .md-preview p {
   margin: 0 0 1em;

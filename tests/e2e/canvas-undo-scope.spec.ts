@@ -3,7 +3,7 @@ import * as path from "node:path";
 import * as fs from "node:fs";
 import { type E2EClient } from "./client.js";
 import { getClient } from "./connect.js";
-import { sleep } from "./helpers.js";
+import { sleep, isFolderExpanded, clickFolder } from "./helpers.js";
 
 /**
  * Canvas undo/redo scoping E2E tests.
@@ -70,6 +70,16 @@ describe("Canvas Undo/Redo Scoping", () => {
         const dest = path.join(wsRoot, canvasPath);
         fs.copyFileSync(seedCanvas, dest);
       }
+    }
+
+    // Collapse the Concepts folder if it was expanded (openNote expands it)
+    try {
+      if (await isFolderExpanded(client, "Concepts")) {
+        await clickFolder(client, "Concepts");
+        await sleep(400);
+      }
+    } catch {
+      // Folder may not be in tree if workspace state changed
     }
   });
 
@@ -230,6 +240,33 @@ describe("Canvas Undo/Redo Scoping", () => {
 
     // Clean up: undo the card via canvas focus
     await canvasCmdZ();
+    // Verify cleanup succeeded — if this fails, leaked node will break subsequent tests
+    expect(await getCanvasNodeCount()).toBe(before);
+
+    // Close the note tab we opened and re-focus canvas
+    await client.executeJs(`
+      (async () => {
+        const { useTabStore } = await import('/src/stores/tabStore.ts');
+        var tabs = useTabStore.getState().tabs;
+        for (var i = 0; i < tabs.length; i++) {
+          if (tabs[i].path && tabs[i].path.endsWith('.md')) {
+            useTabStore.getState().closeTab(tabs[i].id);
+          }
+        }
+        return 'closed-note-tabs';
+      })()
+    `);
+    await sleep(500);
+
+    // Re-focus canvas so subsequent tests have clean focus state
+    await client.executeJs(`
+      (function() {
+        var c = document.querySelector('.canvas-container');
+        if (c) c.focus();
+        return 'refocused';
+      })()
+    `);
+    await sleep(200);
 
     await client.takeScreenshot(screenshotsDir);
   });
